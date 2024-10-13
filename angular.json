@@ -67,6 +67,9 @@
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+             "proxyConfig": "proxy.conf.json"
+              },
           "configurations": {
             "production": {
               "buildTarget": "smartsop:build:production"
@@ -103,5 +106,8 @@
         }
       }
     }
+  },
+  "cli": {
+    "analytics": "d976fd8a-4f75-43d4-a2da-c0fa9ebcdaa6"
   }
 }
