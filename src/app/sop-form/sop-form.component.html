@@ -1,0 +1,22 @@
+<div class="container">
+    <h1>Create Standard Operating Procedure</h1>
+    <form (submit)="onSubmit()">
+      <div class="form-group">
+        <label for="steps">Steps</label>
+        <input type="text" class="form-control" [(ngModel)]="formData.steps" name="steps" required />
+      </div>
+      <div class="form-group">
+        <label for="roles">Roles Involved</label>
+        <input type="text" class="form-control" [(ngModel)]="formData.roles" name="roles" required />
+      </div>
+      <button type="submit" class="btn btn-primary">Generate SOP</button>
+    </form>
+  
+    <!-- Display the generated SOP content -->
+    <div *ngIf="sopContent">
+      <h2>Generated SOP</h2>
+      <pre>{{ sopContent }}</pre>
+    </div>
+  </div>
+  
+  

@@ -1,13 +1,10 @@
 import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { SopFormComponent } from './sop-form/sop-form.component';  // Import the standalone component
 
 @Component({
   selector: 'app-root',
-  standalone: true,
-  imports: [RouterOutlet],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  standalone: true,  // Mark as standalone
+  imports: [SopFormComponent],  // Import SopFormComponent directly
 })
-export class AppComponent {
-  title = 'smartsop';
-}
+export class AppComponent {}
