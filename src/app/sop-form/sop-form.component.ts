@@ -1,23 +1,31 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';  // Import CommonModule for ngIf
-import { FormsModule } from '@angular/forms';    // Import FormsModule for [(ngModel)]
+import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';  // Required for common Angular directives like *ngIf
 
 @Component({
   selector: 'app-sop-form',
-  standalone: true,  // Mark this as a standalone component
-  imports: [CommonModule, FormsModule],  // Import CommonModule and FormsModule
+  standalone: true,
+  imports: [FormsModule, CommonModule],  // Make sure to import FormsModule and CommonModule
   templateUrl: './sop-form.component.html',
 })
 export class SopFormComponent {
   formData = { steps: '', roles: '' };
   sopContent: string = '';
+  errorMessage: string = '';
+  loading: boolean = false;
 
   constructor() {}
 
   onSubmit() {
-    // Logic to handle form submission
+    this.errorMessage = '';
+    this.sopContent = '';
+    this.loading = true;
+
+    // Implement the form submission logic here
   }
 }
+
+
 
 
 
