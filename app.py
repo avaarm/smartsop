@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import openai
 from dotenv import load_dotenv
 import os
@@ -6,36 +7,79 @@ import os
 # Load environment variables from .env file
 load_dotenv()
 
-
 # Initialize Flask app
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
-# Set up OpenAI API Key 
+# Set up OpenAI API Key
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Route to generate SOP content
-@app.route('/api/generate_sop', methods=['POST'])
-def generate_sop():
-    data = request.json #Get data from POST request
-    steps = data.get('steps')
-    roles = data.get('roles')
+def create_sop_prompt(data):
+    return f"""Create a detailed Standard Operating Procedure (SOP) with the following information:
+Process Steps: {data.get('steps')}
+Roles Involved: {data.get('roles')}
+Additional Notes: {data.get('notes', 'None')}
 
-    # Create the prompt for GPT 
-    prompt = f"Create an SOP for the following steps: {steps}, roles involved: {roles}"
+Format the SOP with:
+1. Purpose
+2. Scope
+3. Responsibilities
+4. Safety Precautions
+5. Required Materials
+6. Detailed Procedure Steps
+7. Quality Control
+8. Documentation Requirements"""
 
-    # Call the OpenAi GPT API 
-    response = openai.Compilation.create(
-        model="text-davinci-003", # You can switch to GPT-4 if desired
-        prompt=prompt,
-        max_tokens=300
-    )
+def create_batch_record_prompt(data):
+    return f"""Create a detailed Batch Record template with the following information:
+Process: {data.get('steps')}
+Roles: {data.get('roles')}
+Additional Requirements: {data.get('notes', 'None')}
 
-    # Extract the generated content from GPT response
-    sop_content = response.choice[0].text.strip()
+Include sections for:
+1. Batch Identification
+2. Material Information
+3. Equipment Setup Verification
+4. Process Steps with Sign-offs
+5. In-Process Controls
+6. Quality Checks
+7. Deviation Recording
+8. Final Product Details"""
 
-    # Send the response back to the frontend
-    return jsonify({'sop_content': sop_content})
+@app.route('/api/generate_document', methods=['POST'])
+def generate_document():
+    try:
+        data = request.json
+        doc_type = data.get('type', 'sop')
+        
+        # Select appropriate prompt based on document type
+        prompt = create_sop_prompt(data) if doc_type == 'sop' else create_batch_record_prompt(data)
+        
+        # Call the OpenAI API
+        response = openai.ChatCompletion.create(
+            model="gpt-4",  # Using GPT-4 for better quality
+            messages=[
+                {"role": "system", "content": "You are an expert in creating detailed SOPs and batch records for manufacturing and laboratory processes."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=2000,
+            temperature=0.7
+        )
+        
+        # Extract the generated content
+        generated_content = response.choices[0].message.content.strip()
+        
+        return jsonify({
+            'success': True,
+            'content': generated_content,
+            'type': doc_type
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
-    # Run the Flask app
-    if __name__ == '__main__':
-         app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)
