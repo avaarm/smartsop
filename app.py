@@ -1,8 +1,9 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import openai
 from dotenv import load_dotenv
 import os
+from ml_model.model import SOPModel
+from ml_model.data_collector import DataCollector
 
 # Load environment variables from .env file
 load_dotenv()
@@ -11,40 +12,9 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
-# Set up OpenAI API Key
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
-def create_sop_prompt(data):
-    return f"""Create a detailed Standard Operating Procedure (SOP) with the following information:
-Process Steps: {data.get('steps')}
-Roles Involved: {data.get('roles')}
-Additional Notes: {data.get('notes', 'None')}
-
-Format the SOP with:
-1. Purpose
-2. Scope
-3. Responsibilities
-4. Safety Precautions
-5. Required Materials
-6. Detailed Procedure Steps
-7. Quality Control
-8. Documentation Requirements"""
-
-def create_batch_record_prompt(data):
-    return f"""Create a detailed Batch Record template with the following information:
-Process: {data.get('steps')}
-Roles: {data.get('roles')}
-Additional Requirements: {data.get('notes', 'None')}
-
-Include sections for:
-1. Batch Identification
-2. Material Information
-3. Equipment Setup Verification
-4. Process Steps with Sign-offs
-5. In-Process Controls
-6. Quality Checks
-7. Deviation Recording
-8. Final Product Details"""
+# Initialize our custom model and data collector
+model = SOPModel()
+data_collector = DataCollector()
 
 @app.route('/api/generate_document', methods=['POST'])
 def generate_document():
@@ -52,27 +22,101 @@ def generate_document():
         data = request.json
         doc_type = data.get('type', 'sop')
         
-        # Select appropriate prompt based on document type
-        prompt = create_sop_prompt(data) if doc_type == 'sop' else create_batch_record_prompt(data)
+        # Generate document using our custom model
+        generated_content = model.generate_document(data)
         
-        # Call the OpenAI API
-        response = openai.ChatCompletion.create(
-            model="gpt-4",  # Using GPT-4 for better quality
-            messages=[
-                {"role": "system", "content": "You are an expert in creating detailed SOPs and batch records for manufacturing and laboratory processes."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=2000,
-            temperature=0.7
+        # Save the generated document and get its path
+        doc_path = data_collector.save_document(
+            input_data=data,
+            generated_content=generated_content,
+            doc_type=doc_type,
+            metadata={'model_version': 'v1'}
         )
-        
-        # Extract the generated content
-        generated_content = response.choices[0].message.content.strip()
         
         return jsonify({
             'success': True,
             'content': generated_content,
-            'type': doc_type
+            'type': doc_type,
+            'doc_id': doc_path
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/feedback', methods=['POST'])
+def submit_feedback():
+    try:
+        data = request.json
+        doc_path = data.get('doc_id')
+        feedback_score = data.get('score')
+        feedback_text = data.get('text')
+        
+        if not doc_path or feedback_score is None:
+            return jsonify({
+                'success': False,
+                'error': 'Missing required fields'
+            }), 400
+        
+        # Add feedback to the document
+        data_collector.add_feedback(
+            doc_path=doc_path,
+            feedback_score=feedback_score,
+            feedback_text=feedback_text
+        )
+        
+        # Add to model's training data
+        with open(doc_path, 'r') as f:
+            doc_data = json.load(f)
+            model.add_training_example(
+                input_data=doc_data['input'],
+                generated_sop=doc_data['generated_content'],
+                feedback_score=feedback_score
+            )
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/train', methods=['POST'])
+def train_model():
+    try:
+        # Get training data with minimum feedback score of 3.5 (out of 5)
+        training_data = data_collector.get_training_data(min_feedback_score=3.5)
+        
+        if len(training_data) < 10:
+            return jsonify({
+                'success': False,
+                'error': 'Not enough high-quality training data yet'
+            }), 400
+        
+        # Fine-tune the model
+        model.fine_tune()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Model training completed successfully'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/stats', methods=['GET'])
+def get_stats():
+    try:
+        stats = data_collector.get_statistics()
+        return jsonify({
+            'success': True,
+            'stats': stats
         })
         
     except Exception as e:
