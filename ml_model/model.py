@@ -4,7 +4,9 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments,
 from datasets import Dataset
 import json
 import os
-from typing import List, Dict
+import re
+from typing import List, Dict, Tuple, Optional
+from .word_generator import WordDocumentGenerator
 
 class SOPModel:
     def __init__(self, model_name="microsoft/phi-2", save_dir="model_checkpoints"):
@@ -94,8 +96,24 @@ Quality Score: {example['feedback_score']}"""
         self.model.save_pretrained(f"{self.save_dir}/latest")
         self.tokenizer.save_pretrained(f"{self.save_dir}/latest")
 
-    def generate_document(self, input_data: Dict) -> str:
-        """Generate a document using the fine-tuned model"""
+    def generate_document(self, input_data: Dict) -> Tuple[str, Optional[str], Optional[str]]:
+        """Generate a document using the fine-tuned model
+        
+        Returns:
+            Tuple containing:
+                - The generated document content (str)
+                - Path to Word document if generated (str or None)
+                - Template type used (str or None)
+        """
+        # Check if this is an NK cell thawing request
+        template_type = None
+        steps = input_data.get('steps', '').lower()
+        
+        # Detect NK cell thawing requests
+        if any(term in steps for term in ['nk cell', 'natural killer cell']) and \
+           any(term in steps for term in ['thaw', 'thawing', 'defrost']):
+            template_type = 'NK_cell_thawing'
+        
         # Format input as a prompt
         prompt = f"""Type: {input_data.get('type', 'sop')}
 Steps: {input_data.get('steps', '')}
@@ -115,4 +133,25 @@ Generate a detailed document following the standard format."""
             do_sample=True
         )
         
-        return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        generated_content = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        
+        # Generate Word document if requested
+        word_doc_path = None
+        if template_type or 'word' in steps or 'word format' in steps or 'docx' in steps:
+            try:
+                # Extract title from content
+                title_match = re.search(r"Title:\s*([^\n]+)", generated_content)
+                title = title_match.group(1) if title_match else "NK Cell Thawing SOP"
+                
+                # Generate Word document
+                word_generator = WordDocumentGenerator()
+                word_doc_path = word_generator.generate_sop_document(
+                    content=generated_content,
+                    title=title,
+                    doc_id=f"SOP-{input_data.get('type', 'sop').upper()}-{len(self.training_data) + 1:03d}",
+                    template_type=template_type
+                )
+            except Exception as e:
+                print(f"Error generating Word document: {e}")
+        
+        return generated_content, word_doc_path, template_type

@@ -1,0 +1,95 @@
+<div class="chat-container">
+  <div class="chat-header">
+    <h1>SmartSOP Assistant</h1>
+    <div class="document-type-selector">
+      <span>Document Type:</span>
+      <div class="type-buttons">
+        @for (type of documentTypes; track type.id) {
+        <button 
+          [class.active]="documentType === type.id"
+          (click)="setDocumentType(type.id)">
+          {{ type.name }}
+        </button>
+      }
+      </div>
+    </div>
+  </div>
+  
+  <div class="messages-container">
+    <div class="message-list" #scrollContainer>
+      @for (message of chatMessages; track message.timestamp) {
+        <div [ngClass]="{'message': true, 'user-message': message.role === 'user', 'assistant-message': message.role === 'assistant'}">
+          <div class="message-header">
+            <span class="message-sender">{{ message.role === 'user' ? 'You' : 'SmartSOP Assistant' }}</span>
+            <span class="message-time">{{ formatTime(message.timestamp) }}</span>
+          </div>
+          <div class="message-content">
+            @if (isLoading) {
+              <div class="loading-indicator">
+                <div class="dot-flashing"></div>
+              </div>
+            } @else {
+              <div>{{message.content}}</div>
+              <!-- Word document download link -->
+              @if (message.wordDocument) {
+                <div class="word-document-download">
+                  <p><strong>Word Document Available:</strong></p>
+                  <a [href]="message.wordDocument.downloadUrl" target="_blank" class="download-button">
+                    <i class="fas fa-file-word"></i> Download {{ message.wordDocument.filename }}
+                  </a>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+    </div>
+    
+    <!-- Feedback section for each message -->
+    @for (message of chatMessages; track message.timestamp) {
+      @if (message.showFeedback && !feedbackSubmitted && message.role === 'assistant') {
+        <div class="feedback-container">
+          <h3>How helpful was this response?</h3>
+          <div class="rating-buttons">
+            @for (rating of [1, 2, 3, 4, 5]; track rating) {
+              <button 
+                [class.selected]="feedbackRating === rating"
+                (click)="setFeedbackRating(rating)">
+                {{ rating }}
+              </button>
+            }
+          </div>
+          <textarea 
+            [(ngModel)]="feedbackText" 
+            placeholder="Additional comments (optional)"
+            class="feedback-text">
+          </textarea>
+          <button 
+            class="submit-feedback" 
+            [disabled]="feedbackRating === null"
+            (click)="submitFeedback(message.docId!)">
+            Submit Feedback
+          </button>
+        </div>
+      }
+    }
+  </div>
+  
+  <div class="input-container">
+    <textarea 
+      [(ngModel)]="newMessage" 
+      placeholder="Describe the process or ask for help with SOPs or Batch Records..."
+      (keydown)="handleKeyDown($event)"
+      [disabled]="isLoading">
+    </textarea>
+    <button 
+      (click)="sendMessage()" 
+      [disabled]="!newMessage.trim() || isLoading">
+      @if (!isLoading) {
+        <span>Send</span>
+      } @else {
+        <span>Generating...</span>
+      }
+    </button>
+  </div>
+</div>

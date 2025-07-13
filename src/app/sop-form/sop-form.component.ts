@@ -73,6 +73,50 @@ import { AIService, DocumentRequest } from '../services/ai-service.service';
         <div class="p-4 bg-gray-50 rounded whitespace-pre-wrap">
           {{ generatedContent }}
         </div>
+
+        <!-- Feedback Section -->
+        <div *ngIf="!feedbackSubmitted" class="mt-4 p-4 bg-blue-50 rounded">
+          <h3 class="text-lg font-semibold mb-3">Provide Feedback</h3>
+          <p class="text-sm text-gray-600 mb-4">Your feedback helps improve the quality of generated documents.</p>
+          
+          <div class="mb-4">
+            <label class="block text-sm font-medium mb-2">Quality Rating</label>
+            <div class="flex gap-2">
+              <button
+                *ngFor="let score of [1,2,3,4,5]"
+                (click)="selectRating(score)"
+                [class.bg-blue-500]="selectedRating === score"
+                [class.text-white]="selectedRating === score"
+                class="px-4 py-2 rounded border hover:bg-blue-100"
+              >
+                {{score}}
+              </button>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-sm font-medium mb-2">Comments (Optional)</label>
+            <textarea
+              [(ngModel)]="feedbackText"
+              name="feedbackText"
+              rows="2"
+              class="w-full p-2 border rounded"
+              placeholder="Any suggestions for improvement?"
+            ></textarea>
+          </div>
+
+          <button
+            (click)="submitFeedback()"
+            [disabled]="!selectedRating || submittingFeedback"
+            class="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600 disabled:bg-gray-400"
+          >
+            {{ submittingFeedback ? 'Submitting...' : 'Submit Feedback' }}
+          </button>
+        </div>
+
+        <div *ngIf="feedbackSubmitted" class="mt-4 p-4 bg-green-50 rounded">
+          <p class="text-green-700">Thank you for your feedback! Your input helps improve the system.</p>
+        </div>
       </div>
     </div>
   `,
@@ -94,17 +138,28 @@ export class SopFormComponent {
   errorMessage: string = '';
   loading: boolean = false;
 
+  // Feedback related properties
+  selectedRating: number | null = null;
+  feedbackText: string = '';
+  feedbackSubmitted: boolean = false;
+  submittingFeedback: boolean = false;
+  currentDocId: string = '';
+
   constructor(private aiService: AIService) {}
 
   onSubmit() {
     this.errorMessage = '';
     this.generatedContent = '';
     this.loading = true;
+    this.feedbackSubmitted = false;
+    this.selectedRating = null;
+    this.feedbackText = '';
 
     this.aiService.generateDocument(this.formData).subscribe({
       next: (response) => {
         if (response.success) {
           this.generatedContent = response.content;
+          this.currentDocId = response.doc_id;
         } else {
           this.errorMessage = response.error || 'Failed to generate document';
         }
@@ -113,6 +168,36 @@ export class SopFormComponent {
       error: (error) => {
         this.errorMessage = 'An error occurred while generating the document. Please try again.';
         this.loading = false;
+        console.error('Error:', error);
+      }
+    });
+  }
+
+  selectRating(score: number) {
+    this.selectedRating = score;
+  }
+
+  submitFeedback() {
+    if (!this.selectedRating) return;
+
+    this.submittingFeedback = true;
+    
+    this.aiService.submitFeedback({
+      doc_id: this.currentDocId,
+      score: this.selectedRating,
+      text: this.feedbackText
+    }).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.feedbackSubmitted = true;
+        } else {
+          this.errorMessage = 'Failed to submit feedback';
+        }
+        this.submittingFeedback = false;
+      },
+      error: (error) => {
+        this.errorMessage = 'An error occurred while submitting feedback';
+        this.submittingFeedback = false;
         console.error('Error:', error);
       }
     });
