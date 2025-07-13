@@ -99,7 +99,7 @@ export class ChatInterfaceComponent implements OnInit {
         if (response.word_document) {
           aiMessage.wordDocument = {
             filename: response.word_document.filename,
-            downloadUrl: `http://localhost:5000${response.word_document.download_url}`
+            downloadUrl: `http://localhost:5001${response.word_document.download_url}`
           };
         }
 
@@ -108,12 +108,24 @@ export class ChatInterfaceComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error generating document:', error);
+        
+        // Determine the appropriate error message
+        let errorContent = 'Sorry, I encountered an error while generating the document. Please try again.';
+        
+        // Check for timeout error
+        if (error.message && error.message.includes('timed out')) {
+          errorContent = 'The server is taking too long to respond. This might be because the model is processing a complex request. You can try again with a simpler request or wait a moment before trying again.';
+        } else if (error.status === 0) {
+          errorContent = 'Unable to connect to the server. Please check your connection and make sure the server is running.';
+        }
+        
         // Add error message to chat
         const errorMessage: ChatMessage = {
           role: 'assistant',
-          content: 'Sorry, I encountered an error while generating the document. Please try again.',
+          content: errorContent,
           timestamp: new Date()
         };
+        
         this.chatMessages.push(errorMessage);
         this.isLoading = false;
       }

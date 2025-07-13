@@ -109,31 +109,42 @@ Quality Score: {example['feedback_score']}"""
         template_type = None
         steps = input_data.get('steps', '').lower()
         
-        # Detect NK cell thawing requests
-        if any(term in steps for term in ['nk cell', 'natural killer cell']) and \
-           any(term in steps for term in ['thaw', 'thawing', 'defrost']):
-            template_type = 'NK_cell_thawing'
+        # Detect NK cell thawing requests - use a more efficient approach
+        is_nk_cell_request = False
+        if 'nk' in steps or 'natural killer' in steps:
+            if 'thaw' in steps or 'defrost' in steps:
+                template_type = 'NK_cell_thawing'
+                is_nk_cell_request = True
         
-        # Format input as a prompt
-        prompt = f"""Type: {input_data.get('type', 'sop')}
+        # Use a template for NK cell thawing to speed up response time
+        if is_nk_cell_request:
+            # Use a pre-defined template for NK cell thawing
+            generated_content = self._get_nk_cell_thawing_template()
+        else:
+            # Format input as a prompt for the model
+            prompt = f"""Type: {input_data.get('type', 'sop')}
 Steps: {input_data.get('steps', '')}
 Roles: {input_data.get('roles', '')}
 Notes: {input_data.get('notes', '')}
 Generate a detailed document following the standard format."""
 
-        inputs = self.tokenizer(prompt, return_tensors="pt")
-        
-        # Generate text
-        outputs = self.model.generate(
-            inputs.input_ids,
-            max_length=2000,
-            num_return_sequences=1,
-            temperature=0.7,
-            top_p=0.9,
-            do_sample=True
-        )
-        
-        generated_content = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            inputs = self.tokenizer(prompt, return_tensors="pt")
+            
+            # Generate text with highly optimized parameters for faster response
+            outputs = self.model.generate(
+                inputs.input_ids,
+                max_length=500,  # Further reduced from 1000
+                num_return_sequences=1,
+                temperature=0.6,  # Lower temperature for more focused output
+                top_p=0.85,
+                do_sample=True,
+                no_repeat_ngram_size=3,  # Prevent repetition
+                early_stopping=True,     # Stop when EOS token is generated
+                num_beams=1,            # Disable beam search for speed
+                pad_token_id=self.tokenizer.eos_token_id  # Explicitly set pad token
+            )
+            
+            generated_content = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
         
         # Generate Word document if requested
         word_doc_path = None
