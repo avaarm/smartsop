@@ -1,1 +1,23 @@
-<app-sop-form></app-sop-form>
+<div class="app-container">
+  <nav class="navbar">
+    <div class="navbar-brand">SmartSOP</div>
+    <div class="navbar-links">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Chat</a>
+      <a routerLink="/form" routerLinkActive="active">Form</a>
+      @if (!isLoggedIn) {
+        <a href="#" class="partner-btn">Partner with us</a>
+      }
+    </div>
+    <div class="auth-buttons">
+      @if (!isLoggedIn) {
+        <button class="login-btn" (click)="login()">Log In</button>
+      } @else {
+        <button class="logout-btn" (click)="logout()">Log Out</button>
+      }
+    </div>
+  </nav>
+  
+  <main class="main-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

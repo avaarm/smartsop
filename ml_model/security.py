@@ -6,8 +6,14 @@ from typing import Dict, Optional
 
 class SecurityManager:
     def __init__(self):
-        self.jwt_secret = os.getenv('JWT_SECRET')
+        self.jwt_secret = os.getenv('JWT_SECRET', 'default_jwt_secret_key')
+        # Generate a default encryption key if not provided
         self.encryption_key = os.getenv('ENCRYPTION_KEY')
+        if not self.encryption_key:
+            # Generate a new key for development purposes
+            self.encryption_key = Fernet.generate_key().decode()
+            print("Warning: Using a generated encryption key. For production, set ENCRYPTION_KEY in .env")
+        
         self.allowed_domains = os.getenv('ALLOWED_DOMAINS', '[]')
         self.fernet = Fernet(self.encryption_key.encode())
 
