@@ -96,6 +96,116 @@ Quality Score: {example['feedback_score']}"""
         self.model.save_pretrained(f"{self.save_dir}/latest")
         self.tokenizer.save_pretrained(f"{self.save_dir}/latest")
 
+    def _get_nk_cell_thawing_template(self) -> str:
+        """Return a pre-defined template for NK cell thawing SOP
+        This avoids the need for model inference for common requests
+        """
+        return """Title: NK Cell Thawing Standard Operating Procedure (SOP)
+
+Purpose: This SOP outlines the standardized procedure for thawing cryopreserved NK (Natural Killer) cells while maintaining cell viability and functionality.
+
+Scope: This procedure applies to all laboratory personnel involved in NK cell-based research and therapeutic applications.
+
+Responsibilities:
+- Laboratory Technicians: Responsible for executing the NK cell thawing procedure according to this SOP.
+- Laboratory Supervisor: Ensures compliance with this SOP and provides necessary training.
+- Quality Assurance Personnel: Monitors adherence to the procedure and maintains documentation.
+
+Materials and Equipment:
+1. Personal Protective Equipment (PPE): Lab coat, gloves, safety glasses
+2. Water bath set to 37°C
+3. 70% ethanol spray
+4. Sterile serological pipettes (5 mL, 10 mL)
+5. Sterile 15 mL conical tubes
+6. Complete NK cell medium (pre-warmed to 37°C)
+7. Centrifuge
+8. Biosafety cabinet (BSC)
+9. Cell counting equipment
+10. Timer
+11. Cryovials containing frozen NK cells
+
+Procedure:
+
+1. Preparation
+   1.1. Turn on the biosafety cabinet 15-30 minutes before starting the procedure.
+   1.2. Set the water bath to 37°C and verify temperature with a thermometer.
+   1.3. Pre-warm complete NK cell medium in 37°C water bath.
+   1.4. Prepare all necessary materials and place them in the biosafety cabinet.
+
+2. Thawing Process
+   2.1. Remove the cryovial containing NK cells from liquid nitrogen storage.
+   2.2. Transport the cryovial to the laboratory using appropriate safety measures.
+   2.3. Partially submerge the cryovial in the 37°C water bath.
+   2.4. Gently swirl the vial in the water bath without submerging the cap.
+   2.5. Monitor the thawing process closely (approximately 2-3 minutes).
+   2.6. Remove the vial from the water bath when a small ice crystal remains (approximately 90% thawed).
+   2.7. Spray the outside of the vial with 70% ethanol before placing it in the biosafety cabinet.
+
+3. Cell Transfer and Dilution
+   3.1. Using a 1000 μL pipette, gently transfer the cell suspension to a labeled 15 mL conical tube.
+   3.2. Slowly add pre-warmed complete NK cell medium dropwise to the cells:
+       a. Add the first 1 mL of medium dropwise (1 drop per 2-3 seconds) while gently swirling the tube.
+       b. Let the cells rest for 1 minute.
+       c. Add the next 2 mL of medium dropwise at a slightly faster rate.
+       d. Add an additional 7 mL of medium to bring the total volume to 10 mL.
+
+4. Centrifugation and Resuspension
+   4.1. Centrifuge the cell suspension at 300 x g for 5 minutes at room temperature.
+   4.2. Carefully aspirate the supernatant without disturbing the cell pellet.
+   4.3. Gently resuspend the cell pellet in 5-10 mL of fresh pre-warmed complete NK cell medium.
+
+5. Cell Counting and Viability Assessment
+   5.1. Take a small aliquot of the cell suspension for counting.
+   5.2. Determine cell concentration and viability using trypan blue exclusion or other approved methods.
+   5.3. Record cell count and viability in the laboratory notebook.
+
+6. Final Cell Preparation
+   6.1. Adjust the cell concentration to the required density for downstream applications.
+   6.2. Transfer the cells to appropriate culture vessels.
+   6.3. Place the cells in a humidified incubator at 37°C with 5% CO2.
+
+7. Post-Procedure
+   7.1. Clean the biosafety cabinet and water bath according to laboratory protocols.
+   7.2. Dispose of waste in appropriate biohazard containers.
+   7.3. Complete all required documentation.
+
+Quality Control:
+- Cell viability should be ≥ 80% post-thawing.
+- Monitor NK cell recovery (typically 60-80% of the frozen cell number).
+- Assess NK cell functionality using appropriate assays within 24-48 hours post-thawing.
+
+Troubleshooting:
+1. Low viability (<80%):
+   - Ensure proper thawing temperature and timing.
+   - Check medium quality and pre-warming.
+   - Verify slow dilution technique was followed.
+
+2. Cell clumping:
+   - Ensure proper dropwise addition of medium.
+   - Check medium composition and pH.
+   - Consider adding DNase I if clumping persists due to DNA from lysed cells.
+
+Documentation:
+- Record date and time of thawing.
+- Document cryovial information (cell type, passage number, freeze date, donor ID if applicable).
+- Note cell count, viability, and any deviations from the SOP.
+- Record the name of the person performing the procedure.
+
+References:
+1. Current Good Manufacturing Practice (cGMP) guidelines.
+2. Laboratory-specific Cell Culture Manual.
+3. Manufacturer's instructions for equipment used.
+
+Appendices:
+- NK Cell Medium Composition
+- Cell Counting Protocol
+- Equipment Maintenance Records
+
+Revision History:
+- Version 1.0: Initial SOP creation
+- Version 1.1: Updated centrifugation parameters
+- Version 1.2: Added detailed troubleshooting section"""
+
     def generate_document(self, input_data: Dict) -> Tuple[str, Optional[str], Optional[str]]:
         """Generate a document using the fine-tuned model
         
