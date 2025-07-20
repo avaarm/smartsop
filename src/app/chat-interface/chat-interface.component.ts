@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { AIService } from '../services/ai-service.service';
 
 interface ChatMessage {
@@ -29,7 +30,7 @@ interface DocumentRequest {
 @Component({
   selector: 'app-chat-interface',
   standalone: true,
-  imports: [FormsModule, CommonModule],
+  imports: [FormsModule, CommonModule, RouterModule],
   templateUrl: './chat-interface.component.html',
   styleUrls: ['./chat-interface.component.scss']
 })

@@ -1,0 +1,19 @@
+{
+  "input": {
+    "type": "batch",
+    "steps": "1. Receive ingredients\n2. Weigh components\n3. Mix according to formula\n4. Process mixture\n5. Package product\n6. Label packages\n7. Sample for QC\n8. Release for distribution",
+    "roles": "Manufacturing Technician, QC Analyst, Production Manager, QA Specialist",
+    "notes": "Maintain controlled room temperature (20-25\u00b0C) and relative humidity (30-50%)."
+  },
+  "generated_content": "\n# BATCH MANUFACTURING RECORD\n## Metformin Injection\n\n**BMR Number:** BMR-B24420  \n**Product ID:** P768  \n**Lot Size:** 485 kg  \n**Start Date:** 2025-05-22  \n\n### 1. PRODUCT DETAILS\n- **Product Description:** 488 mg Metformin Injection\n- **Physical Form:** Off-white granules\n- **Storage Requirements:** Refrigerate at 2-8\u00b0C\n\n### 2. MATERIAL INFORMATION\n| Item | Material Code | Standard Quantity | Actual Quantity | Lot Number | Expiry Date | Verified By |\n|------|--------------|-------------------|----------------|------------|-------------|-------------|\n| Active Ingredient | RM-6590 | 12 kg | | | | |\n| Excipient 1 | RM-6421 | 12 kg | | | | |\n| Excipient 2 | RM-2335 | 28 kg | | | | |\n| Coating Material | RM-4066 | 7 kg | | | | |\n\n\n### 3. EQUIPMENT LIST\n| Equipment | ID | Calibration Due Date | Setup By | Verified By |\n|-----------|----|--------------------|----------|-------------|\n| Mixer | EQ-951 | 2026-09-16 | | |\n| Reactor | EQ-761 | 2026-12-16 | | |\n| Filling Machine | EQ-661 | 2026-08-03 | | |\n| Packaging Line | EQ-409 | 2026-11-05 | | |\n\n\n### 4. PRE-PRODUCTION CHECKLIST\n- Area cleaned and sanitized: \u25a1 Yes \u25a1 No\n- Line clearance completed: \u25a1 Yes \u25a1 No\n- Materials verified: \u25a1 Yes \u25a1 No\n- Equipment verified: \u25a1 Yes \u25a1 No\n\n### 5. PRODUCTION PROCESS\n1. Receive ingredients\n\n2. Weigh components\n\n3. Mix according to formula\n\n4. Process mixture\n\n5. Package product\n\n6. Label packages\n\n7. Sample for QC\n\n8. Release for distribution\n\n### 6. IN-PROCESS TESTING\n**Step 3:** Check pH and temperature before proceeding\n\n**Step 5:** Sample for appearance and weight check\n\n**Step 7:** Test for dissolution and content uniformity\n\n### 7. DEVIATIONS AND INVESTIGATIONS\nRecord any deviations from the standard procedure here:\n\n_______________________________________________\n\n_______________________________________________\n\n### 8. FINAL PRODUCT DETAILS\n- **Quantity Produced:** ____________\n- **Number of Containers:** ____________\n- **Lot Number Assigned:** ____________\n\n### 9. BATCH DISPOSITION\n\u25a1 Released  \u25a1 Rejected  \u25a1 On Hold\n\n**Reason:** ____________\n\n### 10. APPROVALS\n| Department | Name | Signature | Date |\n|------------|------|-----------|------|\n| Production | | | |\n| QC | | | |\n| QA | | | |\n    ",
+  "doc_type": "batch",
+  "metadata": {
+    "model_version": "v1",
+    "template_type": "standard",
+    "timestamp": "2025-07-19T12:00:00"
+  },
+  "feedback": {
+    "score": 4.484583481719819,
+    "text": "Generated from industry standard templates"
+  }
+}

@@ -33,6 +33,8 @@ export interface FeedbackRequest {
 export interface FeedbackResponse {
   success: boolean;
   error?: string;
+  message?: string;
+  num_examples?: number;
 }
 
 export interface ModelStats {
@@ -55,11 +57,38 @@ export interface StatsResponse {
   error?: string;
 }
 
+export interface TrainingMetrics {
+  training_loss: number;
+  eval_results: any;
+  num_examples: number;
+  timestamp: string;
+  model_save_path: string;
+  training_time_seconds?: number;
+  training_hyperparameters?: {
+    learning_rate: number;
+    batch_size: number;
+    num_epochs: number;
+    use_gradient_checkpointing: boolean;
+    weight_decay: number;
+    warmup_ratio?: number;
+    max_length?: number;
+    fp16?: boolean;
+  };
+}
+
+export interface TrainingStatusResponse {
+  success: boolean;
+  training_history: TrainingMetrics[];
+  is_training_in_progress: boolean;
+  latest_model: string | null;
+  error?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class AIService {
-  private apiUrl = 'http://localhost:5001';
+  private apiUrl = 'http://localhost:5000';
 
   constructor(private http: HttpClient) { }
 
@@ -119,8 +148,28 @@ export class AIService {
     );
   }
 
-  triggerTraining(): Observable<FeedbackResponse> {
-    return this.http.post<FeedbackResponse>(`${this.apiUrl}/api/train`, {}, {
+  triggerTraining(options: { 
+    min_feedback_score?: number, 
+    min_examples?: number,
+    advanced_options?: {
+      num_epochs?: number;
+      learning_rate?: number;
+      batch_size?: number;
+      use_gradient_checkpointing?: boolean;
+      early_stopping_patience?: number;
+    }
+  } = {}): Observable<FeedbackResponse> {
+    return this.http.post<FeedbackResponse>(`${this.apiUrl}/api/train`, options, {
+      withCredentials: true
+    }).pipe(
+      retry(1),
+      timeout(this.requestTimeout),
+      catchError(error => this.handleError(error))
+    );
+  }
+  
+  getTrainingStatus(): Observable<TrainingStatusResponse> {
+    return this.http.get<TrainingStatusResponse>(`${this.apiUrl}/api/training/status`, {
       withCredentials: true
     }).pipe(
       retry(1),

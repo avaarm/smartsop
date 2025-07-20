@@ -1,0 +1,19 @@
+{
+  "input": {
+    "type": "sop",
+    "steps": "1. Set up production line\n2. Verify material specifications\n3. Process materials according to formula\n4. Monitor critical parameters\n5. Collect in-process samples\n6. Perform final inspection\n7. Release to packaging",
+    "roles": "Quality Control Specialist, Laboratory Manager, Quality Assurance Reviewer",
+    "notes": "Ensure all equipment is calibrated according to SOP-QC-001. Document all deviations."
+  },
+  "generated_content": "\n# STANDARD OPERATING PROCEDURE\n## Manufacturing Maintenance\n\n**Document ID:** SOP-218-45  \n**Version:** 1.0  \n**Effective Date:** 2025-02-26  \n**Review Date:** 2026-02-13  \n\n### 1. PURPOSE\nThis Standard Operating Procedure (SOP) defines the process for manufacturing maintenance in a consistent and compliant manner.\n\n### 2. SCOPE\nThis procedure applies to all personnel involved in manufacturing maintenance.\n\n### 3. RESPONSIBILITIES\n**Quality Control Specialist**\n- Review and approve documentation\n- Ensure compliance with regulations\n- Perform quality checks as specified\n\n**Laboratory Manager**\n- Oversee execution of the procedure\n- Review completed documentation\n- Address deviations and issues\n\n**Quality Assurance Reviewer**\n- Review and approve documentation\n- Ensure compliance with regulations\n- Perform quality checks as specified\n\n\n\n### 4. MATERIALS AND EQUIPMENT\n- Thermometer\n- pH meter\n- Dissolution apparatus\n- Timer\n- Laminar flow hood\n\n### 5. PROCEDURE\n1. Set up production line\n\n2. Verify material specifications\n\n3. Process materials according to formula\n\n4. Monitor critical parameters\n\n5. Collect in-process samples\n\n6. Perform final inspection\n\n7. Release to packaging\n\n### 6. DOCUMENTATION\nThe following records must be maintained:\n- Deviation reports\n- Completed procedure form\n- Calibration records\n\n### 7. REFERENCES\n- Equipment Manual: Model XYZ-123\n- ICH Q7 Good Manufacturing Practice Guide for Active Pharmaceutical Ingredients\n- EU GMP Guidelines Annex 1: Manufacture of Sterile Medicinal Products\n\n### 8. REVISION HISTORY\n| Version | Date | Description of Changes | Author | Approved By |\n|---------|------|------------------------|--------|-------------|\n| 1.0 | 2025-02-26 | Initial release | | |\n\n### 9. APPROVALS\n| Role | Name | Signature | Date |\n|------|------|-----------|------|\n| Author | | | |\n| Reviewer | | | |\n| Approver | | | |\n    ",
+  "doc_type": "sop",
+  "metadata": {
+    "model_version": "v1",
+    "template_type": "standard",
+    "timestamp": "2025-07-19T12:00:00"
+  },
+  "feedback": {
+    "score": 4.249717765809016,
+    "text": "Generated from industry standard templates"
+  }
+}

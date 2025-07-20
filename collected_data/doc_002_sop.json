@@ -1,0 +1,19 @@
+{
+  "input": {
+    "type": "sop",
+    "steps": "1. Clean equipment\n2. Prepare sanitizing solution\n3. Apply solution to surfaces\n4. Allow contact time\n5. Rinse thoroughly\n6. Verify cleanliness\n7. Document procedure",
+    "roles": "Calibration Technician, Laboratory Manager, Quality Assurance Specialist",
+    "notes": "All documentation must be completed in blue or black ink. No correction fluid allowed."
+  },
+  "generated_content": "\n# STANDARD OPERATING PROCEDURE\n## Documentation Maintenance\n\n**Document ID:** SOP-989-32  \n**Version:** 1.0  \n**Effective Date:** 2025-02-11  \n**Review Date:** 2026-05-03  \n\n### 1. PURPOSE\nThis Standard Operating Procedure (SOP) defines the process for documentation maintenance in a consistent and compliant manner.\n\n### 2. SCOPE\nThis procedure applies to all personnel involved in documentation maintenance.\n\n### 3. RESPONSIBILITIES\n**Calibration Technician**\n- Execute procedure as outlined\n- Document all activities accurately\n- Report deviations to supervisor\n\n**Laboratory Manager**\n- Oversee execution of the procedure\n- Review completed documentation\n- Address deviations and issues\n\n**Quality Assurance Specialist**\n- Review and approve documentation\n- Ensure compliance with regulations\n- Perform quality checks as specified\n\n\n\n### 4. MATERIALS AND EQUIPMENT\n- Calibrated pipettes\n- Spectrophotometer\n- Microscope\n- Dissolution apparatus\n- Mixing vessel\n\n### 5. PROCEDURE\n1. Clean equipment\n\n2. Prepare sanitizing solution\n\n3. Apply solution to surfaces\n\n4. Allow contact time\n\n5. Rinse thoroughly\n\n6. Verify cleanliness\n\n7. Document procedure\n\n### 6. DOCUMENTATION\nThe following records must be maintained:\n- Completed procedure form\n- Test results\n- Change control documentation\n\n### 7. REFERENCES\n- ICH Q7 Good Manufacturing Practice Guide for Active Pharmaceutical Ingredients\n- USP <1116> Microbiological Control and Monitoring\n- Company Quality Manual, Section 4.2\n\n### 8. REVISION HISTORY\n| Version | Date | Description of Changes | Author | Approved By |\n|---------|------|------------------------|--------|-------------|\n| 1.0 | 2025-02-11 | Initial release | | |\n\n### 9. APPROVALS\n| Role | Name | Signature | Date |\n|------|------|-----------|------|\n| Author | | | |\n| Reviewer | | | |\n| Approver | | | |\n    ",
+  "doc_type": "sop",
+  "metadata": {
+    "model_version": "v1",
+    "template_type": "standard",
+    "timestamp": "2025-07-19T12:00:00"
+  },
+  "feedback": {
+    "score": 4.947804182983172,
+    "text": "Generated from industry standard templates"
+  }
+}

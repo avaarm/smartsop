@@ -15,9 +15,47 @@
   color: white;
   padding: 15px 20px;
   
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  
   h1 {
     margin: 0;
     font-size: 1.5rem;
+  }
+  
+  .main-nav {
+    ul {
+      display: flex;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      gap: 20px;
+      
+      li {
+        a {
+          color: rgba(255, 255, 255, 0.8);
+          text-decoration: none;
+          padding: 5px 10px;
+          border-radius: 4px;
+          transition: all 0.2s ease;
+          
+          &:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+          }
+          
+          &.active {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.2);
+            font-weight: 500;
+          }
+        }
+      }
+    }
   }
   
   .document-type-selector {

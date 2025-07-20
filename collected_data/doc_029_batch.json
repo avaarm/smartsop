@@ -1,0 +1,19 @@
+{
+  "input": {
+    "type": "batch",
+    "steps": "1. Verify reactor status\n2. Add initial reagents\n3. Heat to reaction temperature\n4. Add catalysts\n5. Monitor reaction parameters\n6. Cool mixture\n7. Filter product\n8. Package final product",
+    "roles": "Clean Room Operator, Fill/Finish Technician, QC Microbiologist, QA Specialist",
+    "notes": "All deviations must be documented and approved before proceeding to next step."
+  },
+  "generated_content": "\n# BATCH PRODUCTION RECORD\n## Paracetamol Ointment\n\n**Batch Number:** B55977  \n**Product Code:** P622  \n**Batch Size:** 216 kg  \n**Manufacturing Date:** 2025-01-01  \n\n### 1. PRODUCT INFORMATION\n- **Product Name:** Paracetamol Ointment\n- **Strength/Concentration:** 338 mg\n- **Dosage Form:** Cream\n\n### 2. RAW MATERIALS\n| Material | Item Code | Quantity Required | Quantity Dispensed | Dispensed By | Verified By |\n|----------|-----------|-------------------|-------------------|--------------|-------------|\n| Active Ingredient | RM-1531 | 93 kg | | | |\n| Excipient 1 | RM-8256 | 25 kg | | | |\n| Excipient 2 | RM-8712 | 13 kg | | | |\n| Coating Material | RM-6485 | 1 kg | | | |\n\n\n### 3. EQUIPMENT\n| Equipment | ID Number | Cleaned By | Verified By |\n|-----------|-----------|------------|-------------|\n| Mixer | EQ-244 | | |\n| Reactor | EQ-406 | | |\n| Filling Machine | EQ-262 | | |\n| Packaging Line | EQ-974 | | |\n\n\n### 4. MANUFACTURING PROCEDURE\n1. Verify reactor status\n\n2. Add initial reagents\n\n3. Heat to reaction temperature\n\n4. Add catalysts\n\n5. Monitor reaction parameters\n\n6. Cool mixture\n\n7. Filter product\n\n8. Package final product\n\n### 5. IN-PROCESS CONTROLS\n| Test | Specification | Result | Tested By | Date/Time |\n|------|--------------|--------|-----------|-----------|\n| pH | 6.8 - 7.2 | | | |\n| Temperature | 60\u00b0C - 65\u00b0C | | | |\n| Dissolution | NLT 80% in 30 minutes | | | |\n| Weight Variation | \u00b1 5% of target weight | | | |\n\n\n### 6. BATCH RECONCILIATION\n- **Theoretical Yield:** 85%\n- **Actual Yield:** ____________\n- **Yield Percentage:** ____________\n- **Reconciliation By:** ____________\n- **Date:** ____________\n\n### 7. BATCH RELEASE\n| Role | Name | Signature | Date |\n|------|------|-----------|------|\n| Manufacturing | | | |\n| Quality Control | | | |\n| Quality Assurance | | | |\n    ",
+  "doc_type": "batch",
+  "metadata": {
+    "model_version": "v1",
+    "template_type": "standard",
+    "timestamp": "2025-07-19T12:00:00"
+  },
+  "feedback": {
+    "score": 4.689225528441911,
+    "text": "Generated from industry standard templates"
+  }
+}
