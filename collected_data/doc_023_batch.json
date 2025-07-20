@@ -1,0 +1,19 @@
+{
+  "input": {
+    "type": "batch",
+    "steps": "1. Prepare clean room\n2. Sanitize equipment\n3. Prepare solution\n4. Filter solution\n5. Fill vials\n6. Apply stoppers\n7. Crimp seals\n8. Inspect vials\n9. Label product",
+    "roles": "Manufacturing Technician, QC Analyst, Production Manager, QA Specialist",
+    "notes": "Hold times: Maximum 4 hours between steps 3 and 4, 24 hours between steps 6 and 7."
+  },
+  "generated_content": "\n# BATCH PRODUCTION RECORD\n## Omeprazole Capsule\n\n**Batch Number:** B17742  \n**Product Code:** P312  \n**Batch Size:** 376 kg  \n**Manufacturing Date:** 2025-08-05  \n\n### 1. PRODUCT INFORMATION\n- **Product Name:** Omeprazole Capsule\n- **Strength/Concentration:** 224 mg\n- **Dosage Form:** Ointment\n\n### 2. RAW MATERIALS\n| Material | Item Code | Quantity Required | Quantity Dispensed | Dispensed By | Verified By |\n|----------|-----------|-------------------|-------------------|--------------|-------------|\n| Active Ingredient | RM-6916 | 64 kg | | | |\n| Excipient 1 | RM-2864 | 46 kg | | | |\n| Excipient 2 | RM-9396 | 30 kg | | | |\n| Coating Material | RM-1590 | 9 kg | | | |\n\n\n### 3. EQUIPMENT\n| Equipment | ID Number | Cleaned By | Verified By |\n|-----------|-----------|------------|-------------|\n| Mixer | EQ-338 | | |\n| Reactor | EQ-637 | | |\n| Filling Machine | EQ-990 | | |\n| Packaging Line | EQ-278 | | |\n\n\n### 4. MANUFACTURING PROCEDURE\n1. Prepare clean room\n\n2. Sanitize equipment\n\n3. Prepare solution\n\n4. Filter solution\n\n5. Fill vials\n\n6. Apply stoppers\n\n7. Crimp seals\n\n8. Inspect vials\n\n9. Label product\n\n### 5. IN-PROCESS CONTROLS\n| Test | Specification | Result | Tested By | Date/Time |\n|------|--------------|--------|-----------|-----------|\n| pH | 6.8 - 7.2 | | | |\n| Temperature | 60\u00b0C - 65\u00b0C | | | |\n| Dissolution | NLT 80% in 30 minutes | | | |\n| Weight Variation | \u00b1 5% of target weight | | | |\n\n\n### 6. BATCH RECONCILIATION\n- **Theoretical Yield:** 90%\n- **Actual Yield:** ____________\n- **Yield Percentage:** ____________\n- **Reconciliation By:** ____________\n- **Date:** ____________\n\n### 7. BATCH RELEASE\n| Role | Name | Signature | Date |\n|------|------|-----------|------|\n| Manufacturing | | | |\n| Quality Control | | | |\n| Quality Assurance | | | |\n    ",
+  "doc_type": "batch",
+  "metadata": {
+    "model_version": "v1",
+    "template_type": "standard",
+    "timestamp": "2025-07-19T12:00:00"
+  },
+  "feedback": {
+    "score": 4.376856014970254,
+    "text": "Generated from industry standard templates"
+  }
+}

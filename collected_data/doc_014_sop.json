@@ -1,0 +1,19 @@
+{
+  "input": {
+    "type": "sop",
+    "steps": "1. Review equipment manual\n2. Perform pre-operation checks\n3. Start equipment according to procedure\n4. Monitor operation parameters\n5. Perform required adjustments\n6. Shut down properly\n7. Document operation details",
+    "roles": "Laboratory Technician, Laboratory Manager, Quality Assurance Specialist",
+    "notes": "Electronic records must be backed up according to IT-SOP-005."
+  },
+  "generated_content": "\n# STANDARD OPERATING PROCEDURE\n## Cleaning Operation\n\n**SOP Number:** SOP-226-59  \n**Revision:** 1.0  \n**Implementation Date:** 2025-04-23  \n**Next Review:** 2026-01-11  \n\n### 1. INTRODUCTION\n#### 1.1 Purpose\nThis procedure establishes guidelines for cleaning operation in a consistent and compliant manner.\n\n#### 1.2 Scope\nThis SOP applies to personnel involved in cleaning operation.\n\n### 2. DEFINITIONS\n- **QMS:** Quality Management System\n- **QA:** Quality Assurance\n\n### 3. RESPONSIBILITIES\n**Laboratory Technician**\n- Execute procedure as outlined\n- Document all activities accurately\n- Report deviations to supervisor\n\n**Laboratory Manager**\n- Oversee execution of the procedure\n- Review completed documentation\n- Address deviations and issues\n\n**Quality Assurance Specialist**\n- Review and approve documentation\n- Ensure compliance with regulations\n- Perform quality checks as specified\n\n\n\n### 4. SAFETY CONSIDERATIONS\nWear appropriate PPE including gloves, lab coat, and safety glasses.\nUse proper lifting techniques for heavy equipment.\nEnsure proper ventilation when working with volatile materials.\n\n### 5. MATERIALS AND EQUIPMENT\nTimer\n- Analytical balance\n- Mixing vessel\n- Thermometer\n- Incubator\n\n### 6. PROCEDURE\n1. Review equipment manual\n\n2. Perform pre-operation checks\n\n3. Start equipment according to procedure\n\n4. Monitor operation parameters\n\n5. Perform required adjustments\n\n6. Shut down properly\n\n7. Document operation details\n\n### 7. QUALITY CONTROL\nVerify calculations using the four-eyes principle.\nAny result outside of specification must be reported immediately.\nVerify all measurements against calibrated standards.\n\n### 8. DOCUMENTATION\nRetain all records for a minimum of 5 years.\nComplete all records in blue or black ink.\nElectronic records must be backed up according to IT-SOP-005.\n\n### 9. REFERENCES\nEU GMP Guidelines Annex 1: Manufacture of Sterile Medicinal Products\n- Equipment Manual: Model XYZ-123\n- ISO 9001:2015 Quality Management Systems\n\n### 10. ATTACHMENTS\n- Form F-002: Calibration Record\n- Appendix B: Troubleshooting Guide\n\n### 11. REVISION HISTORY\n| Version | Effective Date | Description | Prepared By | Approved By |\n|---------|---------------|-------------|-------------|-------------|\n| 1.0 | 2025-04-23 | Initial version | | |\n    ",
+  "doc_type": "sop",
+  "metadata": {
+    "model_version": "v1",
+    "template_type": "standard",
+    "timestamp": "2025-07-19T12:00:00"
+  },
+  "feedback": {
+    "score": 4.027985786760455,
+    "text": "Generated from industry standard templates"
+  }
+}

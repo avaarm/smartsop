@@ -1,0 +1,19 @@
+{
+  "input": {
+    "type": "sop",
+    "steps": "1. Receive raw materials\n2. Inspect packaging integrity\n3. Check documentation\n4. Sample according to plan\n5. Test samples\n6. Record results\n7. Make disposition decision",
+    "roles": "Equipment Operator, Maintenance Technician, Production Supervisor",
+    "notes": "Follow safety protocols outlined in SAF-001. Wear appropriate PPE at all times."
+  },
+  "generated_content": "\n# STANDARD OPERATING PROCEDURE\n## Equipment Operation\n\n**SOP Number:** SOP-137-43  \n**Revision:** 1.0  \n**Implementation Date:** 2025-09-11  \n**Next Review:** 2026-03-19  \n\n### 1. INTRODUCTION\n#### 1.1 Purpose\nThis procedure establishes guidelines for equipment operation in a consistent and compliant manner.\n\n#### 1.2 Scope\nThis SOP applies to personnel involved in equipment operation.\n\n### 2. DEFINITIONS\n- **IQ/OQ/PQ:** Installation/Operational/Performance Qualification\n- **QMS:** Quality Management System\n\n### 3. RESPONSIBILITIES\n**Equipment Operator**\n- Execute procedure as outlined\n- Document all activities accurately\n- Report deviations to supervisor\n\n**Maintenance Technician**\n- Execute procedure as outlined\n- Document all activities accurately\n- Report deviations to supervisor\n\n**Production Supervisor**\n- Oversee execution of the procedure\n- Review completed documentation\n- Address deviations and issues\n\n\n\n### 4. SAFETY CONSIDERATIONS\nEnsure proper ventilation when working with volatile materials.\nUse proper lifting techniques for heavy equipment.\nWear appropriate PPE including gloves, lab coat, and safety glasses.\n\n### 5. MATERIALS AND EQUIPMENT\nMicroscope\n- Timer\n- Incubator\n- pH meter\n- Calibrated pipettes\n\n### 6. PROCEDURE\n1. Receive raw materials\n\n2. Inspect packaging integrity\n\n3. Check documentation\n\n4. Sample according to plan\n\n5. Test samples\n\n6. Record results\n\n7. Make disposition decision\n\n### 7. QUALITY CONTROL\nVerify calculations using the four-eyes principle.\nDocument all results in the appropriate log book.\nPerform duplicate testing for critical parameters.\n\n### 8. DOCUMENTATION\nSubmit completed forms to Document Control within 3 business days.\nAny corrections must follow the single-line strikethrough method, initialed and dated.\nComplete all records in blue or black ink.\n\n### 9. REFERENCES\nEU GMP Guidelines Annex 1: Manufacture of Sterile Medicinal Products\n- USP <1116> Microbiological Control and Monitoring\n- Equipment Manual: Model XYZ-123\n\n### 10. ATTACHMENTS\n- Form F-003: Deviation Report\n- Form F-002: Calibration Record\n\n### 11. REVISION HISTORY\n| Version | Effective Date | Description | Prepared By | Approved By |\n|---------|---------------|-------------|-------------|-------------|\n| 1.0 | 2025-09-11 | Initial version | | |\n    ",
+  "doc_type": "sop",
+  "metadata": {
+    "model_version": "v1",
+    "template_type": "standard",
+    "timestamp": "2025-07-19T12:00:00"
+  },
+  "feedback": {
+    "score": 4.022341484800427,
+    "text": "Generated from industry standard templates"
+  }
+}

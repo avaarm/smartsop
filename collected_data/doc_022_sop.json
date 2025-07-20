@@ -1,0 +1,19 @@
+{
+  "input": {
+    "type": "sop",
+    "steps": "1. Prepare laboratory area\n2. Calibrate analytical instruments\n3. Prepare reagents\n4. Process samples\n5. Run analysis\n6. Calculate results\n7. Document findings\n8. Review data",
+    "roles": "Equipment Operator, Maintenance Technician, Production Supervisor",
+    "notes": "All documentation must be completed in blue or black ink. No correction fluid allowed."
+  },
+  "generated_content": "\n# STANDARD OPERATING PROCEDURE\n## Manufacturing Maintenance\n\n**SOP Number:** SOP-217-70  \n**Revision:** 1.0  \n**Implementation Date:** 2025-01-19  \n**Next Review:** 2026-10-10  \n\n### 1. INTRODUCTION\n#### 1.1 Purpose\nThis procedure establishes guidelines for manufacturing maintenance in a consistent and compliant manner.\n\n#### 1.2 Scope\nThis SOP applies to personnel involved in manufacturing maintenance.\n\n### 2. DEFINITIONS\n- **OOS:** Out of Specification\n- **SOP:** Standard Operating Procedure\n\n### 3. RESPONSIBILITIES\n**Equipment Operator**\n- Execute procedure as outlined\n- Document all activities accurately\n- Report deviations to supervisor\n\n**Maintenance Technician**\n- Execute procedure as outlined\n- Document all activities accurately\n- Report deviations to supervisor\n\n**Production Supervisor**\n- Oversee execution of the procedure\n- Review completed documentation\n- Address deviations and issues\n\n\n\n### 4. SAFETY CONSIDERATIONS\nReview Safety Data Sheets (SDS) for all chemicals before use.\nFollow waste disposal procedures according to EHS-SOP-001.\nUse proper lifting techniques for heavy equipment.\n\n### 5. MATERIALS AND EQUIPMENT\nCalibrated pipettes\n- Autoclave\n- Dissolution apparatus\n- Analytical balance\n- Moisture analyzer\n\n### 6. PROCEDURE\n1. Prepare laboratory area\n\n2. Calibrate analytical instruments\n\n3. Prepare reagents\n\n4. Process samples\n\n5. Run analysis\n\n6. Calculate results\n\n7. Document findings\n\n8. Review data\n\n### 7. QUALITY CONTROL\nAny result outside of specification must be reported immediately.\nVerify calculations using the four-eyes principle.\nVerify all measurements against calibrated standards.\n\n### 8. DOCUMENTATION\nRetain all records for a minimum of 5 years.\nSubmit completed forms to Document Control within 3 business days.\nElectronic records must be backed up according to IT-SOP-005.\n\n### 9. REFERENCES\nUSP <1116> Microbiological Control and Monitoring\n- 21 CFR Part 211 - Current Good Manufacturing Practice for Finished Pharmaceuticals\n- ICH Q7 Good Manufacturing Practice Guide for Active Pharmaceutical Ingredients\n\n### 10. ATTACHMENTS\n- Form F-001: Equipment Cleaning Log\n- Form F-003: Deviation Report\n\n### 11. REVISION HISTORY\n| Version | Effective Date | Description | Prepared By | Approved By |\n|---------|---------------|-------------|-------------|-------------|\n| 1.0 | 2025-01-19 | Initial version | | |\n    ",
+  "doc_type": "sop",
+  "metadata": {
+    "model_version": "v1",
+    "template_type": "standard",
+    "timestamp": "2025-07-19T12:00:00"
+  },
+  "feedback": {
+    "score": 4.956615310008589,
+    "text": "Generated from industry standard templates"
+  }
+}

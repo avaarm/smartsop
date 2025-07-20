@@ -1,0 +1,19 @@
+{
+  "input": {
+    "type": "sop",
+    "steps": "1. Review equipment manual\n2. Perform pre-operation checks\n3. Start equipment according to procedure\n4. Monitor operation parameters\n5. Perform required adjustments\n6. Shut down properly\n7. Document operation details",
+    "roles": "Warehouse Personnel, Quality Control Analyst, Materials Manager",
+    "notes": "All documentation must be completed in blue or black ink. No correction fluid allowed."
+  },
+  "generated_content": "\n# STANDARD OPERATING PROCEDURE\n## Documentation Validation\n\n**Document ID:** SOP-142-15  \n**Version:** 1.0  \n**Effective Date:** 2025-06-01  \n**Review Date:** 2026-09-03  \n\n### 1. PURPOSE\nThis Standard Operating Procedure (SOP) defines the process for documentation validation in a consistent and compliant manner.\n\n### 2. SCOPE\nThis procedure applies to all personnel involved in documentation validation.\n\n### 3. RESPONSIBILITIES\n**Warehouse Personnel**\n\n**Quality Control Analyst**\n- Review and approve documentation\n- Ensure compliance with regulations\n- Perform quality checks as specified\n\n**Materials Manager**\n- Oversee execution of the procedure\n- Review completed documentation\n- Address deviations and issues\n\n\n\n### 4. MATERIALS AND EQUIPMENT\n- Refrigerator\n- Timer\n- Mixing vessel\n- pH meter\n- HPLC system\n\n### 5. PROCEDURE\n1. Review equipment manual\n\n2. Perform pre-operation checks\n\n3. Start equipment according to procedure\n\n4. Monitor operation parameters\n\n5. Perform required adjustments\n\n6. Shut down properly\n\n7. Document operation details\n\n### 6. DOCUMENTATION\nThe following records must be maintained:\n- Deviation reports\n- Calibration records\n- Batch records\n\n### 7. REFERENCES\n- USP <1116> Microbiological Control and Monitoring\n- Equipment Manual: Model XYZ-123\n- Company Quality Manual, Section 4.2\n\n### 8. REVISION HISTORY\n| Version | Date | Description of Changes | Author | Approved By |\n|---------|------|------------------------|--------|-------------|\n| 1.0 | 2025-06-01 | Initial release | | |\n\n### 9. APPROVALS\n| Role | Name | Signature | Date |\n|------|------|-----------|------|\n| Author | | | |\n| Reviewer | | | |\n| Approver | | | |\n    ",
+  "doc_type": "sop",
+  "metadata": {
+    "model_version": "v1",
+    "template_type": "standard",
+    "timestamp": "2025-07-19T12:00:00"
+  },
+  "feedback": {
+    "score": 4.84191993231807,
+    "text": "Generated from industry standard templates"
+  }
+}

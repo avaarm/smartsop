@@ -5,8 +5,11 @@ from datasets import Dataset
 import json
 import os
 import re
-from typing import List, Dict, Tuple, Optional
+import logging
+from datetime import datetime
+from typing import List, Dict, Tuple, Optional, Any
 from .word_generator import WordDocumentGenerator
+from .enhanced_training import EnhancedTrainer
 
 class SOPModel:
     def __init__(self, model_name="microsoft/phi-2", save_dir="model_checkpoints"):
@@ -46,11 +49,19 @@ class SOPModel:
         self.training_data.append(example)
         self.save_training_data()
 
-    def prepare_dataset(self):
-        """Convert training data to HuggingFace dataset format"""
+    def prepare_dataset(self, training_data=None):
+        """Convert training data to HuggingFace dataset format
+        
+        Args:
+            training_data: Optional list of training examples. If None, uses self.training_data
+            
+        Returns:
+            Dataset: HuggingFace dataset ready for training
+        """
+        data_to_use = training_data if training_data is not None else self.training_data
         formatted_data = []
         
-        for example in self.training_data:
+        for example in data_to_use:
             # Format input as a prompt
             input_prompt = f"""Type: {example['type']}
 Steps: {example['input']['steps']}
@@ -66,35 +77,47 @@ Quality Score: {example['feedback_score']}"""
         
         return Dataset.from_list(formatted_data)
 
-    def fine_tune(self):
-        """Fine-tune the model on collected training data"""
-        if len(self.training_data) < 10:
+    def fine_tune(self, training_data=None):
+        """Fine-tune the model on collected training data using the enhanced trainer
+        
+        Args:
+            training_data: Optional list of training examples. If None, uses self.training_data
+        
+        Returns:
+            dict: Training metrics and results
+        """
+        # Use provided training data or fall back to self.training_data
+        data_to_use = training_data if training_data is not None else self.training_data
+        
+        if len(data_to_use) < 10:
             raise ValueError("Not enough training data. Need at least 10 examples.")
 
-        dataset = self.prepare_dataset()
-        
-        training_args = TrainingArguments(
-            output_dir=self.save_dir,
-            num_train_epochs=3,
-            per_device_train_batch_size=4,
-            save_steps=100,
-            save_total_limit=2,
-            learning_rate=2e-5,
+        # Create enhanced trainer with optimized settings
+        trainer = EnhancedTrainer(
+            model_name="ml_model/saved_models/latest",  # Use the latest saved model
+            save_dir=self.save_dir,
+            max_length=768,  # Increased context length for better document generation
+            use_gradient_checkpointing=True,  # Save memory
+            learning_rate=2e-5,  # Optimal learning rate for fine-tuning
             weight_decay=0.01,
-            logging_dir='./logs',
+            warmup_ratio=0.1,  # 10% of training steps for warmup
+            num_epochs=5,
+            early_stopping_patience=3,  # Stop if no improvement for 3 evaluations
+            batch_size=2,
+            gradient_accumulation_steps=8,  # Increased for better stability
+            eval_steps=50,
+            save_steps=100,
+            fp16=torch.cuda.is_available()  # Use mixed precision if GPU available
         )
-
-        trainer = Trainer(
-            model=self.model,
-            args=training_args,
-            train_dataset=dataset,
-        )
-
-        trainer.train()
         
-        # Save the fine-tuned model
-        self.model.save_pretrained(f"{self.save_dir}/latest")
-        self.tokenizer.save_pretrained(f"{self.save_dir}/latest")
+        # Start training with enhanced trainer
+        metrics = trainer.fine_tune(data_to_use)
+        
+        # Update our model and tokenizer with the fine-tuned versions
+        self.model = trainer.model
+        self.tokenizer = trainer.tokenizer
+        
+        return metrics
 
     def _get_nk_cell_thawing_template(self) -> str:
         """Return a pre-defined template for NK cell thawing SOP
