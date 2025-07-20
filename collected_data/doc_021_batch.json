@@ -1,0 +1,19 @@
+{
+  "input": {
+    "type": "batch",
+    "steps": "1. Verify material identity\n2. Dispense raw materials\n3. Granulate powder\n4. Dry granulation\n5. Blend with excipients\n6. Compress tablets\n7. Coat tablets\n8. Package product",
+    "roles": "Manufacturing Technician, QC Analyst, Production Manager, QA Specialist",
+    "notes": "All deviations must be documented and approved before proceeding to next step."
+  },
+  "generated_content": "\n# BATCH PRODUCTION RECORD\n## Atorvastatin Capsule\n\n**Batch Number:** B82342  \n**Product Code:** P170  \n**Batch Size:** 447 kg  \n**Manufacturing Date:** 2025-05-22  \n\n### 1. PRODUCT INFORMATION\n- **Product Name:** Atorvastatin Capsule\n- **Strength/Concentration:** 261 mg\n- **Dosage Form:** Tablet\n\n### 2. RAW MATERIALS\n| Material | Item Code | Quantity Required | Quantity Dispensed | Dispensed By | Verified By |\n|----------|-----------|-------------------|-------------------|--------------|-------------|\n| Active Ingredient | RM-3694 | 31 kg | | | |\n| Excipient 1 | RM-1383 | 25 kg | | | |\n| Excipient 2 | RM-2307 | 17 kg | | | |\n| Coating Material | RM-4546 | 9 kg | | | |\n\n\n### 3. EQUIPMENT\n| Equipment | ID Number | Cleaned By | Verified By |\n|-----------|-----------|------------|-------------|\n| Mixer | EQ-442 | | |\n| Reactor | EQ-274 | | |\n| Filling Machine | EQ-275 | | |\n| Packaging Line | EQ-368 | | |\n\n\n### 4. MANUFACTURING PROCEDURE\n1. Verify material identity\n\n2. Dispense raw materials\n\n3. Granulate powder\n\n4. Dry granulation\n\n5. Blend with excipients\n\n6. Compress tablets\n\n7. Coat tablets\n\n8. Package product\n\n### 5. IN-PROCESS CONTROLS\n| Test | Specification | Result | Tested By | Date/Time |\n|------|--------------|--------|-----------|-----------|\n| pH | 6.8 - 7.2 | | | |\n| Temperature | 60\u00b0C - 65\u00b0C | | | |\n| Dissolution | NLT 80% in 30 minutes | | | |\n| Weight Variation | \u00b1 5% of target weight | | | |\n\n\n### 6. BATCH RECONCILIATION\n- **Theoretical Yield:** 89%\n- **Actual Yield:** ____________\n- **Yield Percentage:** ____________\n- **Reconciliation By:** ____________\n- **Date:** ____________\n\n### 7. BATCH RELEASE\n| Role | Name | Signature | Date |\n|------|------|-----------|------|\n| Manufacturing | | | |\n| Quality Control | | | |\n| Quality Assurance | | | |\n    ",
+  "doc_type": "batch",
+  "metadata": {
+    "model_version": "v1",
+    "template_type": "standard",
+    "timestamp": "2025-07-19T12:00:00"
+  },
+  "feedback": {
+    "score": 4.646824340572959,
+    "text": "Generated from industry standard templates"
+  }
+}

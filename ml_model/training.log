@@ -1,0 +1,105 @@
+2025-07-19 13:03:31,631 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+2025-07-19 13:03:31,632 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-07-19 13:03:31,637 - werkzeug - INFO -  * Restarting with stat
+2025-07-19 13:04:02,235 - werkzeug - WARNING -  * Debugger is active!
+2025-07-19 13:04:02,289 - werkzeug - INFO -  * Debugger PIN: 464-700-699
+2025-07-19 13:09:27,336 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:09:27] "GET /api/training/status HTTP/1.1" 200 -
+2025-07-19 13:09:27,337 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:09:27] "GET /api/stats HTTP/1.1" 200 -
+2025-07-19 13:09:27,397 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:09:27] "GET /api/training/status HTTP/1.1" 200 -
+2025-07-19 13:09:27,397 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:09:27] "GET /api/stats HTTP/1.1" 200 -
+2025-07-19 13:09:27,685 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:09:27] "GET /api/training/status HTTP/1.1" 200 -
+2025-07-19 13:09:27,692 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:09:27] "GET /api/stats HTTP/1.1" 200 -
+2025-07-19 13:09:32,888 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:09:32] "GET /api/training/status HTTP/1.1" 200 -
+2025-07-19 13:09:32,889 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:09:32] "GET /api/stats HTTP/1.1" 200 -
+2025-07-19 13:09:33,042 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:09:33] "GET /api/training/status HTTP/1.1" 200 -
+2025-07-19 13:09:33,043 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:09:33] "GET /api/stats HTTP/1.1" 200 -
+2025-07-19 13:09:37,658 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:09:37] "GET /api/training/status HTTP/1.1" 200 -
+2025-07-19 13:09:37,659 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:09:37] "GET /api/stats HTTP/1.1" 200 -
+2025-07-19 13:09:37,722 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:09:37] "GET /api/training/status HTTP/1.1" 200 -
+2025-07-19 13:09:37,723 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:09:37] "GET /api/stats HTTP/1.1" 200 -
+2025-07-19 13:09:41,666 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:09:41] "OPTIONS /api/train HTTP/1.1" 200 -
+2025-07-19 13:09:41,669 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:09:41] "[31m[1mPOST /api/train HTTP/1.1[0m" 400 -
+2025-07-19 13:09:41,673 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:09:41] "[31m[1mPOST /api/train HTTP/1.1[0m" 400 -
+2025-07-19 13:13:20,023 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:13:20] "GET /api/training/status HTTP/1.1" 200 -
+2025-07-19 13:13:20,032 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:13:20] "GET /api/stats HTTP/1.1" 200 -
+2025-07-19 13:15:41,872 - train_model - INFO - Starting SmartSOP model training
+2025-07-19 13:15:41,872 - train_model - INFO - Loading training data...
+2025-07-19 13:15:41,873 - train_model - INFO - Loaded 30 training examples.
+2025-07-19 13:15:41,873 - train_model - INFO - Starting fine-tuning with 30 examples
+2025-07-19 13:15:41,873 - train_model - INFO - Loading model: microsoft/phi-2
+2025-07-19 13:16:01,012 - train_model - INFO - Set padding token to <|endoftext|>
+2025-07-19 13:16:01,019 - train_model - INFO - Gradient checkpointing enabled
+2025-07-19 13:16:01,019 - train_model - INFO - Preparing dataset with 30 examples
+2025-07-19 13:16:01,098 - train_model - INFO - Dataset prepared: 24 training examples, 6 validation examples
+2025-07-19 13:16:01,231 - train_model - ERROR - Error during training: TrainingArguments.__init__() got an unexpected keyword argument 'evaluation_strategy'
+2025-07-19 13:16:21,115 - werkzeug - INFO -  * Detected change in '/Users/armenuhi/Programming/smartsop/train_model.py', reloading
+2025-07-19 13:16:22,684 - werkzeug - INFO -  * Restarting with stat
+2025-07-19 13:16:44,629 - werkzeug - WARNING -  * Debugger is active!
+2025-07-19 13:16:44,662 - werkzeug - INFO -  * Debugger PIN: 464-700-699
+2025-07-19 13:19:14,734 - train_model - INFO - Starting SmartSOP model training
+2025-07-19 13:19:14,734 - train_model - INFO - Loading training data...
+2025-07-19 13:19:14,735 - train_model - INFO - Loaded 30 training examples.
+2025-07-19 13:19:14,735 - train_model - INFO - Starting fine-tuning with 30 examples
+2025-07-19 13:19:14,735 - train_model - INFO - Loading model: microsoft/phi-2
+2025-07-19 13:19:32,252 - train_model - INFO - Set padding token to <|endoftext|>
+2025-07-19 13:19:32,259 - train_model - INFO - Gradient checkpointing enabled
+2025-07-19 13:19:32,259 - train_model - INFO - Preparing dataset with 30 examples
+2025-07-19 13:19:32,374 - train_model - INFO - Dataset prepared: 24 training examples, 6 validation examples
+2025-07-19 13:19:32,534 - train_model - ERROR - Error during training: --load_best_model_at_end requires the save and eval strategy to match, but found
+- Evaluation strategy: no
+- Save strategy: steps
+2025-07-19 13:19:53,822 - werkzeug - INFO -  * Detected change in '/Users/armenuhi/Programming/smartsop/train_model.py', reloading
+2025-07-19 13:19:55,040 - werkzeug - INFO -  * Restarting with stat
+2025-07-19 13:20:14,816 - werkzeug - WARNING -  * Debugger is active!
+2025-07-19 13:20:14,837 - werkzeug - INFO -  * Debugger PIN: 464-700-699
+2025-07-19 13:20:26,719 - train_model - INFO - Starting SmartSOP model training
+2025-07-19 13:20:26,719 - train_model - INFO - Loading training data...
+2025-07-19 13:20:26,719 - train_model - INFO - Loaded 30 training examples.
+2025-07-19 13:20:26,719 - train_model - INFO - Starting fine-tuning with 30 examples
+2025-07-19 13:20:26,719 - train_model - INFO - Loading model: microsoft/phi-2
+2025-07-19 13:20:48,647 - train_model - INFO - Set padding token to <|endoftext|>
+2025-07-19 13:20:48,658 - train_model - INFO - Gradient checkpointing enabled
+2025-07-19 13:20:48,658 - train_model - INFO - Preparing dataset with 30 examples
+2025-07-19 13:20:48,767 - train_model - INFO - Dataset prepared: 24 training examples, 6 validation examples
+2025-07-19 13:20:48,881 - train_model - ERROR - Error during training: TrainingArguments.__init__() got an unexpected keyword argument 'evaluation_strategy'
+2025-07-19 13:36:13,725 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:36:13] "GET /api/stats HTTP/1.1" 200 -
+2025-07-19 13:36:13,728 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:36:13] "GET /api/training/status HTTP/1.1" 200 -
+2025-07-19 13:36:14,227 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:36:14] "GET /api/training/status HTTP/1.1" 200 -
+2025-07-19 13:36:14,230 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:36:14] "GET /api/stats HTTP/1.1" 200 -
+2025-07-19 13:36:46,161 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:36:46] "GET /api/stats HTTP/1.1" 200 -
+2025-07-19 13:36:46,142 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:36:46] "GET /api/training/status HTTP/1.1" 200 -
+2025-07-19 13:36:50,189 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:36:50] "GET /api/training/status HTTP/1.1" 200 -
+2025-07-19 13:36:50,227 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 13:36:50] "GET /api/stats HTTP/1.1" 200 -
+2025-07-19 15:38:34,051 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 15:38:34] "GET /api/stats HTTP/1.1" 200 -
+2025-07-19 15:38:34,049 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 15:38:34] "GET /api/training/status HTTP/1.1" 200 -
+2025-07-19 15:38:34,513 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 15:38:34] "GET /api/training/status HTTP/1.1" 200 -
+2025-07-19 15:38:34,514 - werkzeug - INFO - 127.0.0.1 - - [19/Jul/2025 15:38:34] "GET /api/stats HTTP/1.1" 200 -
+2025-07-19 19:44:11,484 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-07-19 19:44:11,485 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-07-19 19:44:11,489 - werkzeug - INFO -  * Restarting with stat
+2025-07-19 19:44:37,297 - werkzeug - WARNING -  * Debugger is active!
+2025-07-19 19:44:37,320 - werkzeug - INFO -  * Debugger PIN: 464-700-699
+2025-07-20 09:53:53,246 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5002
+2025-07-20 09:53:53,247 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-07-20 09:53:53,251 - werkzeug - INFO -  * Restarting with stat
+2025-07-20 09:54:22,043 - werkzeug - WARNING -  * Debugger is active!
+2025-07-20 09:54:22,084 - werkzeug - INFO -  * Debugger PIN: 464-700-699
+2025-07-20 09:54:24,183 - werkzeug - INFO - 127.0.0.1 - - [20/Jul/2025 09:54:24] "GET /api/stats HTTP/1.1" 200 -
+2025-07-20 09:54:24,183 - werkzeug - INFO - 127.0.0.1 - - [20/Jul/2025 09:54:24] "GET /api/training/status HTTP/1.1" 200 -
+2025-07-20 09:54:24,727 - werkzeug - INFO - 127.0.0.1 - - [20/Jul/2025 09:54:24] "GET /api/training/status HTTP/1.1" 200 -
+2025-07-20 09:54:24,728 - werkzeug - INFO - 127.0.0.1 - - [20/Jul/2025 09:54:24] "GET /api/stats HTTP/1.1" 200 -
+2025-07-20 09:54:24,743 - werkzeug - INFO - 127.0.0.1 - - [20/Jul/2025 09:54:24] "GET /api/training/status HTTP/1.1" 200 -
+2025-07-20 09:54:24,743 - werkzeug - INFO - 127.0.0.1 - - [20/Jul/2025 09:54:24] "GET /api/stats HTTP/1.1" 200 -
+2025-07-20 11:43:58,627 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-07-20 11:43:58,628 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-07-20 11:43:58,630 - werkzeug - INFO -  * Restarting with stat
+2025-07-20 11:44:24,103 - werkzeug - WARNING -  * Debugger is active!
+2025-07-20 11:44:24,139 - werkzeug - INFO -  * Debugger PIN: 111-066-746
+2025-07-20 12:13:37,766 - werkzeug - INFO -  * Detected change in '/Users/armenuhi/Programming/smartsop/app.py', reloading
+2025-07-20 12:13:39,346 - werkzeug - INFO -  * Restarting with stat
+2025-07-20 12:13:58,088 - werkzeug - WARNING -  * Debugger is active!
+2025-07-20 12:13:58,104 - werkzeug - INFO -  * Debugger PIN: 111-066-746

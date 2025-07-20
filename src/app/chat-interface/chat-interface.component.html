@@ -1,6 +1,15 @@
 <div class="chat-container">
   <div class="chat-header">
-    <h1>SmartSOP Assistant</h1>
+    <div class="header-top">
+      <h1>SmartSOP Assistant</h1>
+      <nav class="main-nav">
+        <ul>
+          <li><a routerLink="/" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{exact: true}">Chat</a></li>
+          <li><a routerLink="/form" routerLinkActive="active">Form</a></li>
+          <li><a routerLink="/training" routerLinkActive="active">Model Training</a></li>
+        </ul>
+      </nav>
+    </div>
     <div class="document-type-selector">
       <span>Document Type:</span>
       <div class="type-buttons">
