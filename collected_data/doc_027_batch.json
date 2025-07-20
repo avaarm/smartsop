@@ -1,0 +1,19 @@
+{
+  "input": {
+    "type": "batch",
+    "steps": "1. Verify material identity\n2. Dispense raw materials\n3. Granulate powder\n4. Dry granulation\n5. Blend with excipients\n6. Compress tablets\n7. Coat tablets\n8. Package product",
+    "roles": "Weighing Operator, Production Technician, In-Process Control, QA Reviewer",
+    "notes": "Line clearance must be performed and documented before batch processing begins."
+  },
+  "generated_content": "\n# BATCH MANUFACTURING RECORD\n## Ibuprofen Solution\n\n**BMR Number:** BMR-B93322  \n**Product ID:** P308  \n**Lot Size:** 186 kg  \n**Start Date:** 2025-11-04  \n\n### 1. PRODUCT DETAILS\n- **Product Description:** 190 mg Ibuprofen Solution\n- **Physical Form:** Clear solution\n- **Storage Requirements:** Refrigerate at 2-8\u00b0C\n\n### 2. MATERIAL INFORMATION\n| Item | Material Code | Standard Quantity | Actual Quantity | Lot Number | Expiry Date | Verified By |\n|------|--------------|-------------------|----------------|------------|-------------|-------------|\n| Active Ingredient | RM-3897 | 79 kg | | | | |\n| Excipient 1 | RM-2045 | 45 kg | | | | |\n| Excipient 2 | RM-8062 | 5 kg | | | | |\n| Coating Material | RM-4140 | 5 kg | | | | |\n\n\n### 3. EQUIPMENT LIST\n| Equipment | ID | Calibration Due Date | Setup By | Verified By |\n|-----------|----|--------------------|----------|-------------|\n| Mixer | EQ-475 | 2026-06-06 | | |\n| Reactor | EQ-230 | 2026-12-16 | | |\n| Filling Machine | EQ-308 | 2026-05-09 | | |\n| Packaging Line | EQ-524 | 2026-02-17 | | |\n\n\n### 4. PRE-PRODUCTION CHECKLIST\n- Area cleaned and sanitized: \u25a1 Yes \u25a1 No\n- Line clearance completed: \u25a1 Yes \u25a1 No\n- Materials verified: \u25a1 Yes \u25a1 No\n- Equipment verified: \u25a1 Yes \u25a1 No\n\n### 5. PRODUCTION PROCESS\n1. Verify material identity\n\n2. Dispense raw materials\n\n3. Granulate powder\n\n4. Dry granulation\n\n5. Blend with excipients\n\n6. Compress tablets\n\n7. Coat tablets\n\n8. Package product\n\n### 6. IN-PROCESS TESTING\n**Step 3:** Check pH and temperature before proceeding\n\n**Step 5:** Sample for appearance and weight check\n\n**Step 7:** Test for dissolution and content uniformity\n\n### 7. DEVIATIONS AND INVESTIGATIONS\nRecord any deviations from the standard procedure here:\n\n_______________________________________________\n\n_______________________________________________\n\n### 8. FINAL PRODUCT DETAILS\n- **Quantity Produced:** ____________\n- **Number of Containers:** ____________\n- **Lot Number Assigned:** ____________\n\n### 9. BATCH DISPOSITION\n\u25a1 Released  \u25a1 Rejected  \u25a1 On Hold\n\n**Reason:** ____________\n\n### 10. APPROVALS\n| Department | Name | Signature | Date |\n|------------|------|-----------|------|\n| Production | | | |\n| QC | | | |\n| QA | | | |\n    ",
+  "doc_type": "batch",
+  "metadata": {
+    "model_version": "v1",
+    "template_type": "standard",
+    "timestamp": "2025-07-19T12:00:00"
+  },
+  "feedback": {
+    "score": 4.87935771587045,
+    "text": "Generated from industry standard templates"
+  }
+}

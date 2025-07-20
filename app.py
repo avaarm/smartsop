@@ -15,15 +15,11 @@ load_dotenv()
 # Initialize Flask app
 app = Flask(__name__)
 # Configure CORS to allow requests from Angular frontend
-CORS(app, resources={
-    r"/*": {
-        "origins": ["http://localhost:4200", "http://localhost:4201", "http://127.0.0.1:4200", "http://127.0.0.1:4201"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
-        "supports_credentials": True,
-        "expose_headers": ["Content-Disposition"]
-    }
-})
+# Using a simpler configuration for development purposes
+CORS(app, origins=["http://localhost:4200", "http://localhost:4201", "http://127.0.0.1:4200", "http://127.0.0.1:4201"], 
+     supports_credentials=True, 
+     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+     expose_headers=["Content-Disposition"])
 
 # Create directory for generated documents
 GENERATED_DOCS_DIR = os.path.join(os.path.dirname(__file__), 'generated_docs')
@@ -170,21 +166,52 @@ def submit_feedback():
 @app.route('/api/train', methods=['POST'])
 def train_model():
     try:
+        # Get request parameters
+        data = request.json or {}
+        min_feedback_score = data.get('min_feedback_score', 3.5)  # Default to 3.5 out of 5
+        min_examples = data.get('min_examples', 10)  # Default to requiring at least 10 examples
+        
         # Log training attempt
-        data_protection.audit_log('train_model', 'user', 'manual trigger')
+        data_protection.audit_log('train_model', 'user', f'manual trigger with min_score={min_feedback_score}')
         
-        # Get training data with minimum feedback score of 3.5 (out of 5)
-        training_data = data_collector.get_training_data(min_feedback_score=3.5)
+        # Get training data with minimum feedback score
+        training_data = data_collector.get_training_data(min_feedback_score=min_feedback_score)
         
-        if len(training_data) < 10:
+        # Check if we have enough data
+        if len(training_data) < min_examples:
             return jsonify({
                 'success': False,
-                'error': 'Not enough high-quality training data yet'
+                'error': f'Not enough high-quality training data yet. Found {len(training_data)} examples, need at least {min_examples}.',
+                'available_examples': len(training_data)
             }), 400
         
-        # Fine-tune the model
-        model.fine_tune(training_data)
-        return jsonify({'success': True})
+        # Start training in a background thread to avoid blocking the API
+        def train_in_background():
+            try:
+                print(f"Starting model training with {len(training_data)} examples...")
+                # Fine-tune the model with the collected training data
+                metrics = model.fine_tune(training_data)
+                print(f"Training complete. Final loss: {metrics['training_loss']}")
+                # Log successful training
+                data_protection.audit_log('train_model_complete', 'system', 
+                                         f'Training completed with {len(training_data)} examples')
+            except Exception as e:
+                print(f"Error during training: {str(e)}")
+                # Log training error
+                data_protection.audit_log('train_model_error', 'system', f'Error: {str(e)}')
+        
+        # Start training in background thread
+        import threading
+        training_thread = threading.Thread(target=train_in_background)
+        training_thread.daemon = True
+        training_thread.start()
+        
+        # Return success immediately
+        return jsonify({
+            'success': True,
+            'message': f'Training started with {len(training_data)} examples. This process will continue in the background.',
+            'num_examples': len(training_data)
+        })
         
     except Exception as e:
         return jsonify({
@@ -195,7 +222,7 @@ def train_model():
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
     try:
-        stats = data_collector.get_stats()
+        stats = data_collector.get_statistics()
         return jsonify({
             'success': True,
             'stats': stats
@@ -205,23 +232,52 @@ def get_stats():
             'success': False,
             'error': str(e)
         }), 500
-        training_data = data_collector.get_training_data()
+
+@app.route('/api/training/status', methods=['GET'])
+def get_training_status():
+    try:
+        # Get training metrics from saved files
+        metrics_files = []
+        save_dir = os.path.join(os.path.dirname(__file__), 'ml_model', 'model_checkpoints')
         
-        if not training_data:
+        # Check if directory exists
+        if not os.path.exists(save_dir):
             return jsonify({
-                'success': False,
-                'error': 'No training data available'
+                'success': True,
+                'training_history': [],
+                'is_training_in_progress': False
             })
         
-        # Train the model
-        model.fine_tune(training_data)
+        # Look for metrics files
+        for filename in os.listdir(save_dir):
+            if filename.endswith('_metrics.json'):
+                with open(os.path.join(save_dir, filename), 'r') as f:
+                    metrics = json.load(f)
+                    metrics_files.append(metrics)
         
-        return jsonify({'success': True})
+        # Sort by timestamp (newest first)
+        metrics_files.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+        
+        # Check if training is in progress
+        import threading
+        is_training = any(t.name == 'train_in_background' and t.is_alive() for t in threading.enumerate())
+        
+        return jsonify({
+            'success': True,
+            'training_history': metrics_files,
+            'is_training_in_progress': is_training,
+            'latest_model': metrics_files[0]['model_save_path'] if metrics_files else None
+        })
     except Exception as e:
         return jsonify({
             'success': False,
             'error': str(e)
-        })
+        }), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    import argparse
+    parser = argparse.ArgumentParser(description='SmartSOP Flask Backend')
+    parser.add_argument('--port', type=int, default=5000, help='Port to run the server on')
+    args = parser.parse_args()
+    
+    app.run(debug=True, port=args.port)
