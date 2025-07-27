@@ -109,3 +109,19 @@
 2025-07-20 14:42:08,834 - werkzeug - INFO -  * Restarting with stat
 2025-07-20 14:42:35,884 - werkzeug - WARNING -  * Debugger is active!
 2025-07-20 14:42:35,901 - werkzeug - INFO -  * Debugger PIN: 133-267-909
+2025-07-24 19:59:08,127 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+2025-07-24 19:59:08,128 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-07-24 19:59:08,128 - werkzeug - INFO -  * Restarting with stat
+2025-07-24 19:59:33,378 - werkzeug - WARNING -  * Debugger is active!
+2025-07-24 19:59:33,406 - werkzeug - INFO -  * Debugger PIN: 534-479-411
+2025-07-24 20:20:37,008 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+2025-07-24 20:20:37,013 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-07-24 20:20:37,015 - werkzeug - INFO -  * Restarting with stat
+2025-07-24 20:21:03,022 - werkzeug - WARNING -  * Debugger is active!
+2025-07-24 20:21:03,089 - werkzeug - INFO -  * Debugger PIN: 534-479-411
+2025-07-24 21:44:27,200 - werkzeug - INFO - 127.0.0.1 - - [24/Jul/2025 21:44:27] "POST /api/generate_document HTTP/1.1" 200 -
+2025-07-24 21:45:50,881 - werkzeug - INFO - 127.0.0.1 - - [24/Jul/2025 21:45:50] "GET /api/stats HTTP/1.1" 200 -
+2025-07-24 23:29:01,095 - werkzeug - INFO - 127.0.0.1 - - [24/Jul/2025 23:29:01] "POST /api/generate_document HTTP/1.1" 200 -
+2025-07-24 23:29:19,239 - werkzeug - INFO - 127.0.0.1 - - [24/Jul/2025 23:29:19] "POST /api/feedback HTTP/1.1" 200 -
