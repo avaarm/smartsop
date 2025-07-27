@@ -42,5 +42,29 @@ testem.log
 .DS_Store
 Thumbs.db
 
-
+# Environment variables
 .env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+
+# ML model files and large data
+/ml_model/saved_models/
+/ml_model/model_checkpoints/
+*.safetensors
+*.bin
+*.h5
+*.onnx
+*.pt
+*.pth
+
+# Generated documents and data
+/generated_docs/
+/collected_data/
