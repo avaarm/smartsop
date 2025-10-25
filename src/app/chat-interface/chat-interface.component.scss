@@ -362,3 +362,79 @@
     }
   }
 }
+
+// Document actions and export buttons
+.document-actions {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e0e0e0;
+
+  .download-section,
+  .export-section {
+    margin-bottom: 15px;
+
+    p {
+      margin: 0 0 8px 0;
+      font-size: 0.9rem;
+      color: #555;
+    }
+  }
+
+  .download-button {
+    display: inline-block;
+    background-color: #4CAF50;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: #45a049;
+    }
+  }
+
+  .export-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .export-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    font-weight: 500;
+
+    &.pdf-btn {
+      background-color: #e74c3c;
+      color: white;
+
+      &:hover {
+        background-color: #c0392b;
+      }
+    }
+
+    &.excel-btn {
+      background-color: #27ae60;
+      color: white;
+
+      &:hover {
+        background-color: #229954;
+      }
+    }
+
+    &.csv-btn {
+      background-color: #3498db;
+      color: white;
+
+      &:hover {
+        background-color: #2980b9;
+      }
+    }
+  }
+}

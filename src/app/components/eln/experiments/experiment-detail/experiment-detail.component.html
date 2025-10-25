@@ -1,0 +1,337 @@
+<div class="experiment-detail-container">
+  <div *ngIf="loading" class="loading-spinner">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+  
+  <div *ngIf="error" class="error-message">
+    {{ error }}
+    <button mat-button color="primary" [routerLink]="['/eln/experiments']">Back to Experiments</button>
+  </div>
+  
+  <div *ngIf="!loading && !error">
+    <!-- Experiment Header -->
+    <header class="experiment-header">
+      <div class="header-content">
+        <div *ngIf="!editMode && experiment">
+          <h1>{{ experiment.name }}</h1>
+          <div class="experiment-metadata">
+            <span [ngClass]="getStatusClass(experiment.status)" class="status-badge">{{ experiment.status }}</span>
+            <span *ngIf="experiment.project_id" class="metadata-item">
+              <mat-icon>folder</mat-icon>
+              Project: <a [routerLink]="['/eln/projects', experiment.project_id]">{{ $any(experiment).project_name || 'View Project' }}</a>
+            </span>
+            <span class="metadata-item">
+              <mat-icon>calendar_today</mat-icon>
+              Created: {{ experiment.created_at | date:'mediumDate' }}
+            </span>
+            <span *ngIf="experiment.start_date" class="metadata-item">
+              <mat-icon>play_circle</mat-icon>
+              Started: {{ experiment.start_date | date:'mediumDate' }}
+            </span>
+            <span *ngIf="experiment.end_date" class="metadata-item">
+              <mat-icon>flag</mat-icon>
+              Ends: {{ experiment.end_date | date:'mediumDate' }}
+            </span>
+          </div>
+        </div>
+        
+        <div *ngIf="editMode">
+          <h1>{{ isNewExperiment ? 'Create New Experiment' : 'Edit Experiment' }}</h1>
+        </div>
+        
+        <div class="header-actions" *ngIf="!isNewExperiment">
+          <button *ngIf="!editMode" mat-raised-button color="accent" (click)="generateReport()">
+            <mat-icon>description</mat-icon> Generate Report
+          </button>
+          <button *ngIf="!editMode" mat-raised-button color="primary" (click)="toggleEditMode()">
+            <mat-icon>edit</mat-icon> Edit Experiment
+          </button>
+          <button *ngIf="editMode" mat-button (click)="toggleEditMode()">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </header>
+    
+    <!-- Experiment Form (Edit/Create Mode) -->
+    <div *ngIf="editMode" class="experiment-form-container">
+      <form [formGroup]="experimentForm" (ngSubmit)="saveExperiment()">
+        <mat-card>
+          <mat-card-content>
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Experiment Name</mat-label>
+                <input matInput formControlName="name" placeholder="Enter experiment name">
+                <mat-error *ngIf="experimentForm.get('name')?.hasError('required')">
+                  Experiment name is required
+                </mat-error>
+              </mat-form-field>
+            </div>
+            
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Description</mat-label>
+                <textarea matInput formControlName="description" rows="3" placeholder="Enter experiment description"></textarea>
+                <mat-error *ngIf="experimentForm.get('description')?.hasError('required')">
+                  Description is required
+                </mat-error>
+              </mat-form-field>
+            </div>
+            
+            <div class="form-row form-row-split">
+              <mat-form-field appearance="outline">
+                <mat-label>Project</mat-label>
+                <mat-select formControlName="project_id" (selectionChange)="onProjectChange($event.value)">
+                  <mat-option [value]="">None</mat-option>
+                  <mat-option *ngFor="let project of projects" [value]="project.id">{{ project.name }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline">
+                <mat-label>Protocol</mat-label>
+                <mat-select formControlName="protocol_id">
+                  <mat-option [value]="">None</mat-option>
+                  <mat-option *ngFor="let protocol of protocols" [value]="protocol.id">{{ protocol.name }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline">
+                <mat-label>Status</mat-label>
+                <mat-select formControlName="status">
+                  <mat-option value="active">Active</mat-option>
+                  <mat-option value="in progress">In Progress</mat-option>
+                  <mat-option value="on hold">On Hold</mat-option>
+                  <mat-option value="completed">Completed</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+            
+            <div class="form-row form-row-split">
+              <mat-form-field appearance="outline">
+                <mat-label>Start Date</mat-label>
+                <input matInput [matDatepicker]="startPicker" formControlName="start_date">
+                <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+                <mat-datepicker #startPicker></mat-datepicker>
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline">
+                <mat-label>End Date</mat-label>
+                <input matInput [matDatepicker]="endPicker" formControlName="end_date">
+                <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+                <mat-datepicker #endPicker></mat-datepicker>
+              </mat-form-field>
+            </div>
+            
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Hypothesis</mat-label>
+                <textarea matInput formControlName="hypothesis" rows="3" placeholder="Enter experiment hypothesis"></textarea>
+              </mat-form-field>
+            </div>
+            
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Materials</mat-label>
+                <textarea matInput formControlName="materials" rows="3" placeholder="List materials used"></textarea>
+              </mat-form-field>
+            </div>
+            
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Methods</mat-label>
+                <textarea matInput formControlName="methods" rows="4" placeholder="Describe experimental methods"></textarea>
+              </mat-form-field>
+            </div>
+            
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Results Summary</mat-label>
+                <textarea matInput formControlName="results_summary" rows="4" placeholder="Summarize experiment results"></textarea>
+              </mat-form-field>
+            </div>
+            
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Conclusion</mat-label>
+                <textarea matInput formControlName="conclusion" rows="3" placeholder="Enter experiment conclusion"></textarea>
+              </mat-form-field>
+            </div>
+          </mat-card-content>
+          
+          <mat-card-actions align="end">
+            <button *ngIf="!isNewExperiment" mat-button type="button" (click)="toggleEditMode()">Cancel</button>
+            <button mat-raised-button color="primary" type="submit" [disabled]="saving">
+              <mat-spinner *ngIf="saving" diameter="20" class="button-spinner"></mat-spinner>
+              <span *ngIf="!saving">{{ isNewExperiment ? 'Create Experiment' : 'Save Changes' }}</span>
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      </form>
+    </div>
+    
+    <!-- Experiment Details (View Mode) -->
+    <div *ngIf="!editMode && experiment" class="experiment-details">
+      <mat-tab-group class="experiment-tabs">
+        <!-- Overview Tab -->
+        <mat-tab label="Overview">
+          <div class="tab-content">
+            <mat-card class="experiment-section">
+              <mat-card-header>
+                <mat-card-title>Description</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <p>{{ experiment.description }}</p>
+              </mat-card-content>
+            </mat-card>
+            
+            <div class="two-column-layout">
+              <mat-card class="experiment-section">
+                <mat-card-header>
+                  <mat-card-title>Hypothesis</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <p *ngIf="experiment.hypothesis">{{ experiment.hypothesis }}</p>
+                  <p *ngIf="!experiment.hypothesis" class="empty-content">No hypothesis provided</p>
+                </mat-card-content>
+              </mat-card>
+              
+              <mat-card class="experiment-section">
+                <mat-card-header>
+                  <mat-card-title>Materials</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <p *ngIf="$any(experiment).materials">{{ $any(experiment).materials }}</p>
+                  <p *ngIf="!$any(experiment).materials" class="empty-content">No materials listed</p>
+                </mat-card-content>
+              </mat-card>
+            </div>
+            
+            <mat-card class="experiment-section">
+              <mat-card-header>
+                <mat-card-title>Methods</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <p *ngIf="$any(experiment).methods">{{ $any(experiment).methods }}</p>
+                <p *ngIf="!$any(experiment).methods" class="empty-content">No methods documented</p>
+              </mat-card-content>
+            </mat-card>
+            
+            <div class="two-column-layout">
+              <mat-card class="experiment-section">
+                <mat-card-header>
+                  <mat-card-title>Results Summary</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <p *ngIf="$any(experiment).results_summary">{{ $any(experiment).results_summary }}</p>
+                  <p *ngIf="!$any(experiment).results_summary" class="empty-content">No results summary provided</p>
+                </mat-card-content>
+              </mat-card>
+              
+              <mat-card class="experiment-section">
+                <mat-card-header>
+                  <mat-card-title>Conclusion</mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <p *ngIf="$any(experiment).conclusion">{{ $any(experiment).conclusion }}</p>
+                  <p *ngIf="!$any(experiment).conclusion" class="empty-content">No conclusion provided</p>
+                </mat-card-content>
+              </mat-card>
+            </div>
+          </div>
+        </mat-tab>
+        
+        <!-- Results Tab -->
+        <mat-tab label="Results & Data">
+          <div class="tab-content">
+            <div class="tab-header">
+              <h2>Experiment Results</h2>
+              <button mat-raised-button color="primary" (click)="addResult()">
+                <mat-icon>add</mat-icon> Add Result
+              </button>
+            </div>
+            
+            <div *ngIf="resultsData.length === 0" class="empty-state">
+              <mat-icon>science</mat-icon>
+              <p>No results data found for this experiment.</p>
+              <button mat-raised-button color="primary" (click)="addResult()">
+                Add Result Data
+              </button>
+            </div>
+            
+            <div *ngIf="resultsData.length > 0" class="results-list">
+              <mat-accordion>
+                <mat-expansion-panel *ngFor="let result of resultsData; let i = index">
+                  <mat-expansion-panel-header>
+                    <mat-panel-title>
+                      {{ result.title || 'Result ' + (i + 1) }}
+                    </mat-panel-title>
+                    <mat-panel-description>
+                      {{ result.created_at | date:'medium' }}
+                    </mat-panel-description>
+                  </mat-expansion-panel-header>
+                  
+                  <div class="result-content">
+                    <div *ngIf="result.description" class="result-description">
+                      <h3>Description</h3>
+                      <p>{{ result.description }}</p>
+                    </div>
+                    
+                    <div *ngIf="result.data_type" class="result-metadata">
+                      <span class="metadata-label">Type:</span>
+                      <span class="metadata-value">{{ result.data_type }}</span>
+                    </div>
+                    
+                    <div *ngIf="result.data_value" class="result-data">
+                      <h3>Data</h3>
+                      <pre>{{ result.data_value | json }}</pre>
+                    </div>
+                    
+                    <div *ngIf="result.file_url" class="result-file">
+                      <h3>Attached File</h3>
+                      <a [href]="result.file_url" target="_blank" class="file-link">
+                        <mat-icon>attach_file</mat-icon>
+                        {{ result.file_name || 'Download File' }}
+                      </a>
+                    </div>
+                    
+                    <div *ngIf="result.notes" class="result-notes">
+                      <h3>Notes</h3>
+                      <p>{{ result.notes }}</p>
+                    </div>
+                  </div>
+                  
+                  <mat-action-row>
+                    <button mat-button color="primary" [routerLink]="['/eln/experiments', experimentId, 'results', result.id]">
+                      <mat-icon>edit</mat-icon> Edit
+                    </button>
+                    <button mat-button color="warn">
+                      <mat-icon>delete</mat-icon> Delete
+                    </button>
+                  </mat-action-row>
+                </mat-expansion-panel>
+              </mat-accordion>
+            </div>
+          </div>
+        </mat-tab>
+        
+        <!-- Protocol Tab -->
+        <mat-tab label="Protocol">
+          <div class="tab-content">
+            <div *ngIf="!$any(experiment)?.protocol_id" class="empty-state">
+              <mat-icon>assignment</mat-icon>
+              <p>No protocol associated with this experiment.</p>
+              <button mat-raised-button color="primary" (click)="toggleEditMode()">
+                Assign Protocol
+              </button>
+            </div>
+            
+            <div *ngIf="$any(experiment)?.protocol_id" class="protocol-content">
+              <!-- Protocol content would be displayed here -->
+              <p>Protocol details will be shown here.</p>
+            </div>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </div>
+  </div>
+</div>

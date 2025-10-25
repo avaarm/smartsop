@@ -125,3 +125,56 @@
 2025-07-24 21:45:50,881 - werkzeug - INFO - 127.0.0.1 - - [24/Jul/2025 21:45:50] "GET /api/stats HTTP/1.1" 200 -
 2025-07-24 23:29:01,095 - werkzeug - INFO - 127.0.0.1 - - [24/Jul/2025 23:29:01] "POST /api/generate_document HTTP/1.1" 200 -
 2025-07-24 23:29:19,239 - werkzeug - INFO - 127.0.0.1 - - [24/Jul/2025 23:29:19] "POST /api/feedback HTTP/1.1" 200 -
+2025-07-27 14:15:36,150 - werkzeug - INFO -  * Detected change in '/Users/armenuhi/Programming/smartsop/app.py', reloading
+2025-07-27 14:15:37,618 - werkzeug - INFO -  * Restarting with stat
+2025-07-27 20:27:41,619 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+2025-07-27 20:27:41,622 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-07-27 20:27:41,626 - werkzeug - INFO -  * Restarting with stat
+2025-07-27 20:28:16,467 - werkzeug - WARNING -  * Debugger is active!
+2025-07-27 20:28:16,533 - werkzeug - INFO -  * Debugger PIN: 534-479-411
+2025-07-27 20:35:56,910 - werkzeug - INFO - 127.0.0.1 - - [27/Jul/2025 20:35:56] "OPTIONS /api/generate_document HTTP/1.1" 200 -
+2025-07-27 20:35:56,918 - werkzeug - INFO - 127.0.0.1 - - [27/Jul/2025 20:35:56] "OPTIONS /api/generate_document HTTP/1.1" 200 -
+2025-07-28 12:06:48,092 - werkzeug - INFO - 127.0.0.1 - - [28/Jul/2025 12:06:48] "[33mGET / HTTP/1.1[0m" 404 -
+2025-07-28 12:06:48,432 - werkzeug - INFO - 127.0.0.1 - - [28/Jul/2025 12:06:48] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-07-28 12:12:08,274 - werkzeug - INFO - 127.0.0.1 - - [28/Jul/2025 12:12:08] "OPTIONS /api/generate_document HTTP/1.1" 200 -
+2025-07-28 12:23:09,137 - werkzeug - INFO - 127.0.0.1 - - [28/Jul/2025 12:23:09] "OPTIONS /api/generate_document HTTP/1.1" 200 -
+2025-07-28 12:23:09,172 - werkzeug - INFO - 127.0.0.1 - - [28/Jul/2025 12:23:09] "OPTIONS /api/generate_document HTTP/1.1" 200 -
+2025-07-28 19:15:51,340 - werkzeug - INFO - 127.0.0.1 - - [28/Jul/2025 19:15:51] "POST /api/generate_document HTTP/1.1" 200 -
+2025-08-10 14:40:25,842 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-08-10 14:40:25,842 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-08-10 14:40:25,843 - werkzeug - INFO -  * Restarting with stat
+2025-08-10 14:40:50,717 - werkzeug - WARNING -  * Debugger is active!
+2025-08-10 14:40:50,748 - werkzeug - INFO -  * Debugger PIN: 534-479-411
+2025-08-10 14:42:54,448 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-08-10 14:42:54,448 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-08-10 14:42:54,449 - werkzeug - INFO -  * Restarting with stat
+2025-08-10 14:43:18,833 - werkzeug - WARNING -  * Debugger is active!
+2025-08-10 14:43:18,852 - werkzeug - INFO -  * Debugger PIN: 534-479-411
+2025-08-10 14:46:53,737 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+2025-08-10 14:46:53,737 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-08-10 14:46:53,738 - werkzeug - INFO -  * Restarting with stat
+2025-09-12 16:39:34,954 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+2025-09-12 16:39:34,955 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-09-12 16:39:34,955 - werkzeug - INFO -  * Restarting with stat
+2025-09-12 16:40:01,554 - werkzeug - WARNING -  * Debugger is active!
+2025-09-12 16:40:01,582 - werkzeug - INFO -  * Debugger PIN: 133-267-909
+2025-10-25 02:22:31,599 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+2025-10-25 02:22:31,601 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-10-25 02:22:31,602 - werkzeug - INFO -  * Restarting with stat
+2025-10-25 02:22:59,207 - werkzeug - WARNING -  * Debugger is active!
+2025-10-25 02:22:59,260 - werkzeug - INFO -  * Debugger PIN: 133-267-909
+2025-10-25 02:24:35,824 - werkzeug - INFO - 127.0.0.1 - - [25/Oct/2025 02:24:35] "OPTIONS /api/generate_document HTTP/1.1" 200 -
+2025-10-25 02:33:38,787 - werkzeug - INFO -  * Detected change in '/Users/armenuhi/Programming/smartsop/app.py', reloading
+2025-10-25 02:33:40,556 - werkzeug - INFO -  * Restarting with stat
+2025-10-25 11:46:21,645 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+2025-10-25 11:46:21,645 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-10-25 11:46:21,646 - werkzeug - INFO -  * Restarting with stat
+2025-10-25 11:46:44,453 - werkzeug - WARNING -  * Debugger is active!
+2025-10-25 11:46:44,523 - werkzeug - INFO -  * Debugger PIN: 133-267-909

@@ -8,6 +8,14 @@ from ml_model.model import SOPModel
 from ml_model.data_collector import DataCollector
 from ml_model.security import SecurityManager, DataProtection
 from ml_model.word_generator import WordDocumentGenerator
+from ml_model.document_exporter import DocumentExporter
+from ml_model.web_data_collector import generate_training_examples as generate_web_training_examples
+from ml_model.web_data_collector import save_training_data as save_web_training_data
+
+# Import database and API routes
+from ml_model.database import engine, Base
+from ml_model.db_session import init_db_session
+from ml_model.api import register_api_routes
 
 # Load environment variables from .env file
 load_dotenv()
@@ -25,11 +33,18 @@ CORS(app, origins=["http://localhost:4200", "http://localhost:4201", "http://127
 GENERATED_DOCS_DIR = os.path.join(os.path.dirname(__file__), 'generated_docs')
 os.makedirs(GENERATED_DOCS_DIR, exist_ok=True)
 
+# Initialize database session
+db_session = init_db_session(app)
+
+# Register API routes
+register_api_routes(app)
+
 # Initialize components
 model = SOPModel()
 data_collector = DataCollector()
 security = SecurityManager()
 data_protection = DataProtection()
+document_exporter = DocumentExporter(output_dir=GENERATED_DOCS_DIR)
 
 @app.route('/api/generate_document', methods=['POST'])
 def generate_document():
@@ -267,6 +282,91 @@ def get_training_status():
             'training_history': metrics_files,
             'is_training_in_progress': is_training,
             'latest_model': metrics_files[0]['model_save_path'] if metrics_files else None
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/collect_web_data', methods=['POST'])
+def collect_web_data():
+    try:
+        # Log the request
+        data_protection.audit_log('collect_web_data', 'user', 'manual trigger')
+        
+        # Generate training examples from web data
+        training_data = generate_web_training_examples()
+        
+        # Save the training data
+        save_web_training_data(training_data)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Successfully collected {len(training_data)} new training examples from web sources.'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/export/<format_type>', methods=['POST'])
+def export_document(format_type):
+    """
+    Export a document to specified format (pdf, excel, csv)
+    Expects JSON payload with: content, title, doc_id
+    """
+    try:
+        data = request.json
+        content = data.get('content')
+        title = data.get('title', 'SOP Document')
+        doc_id = data.get('doc_id')
+        
+        if not content:
+            return jsonify({
+                'success': False,
+                'error': 'Content is required'
+            }), 400
+        
+        # Validate format type
+        if format_type.lower() not in document_exporter.get_available_formats():
+            return jsonify({
+                'success': False,
+                'error': f'Unsupported format: {format_type}'
+            }), 400
+        
+        # Log the export
+        data_protection.audit_log('export_document', 'user', f'format: {format_type}, doc_id: {doc_id}')
+        
+        # Export document
+        filepath, filename = document_exporter.export_document(
+            content=content,
+            format_type=format_type,
+            title=title,
+            doc_id=doc_id
+        )
+        
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'download_url': f'/api/download/{filename}'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/export/formats', methods=['GET'])
+def get_export_formats():
+    """Get list of available export formats"""
+    try:
+        return jsonify({
+            'success': True,
+            'formats': document_exporter.get_available_formats()
         })
     except Exception as e:
         return jsonify({

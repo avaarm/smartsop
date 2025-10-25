@@ -1,6 +1,6 @@
 # SmartSOP
 
-SmartSOP is an intelligent document generation tool that helps create Standard Operating Procedures (SOPs) and Batch Records using AI. Built with Angular and Python, it leverages GPT-4 to generate professionally formatted documents based on user input.
+SmartSOP is an intelligent document generation tool that helps create Standard Operating Procedures (SOPs) and Batch Records using a fine-tunable AI model. Built with Angular and Python, it leverages the `microsoft/phi-2` model to generate professionally formatted documents based on user input.
 
 ## Features
 
@@ -17,7 +17,7 @@ Before you begin, ensure you have the following installed:
 - Node.js (v18 or higher)
 - Python (v3.8 or higher)
 - Angular CLI
-- OpenAI API key
+- A machine with a GPU is recommended for fine-tuning the model.
 
 ## Installation
 
@@ -34,19 +34,16 @@ npm install
 
 3. Install backend dependencies:
 ```bash
-pip install flask flask-cors python-dotenv openai
+pip install -r requirements.txt
 ```
 
-4. Create a `.env` file in the root directory and add your OpenAI API key:
-```
-OPENAI_API_KEY=your_api_key_here
-```
+4. Create a `.env` file in the root directory. No API key is required for the default model.
 
 ## Running the Application
 
-1. Start the Python backend:
+1. Start the Python backend on port 5001 (required for frontend connectivity):
 ```bash
-python app.py
+python app.py --port=5001
 ```
 
 2. In a new terminal, start the Angular frontend:
@@ -55,6 +52,10 @@ npm start
 ```
 
 3. Open your browser and navigate to `http://localhost:4200`
+
+**Important Notes:**
+- The backend must run on port 5001 as the Angular frontend is configured to connect to http://localhost:5001
+- If you need to use a different port for the backend, you'll need to update the API URL in the frontend services
 
 ## Using SmartSOP
 
@@ -96,7 +97,7 @@ npm start
 
 - Frontend: Angular 18
 - Backend: Flask (Python)
-- AI: OpenAI GPT-4
+- AI: `microsoft/phi-2` (fine-tunable)
 - API: RESTful architecture
 - Styling: Modern CSS with responsive design
 

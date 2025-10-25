@@ -1,0 +1,106 @@
+<div class="protocol-list-container">
+  <header class="protocol-list-header">
+    <h1>Protocols</h1>
+    <button mat-raised-button color="primary" [routerLink]="['/eln/protocols/new']">
+      <mat-icon>add</mat-icon> New Protocol
+    </button>
+  </header>
+
+  <div class="filters-container">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Search Protocols</mat-label>
+      <input matInput [(ngModel)]="searchQuery" (ngModelChange)="onSearchQueryChange()" placeholder="Search by name or description">
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+
+    <div class="filter-group">
+      <mat-form-field appearance="outline" class="project-filter">
+        <mat-label>Project</mat-label>
+        <mat-select [(ngModel)]="selectedProjectId" (ngModelChange)="onProjectFilterChange()">
+          <mat-option value="all">All Projects</mat-option>
+          <mat-option *ngFor="let project of projects" [value]="project.id">{{ project.name }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="category-filter">
+        <mat-label>Category</mat-label>
+        <mat-select [(ngModel)]="categoryFilter" (ngModelChange)="onCategoryFilterChange()">
+          <mat-option value="all">All Categories</mat-option>
+          <mat-option *ngFor="let category of categories" [value]="category">{{ category }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  <div class="protocol-list-content">
+    <div *ngIf="loading" class="loading-spinner">
+      <mat-spinner diameter="40"></mat-spinner>
+    </div>
+    
+    <div *ngIf="error" class="error-message">
+      {{ error }}
+    </div>
+    
+    <div *ngIf="!loading && !error && filteredProtocols.length === 0" class="empty-state">
+      <mat-icon>assignment</mat-icon>
+      <p *ngIf="searchQuery || categoryFilter !== 'all' || selectedProjectId !== 'all'">No protocols match your current filters.</p>
+      <p *ngIf="!searchQuery && categoryFilter === 'all' && selectedProjectId === 'all'">No protocols found. Create your first protocol to get started.</p>
+      <button mat-raised-button color="primary" [routerLink]="['/eln/protocols/new']">
+        Create Protocol
+      </button>
+    </div>
+    
+    <div *ngIf="!loading && !error && filteredProtocols.length > 0" class="protocol-grid">
+      <mat-card *ngFor="let protocol of displayedProtocols" class="protocol-card" [routerLink]="['/eln/protocols', protocol.id]">
+        <mat-card-header>
+          <div mat-card-avatar class="protocol-avatar">
+            <mat-icon>assignment</mat-icon>
+          </div>
+          <mat-card-title>{{ protocol.name }}</mat-card-title>
+          <mat-card-subtitle>
+            <div class="protocol-metadata">
+              <span *ngIf="protocol.category" class="category-chip">{{ protocol.category }}</span>
+              <span class="version-chip">{{ getVersionLabel(protocol.version) }}</span>
+            </div>
+          </mat-card-subtitle>
+        </mat-card-header>
+        
+        <mat-card-content>
+          <p class="protocol-description">{{ protocol.description | slice:0:150 }}{{ protocol.description.length > 150 ? '...' : '' }}</p>
+          
+          <div class="protocol-details">
+            <div class="detail-item">
+              <mat-icon>calendar_today</mat-icon>
+              <span>Created: {{ protocol.created_at | date:'mediumDate' }}</span>
+            </div>
+            
+            <div *ngIf="protocol.updated_at" class="detail-item">
+              <mat-icon>update</mat-icon>
+              <span>Updated: {{ protocol.updated_at | date:'mediumDate' }}</span>
+            </div>
+            
+            <div *ngIf="protocol.steps?.length" class="detail-item">
+              <mat-icon>list</mat-icon>
+              <span>{{ protocol.steps?.length || 0 }} steps</span>
+            </div>
+          </div>
+        </mat-card-content>
+        
+        <mat-card-actions>
+          <button mat-button color="primary">View Details</button>
+          <button mat-button color="warn" (click)="deleteProtocol($event, protocol.id)">Delete</button>
+        </mat-card-actions>
+      </mat-card>
+    </div>
+    
+    <mat-paginator 
+      *ngIf="filteredProtocols.length > pageSize"
+      [length]="totalProtocols"
+      [pageSize]="pageSize"
+      [pageSizeOptions]="pageSizeOptions"
+      [pageIndex]="pageIndex"
+      (page)="onPageChange($event)"
+      showFirstLastButtons>
+    </mat-paginator>
+  </div>
+</div>
