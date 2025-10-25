@@ -177,4 +177,33 @@ export class AIService {
       catchError(error => this.handleError(error))
     );
   }
+
+  // Document export methods
+  exportDocument(content: string, format: string, title?: string, docId?: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/api/export/${format}`, {
+      content,
+      title,
+      doc_id: docId
+    }, {
+      withCredentials: true
+    }).pipe(
+      retry(1),
+      timeout(this.requestTimeout),
+      catchError(error => this.handleError(error))
+    );
+  }
+
+  getExportFormats(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/api/export/formats`, {
+      withCredentials: true
+    }).pipe(
+      retry(1),
+      timeout(this.requestTimeout),
+      catchError(error => this.handleError(error))
+    );
+  }
+
+  downloadDocument(filename: string): string {
+    return `${this.apiUrl}/api/download/${filename}`;
+  }
 }
