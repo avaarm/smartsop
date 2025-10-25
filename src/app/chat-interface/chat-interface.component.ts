@@ -184,4 +184,25 @@ export class ChatInterfaceComponent implements OnInit {
       this.sendMessage();
     }
   }
+
+  exportDocument(message: ChatMessage, format: string): void {
+    if (!message.content || !message.docId) return;
+
+    this.aiService.exportDocument(message.content, format, undefined, message.docId).subscribe({
+      next: (response) => {
+        if (response.success) {
+          // Download the file
+          const downloadUrl = this.aiService.downloadDocument(response.filename);
+          window.open(downloadUrl, '_blank');
+        } else {
+          console.error('Export failed:', response.error);
+          alert('Failed to export document. Please try again.');
+        }
+      },
+      error: (error) => {
+        console.error('Export error:', error);
+        alert('An error occurred while exporting the document.');
+      }
+    });
+  }
 }

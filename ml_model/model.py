@@ -89,6 +89,16 @@ Quality Score: {example['feedback_score']}"""
         # Use provided training data or fall back to self.training_data
         data_to_use = training_data if training_data is not None else self.training_data
         
+        # Load web-scraped data
+        web_data_path = "collected_data"
+        if os.path.exists(web_data_path):
+            for filename in os.listdir(web_data_path):
+                if filename.endswith(".json"):
+                    with open(os.path.join(web_data_path, filename), 'r') as f:
+                        data = json.load(f)
+                        if data.get("metadata", {}).get("template_type") == "web_scraped":
+                            data_to_use.append(data)
+        
         if len(data_to_use) < 10:
             raise ValueError("Not enough training data. Need at least 10 examples.")
 

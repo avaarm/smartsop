@@ -1,0 +1,282 @@
+<div class="user-detail-container">
+  <div *ngIf="loading" class="loading-spinner">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+  
+  <div *ngIf="error" class="error-message">
+    <p>{{ error }}</p>
+    <button mat-raised-button color="primary" [routerLink]="['/eln/users']">Back to Users</button>
+  </div>
+  
+  <div *ngIf="!loading && !error">
+    <!-- User Header -->
+    <div class="user-header">
+      <div class="header-content">
+        <div *ngIf="!editMode" class="user-info">
+          <h1>{{ user?.name }}</h1>
+          <div class="user-metadata">
+            <div class="role-badge" [ngClass]="getRoleBadgeClass(user?.role || '')">
+              {{ user?.role }}
+            </div>
+            <div class="status-badge" [ngClass]="getStatusBadgeClass(user?.status || 'active')">
+              {{ user?.status }}
+            </div>
+          </div>
+        </div>
+        
+        <div class="header-actions">
+          <ng-container *ngIf="!editMode && canEditUser()">
+            <button mat-raised-button color="primary" (click)="toggleEditMode()">
+              <mat-icon>edit</mat-icon> Edit
+            </button>
+          </ng-container>
+          
+          <ng-container *ngIf="!editMode && canManageUser()">
+            <button mat-stroked-button color="warn" (click)="toggleUserStatus()">
+              <mat-icon>{{ user?.status === 'active' ? 'block' : 'check_circle' }}</mat-icon>
+              {{ user?.status === 'active' ? 'Deactivate' : 'Activate' }}
+            </button>
+            
+            <button mat-stroked-button color="warn" (click)="deleteUser()">
+              <mat-icon>delete</mat-icon> Delete
+            </button>
+          </ng-container>
+          
+          <ng-container *ngIf="editMode">
+            <button mat-raised-button color="primary" (click)="saveUser()" [disabled]="saving">
+              <mat-spinner *ngIf="saving" diameter="20" class="button-spinner"></mat-spinner>
+              <span>{{ isNewUser ? 'Create' : 'Save' }}</span>
+            </button>
+            <button mat-stroked-button (click)="toggleEditMode()" *ngIf="!isNewUser" [disabled]="saving">
+              Cancel
+            </button>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+    
+    <!-- User Form -->
+    <form [formGroup]="userForm" class="user-form-container">
+      <!-- Basic Information Section -->
+      <mat-card class="user-section" *ngIf="editMode">
+        <mat-card-header>
+          <mat-card-title>Basic Information</mat-card-title>
+        </mat-card-header>
+        
+        <mat-card-content>
+          <div class="form-row">
+            <mat-form-field class="full-width">
+              <mat-label>Full Name</mat-label>
+              <input matInput formControlName="name" required>
+              <mat-error *ngIf="userForm.get('name')?.hasError('required')">
+                Full name is required
+              </mat-error>
+            </mat-form-field>
+          </div>
+          
+          <div class="form-row">
+            <mat-form-field class="full-width">
+              <mat-label>Email Address</mat-label>
+              <input matInput formControlName="email" required type="email">
+              <mat-error *ngIf="userForm.get('email')?.hasError('required')">
+                Email is required
+              </mat-error>
+              <mat-error *ngIf="userForm.get('email')?.hasError('email')">
+                Please enter a valid email address
+              </mat-error>
+            </mat-form-field>
+          </div>
+          
+          <div class="form-row form-row-split">
+            <mat-form-field>
+              <mat-label>Role</mat-label>
+              <mat-select formControlName="role" required>
+                <mat-option *ngFor="let role of roles" [value]="role">
+                  {{ role | titlecase }}
+                </mat-option>
+              </mat-select>
+              <mat-error *ngIf="userForm.get('role')?.hasError('required')">
+                Role is required
+              </mat-error>
+            </mat-form-field>
+            
+            <mat-form-field>
+              <mat-label>Department</mat-label>
+              <input matInput formControlName="department">
+            </mat-form-field>
+            
+            <mat-form-field>
+              <mat-label>Title</mat-label>
+              <input matInput formControlName="title">
+            </mat-form-field>
+          </div>
+          
+          <div class="form-row">
+            <mat-form-field>
+              <mat-label>Phone</mat-label>
+              <input matInput formControlName="phone">
+            </mat-form-field>
+          </div>
+          
+          <div class="form-row form-row-split" *ngIf="isNewUser || (currentUser?.role === 'admin')">
+            <mat-form-field>
+              <mat-label>{{ isNewUser ? 'Password' : 'New Password' }}</mat-label>
+              <input matInput formControlName="password" type="password">
+              <mat-hint *ngIf="!isNewUser">Leave blank to keep current password</mat-hint>
+              <mat-error *ngIf="userForm.get('password')?.hasError('minlength')">
+                Password must be at least 8 characters
+              </mat-error>
+            </mat-form-field>
+            
+            <mat-form-field>
+              <mat-label>Confirm Password</mat-label>
+              <input matInput formControlName="confirmPassword" type="password">
+              <mat-error *ngIf="userForm.hasError('passwordMismatch')">
+                Passwords do not match
+              </mat-error>
+            </mat-form-field>
+          </div>
+          
+          <div class="form-row" *ngIf="!isNewUser && canManageUser()">
+            <mat-form-field>
+              <mat-label>Status</mat-label>
+              <mat-select formControlName="status">
+                <mat-option value="active">Active</mat-option>
+                <mat-option value="inactive">Inactive</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+        </mat-card-content>
+      </mat-card>
+      
+      <!-- User Profile (View Mode) -->
+      <mat-card class="user-section" *ngIf="!editMode">
+        <mat-card-content>
+          <div class="user-details">
+            <div class="detail-row">
+              <h3>Email</h3>
+              <p>{{ user?.email }}</p>
+            </div>
+            
+            <div class="detail-row" *ngIf="user?.department">
+              <h3>Department</h3>
+              <p>{{ user?.department }}</p>
+            </div>
+            
+            <div class="detail-row" *ngIf="user?.title">
+              <h3>Title</h3>
+              <p>{{ user?.title }}</p>
+            </div>
+            
+            <div class="detail-row" *ngIf="user?.phone">
+              <h3>Phone</h3>
+              <p>{{ user?.phone }}</p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+      
+      <!-- Additional Information Tabs -->
+      <mat-tab-group class="user-tabs" animationDuration="0ms">
+        <mat-tab label="Projects">
+          <div class="tab-content">
+            <div class="tab-section">
+              <h3>Assigned Projects</h3>
+              
+              <div *ngIf="assignedProjects.length === 0" class="empty-content">
+                This user is not assigned to any projects.
+              </div>
+              
+              <div class="project-list" *ngIf="assignedProjects.length > 0">
+                <mat-card *ngFor="let project of assignedProjects" class="project-card">
+                  <div class="project-card-content">
+                    <div class="project-info">
+                      <h4>
+                        <a [routerLink]="['/eln/projects', project.id]">{{ project.name }}</a>
+                      </h4>
+                      <p *ngIf="project.description">{{ project.description }}</p>
+                    </div>
+                    
+                    <button mat-icon-button color="warn" *ngIf="canManageUser()" 
+                            (click)="removeFromProject(project)" matTooltip="Remove from project">
+                      <mat-icon>remove_circle</mat-icon>
+                    </button>
+                  </div>
+                </mat-card>
+              </div>
+              
+              <div *ngIf="canManageUser() && getUnassignedProjects().length > 0" class="add-project-section">
+                <h3>Add to Project</h3>
+                <div class="project-list">
+                  <mat-card *ngFor="let project of getUnassignedProjects()" class="project-card">
+                    <div class="project-card-content">
+                      <div class="project-info">
+                        <h4>{{ project.name }}</h4>
+                        <p *ngIf="project.description">{{ project.description }}</p>
+                      </div>
+                      
+                      <button mat-icon-button color="primary" (click)="assignProject(project)" matTooltip="Add to project">
+                        <mat-icon>add_circle</mat-icon>
+                      </button>
+                    </div>
+                  </mat-card>
+                </div>
+              </div>
+            </div>
+          </div>
+        </mat-tab>
+        
+        <mat-tab label="Activity History">
+          <div class="tab-content">
+            <div class="tab-section">
+              <h3>Recent Activity</h3>
+              
+              <div *ngIf="activityHistory.length === 0" class="empty-content">
+                No activity history available for this user.
+              </div>
+              
+              <table mat-table [dataSource]="activityHistory" class="activity-table" *ngIf="activityHistory.length > 0">
+                <!-- Date Column -->
+                <ng-container matColumnDef="date">
+                  <th mat-header-cell *matHeaderCellDef>Date</th>
+                  <td mat-cell *matCellDef="let entry">{{ entry.timestamp | date:'medium' }}</td>
+                </ng-container>
+                
+                <!-- Activity Column -->
+                <ng-container matColumnDef="activity">
+                  <th mat-header-cell *matHeaderCellDef>Activity</th>
+                  <td mat-cell *matCellDef="let entry">{{ entry.activity_type }}</td>
+                </ng-container>
+                
+                <!-- Details Column -->
+                <ng-container matColumnDef="details">
+                  <th mat-header-cell *matHeaderCellDef>Details</th>
+                  <td mat-cell *matCellDef="let entry">
+                    <span *ngIf="entry.project_id">
+                      Project: <a [routerLink]="['/eln/projects', entry.project_id]">{{ entry.project_name }}</a>
+                    </span>
+                    <span *ngIf="entry.experiment_id">
+                      Experiment: <a [routerLink]="['/eln/experiments', entry.experiment_id]">{{ entry.experiment_name }}</a>
+                    </span>
+                    <span *ngIf="entry.protocol_id">
+                      Protocol: <a [routerLink]="['/eln/protocols', entry.protocol_id]">{{ entry.protocol_name }}</a>
+                    </span>
+                    <span *ngIf="entry.inventory_id">
+                      Inventory: <a [routerLink]="['/eln/inventory', entry.inventory_id]">{{ entry.inventory_name }}</a>
+                    </span>
+                    <span *ngIf="entry.details">
+                      {{ entry.details }}
+                    </span>
+                  </td>
+                </ng-container>
+                
+                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+              </table>
+            </div>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </form>
+  </div>
+</div>
