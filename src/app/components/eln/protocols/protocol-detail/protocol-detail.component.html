@@ -1,0 +1,358 @@
+<div class="protocol-detail-container">
+  <div *ngIf="loading" class="loading-spinner">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+  
+  <div *ngIf="error" class="error-message">
+    <p>{{ error }}</p>
+    <button mat-raised-button color="primary" [routerLink]="['/eln/protocols']">Back to Protocols</button>
+  </div>
+  
+  <div *ngIf="!loading && !error">
+    <!-- Protocol Header -->
+    <div class="protocol-header">
+      <div class="header-content">
+        <div *ngIf="!editMode">
+          <h1>{{ protocol?.name }}</h1>
+          <div class="protocol-metadata">
+            <div class="metadata-item" *ngIf="protocol?.category">
+              <mat-icon>category</mat-icon>
+              <span>{{ protocol?.category }}</span>
+            </div>
+            <div class="metadata-item">
+              <mat-icon>history</mat-icon>
+              <span>Version {{ protocol?.version }}</span>
+            </div>
+            <div class="metadata-item" *ngIf="protocol?.project_id">
+              <mat-icon>folder</mat-icon>
+              <a [routerLink]="['/eln/projects', protocol?.project_id]">
+                {{ getProjectName(protocol?.project_id) }}
+              </a>
+            </div>
+            <div class="metadata-item">
+              <mat-icon>calendar_today</mat-icon>
+              <span>Created: {{ protocol?.created_at | date:'medium' }}</span>
+            </div>
+            <div class="metadata-item" *ngIf="protocol?.updated_at">
+              <mat-icon>update</mat-icon>
+              <span>Updated: {{ protocol?.updated_at | date:'medium' }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="header-actions">
+          <ng-container *ngIf="!editMode">
+            <button mat-raised-button color="primary" (click)="toggleEditMode()">
+              <mat-icon>edit</mat-icon> Edit
+            </button>
+            <button mat-stroked-button (click)="createNewVersion()">
+              <mat-icon>file_copy</mat-icon> New Version
+            </button>
+            <button mat-stroked-button (click)="exportProtocol()">
+              <mat-icon>download</mat-icon> Export
+            </button>
+          </ng-container>
+          
+          <ng-container *ngIf="editMode">
+            <button mat-raised-button color="primary" (click)="saveProtocol()" [disabled]="saving">
+              <mat-spinner *ngIf="saving" diameter="20" class="button-spinner"></mat-spinner>
+              <span>{{ isNewProtocol ? 'Create' : 'Save' }}</span>
+            </button>
+            <button mat-stroked-button (click)="toggleEditMode()" *ngIf="!isNewProtocol" [disabled]="saving">
+              Cancel
+            </button>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Protocol Form -->
+    <form [formGroup]="protocolForm" class="protocol-form-container">
+      <!-- Basic Information Section -->
+      <mat-card class="protocol-section" *ngIf="editMode">
+        <mat-card-header>
+          <mat-card-title>Basic Information</mat-card-title>
+        </mat-card-header>
+        
+        <mat-card-content>
+          <div class="form-row">
+            <mat-form-field class="full-width">
+              <mat-label>Protocol Name</mat-label>
+              <input matInput formControlName="name" required>
+              <mat-error *ngIf="protocolForm.get('name')?.hasError('required')">
+                Protocol name is required
+              </mat-error>
+            </mat-form-field>
+          </div>
+          
+          <div class="form-row form-row-split">
+            <mat-form-field>
+              <mat-label>Category</mat-label>
+              <input matInput formControlName="category">
+            </mat-form-field>
+            
+            <mat-form-field>
+              <mat-label>Project</mat-label>
+              <mat-select formControlName="project_id">
+                <mat-option value="">None</mat-option>
+                <mat-option *ngFor="let project of projects" [value]="project.id">
+                  {{ project.name }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+            
+            <mat-form-field>
+              <mat-label>Version</mat-label>
+              <input matInput formControlName="version" type="number" step="0.1" min="1.0" readonly>
+            </mat-form-field>
+          </div>
+          
+          <div class="form-row">
+            <mat-form-field class="full-width">
+              <mat-label>Description</mat-label>
+              <textarea matInput formControlName="description" rows="3" required></textarea>
+              <mat-error *ngIf="protocolForm.get('description')?.hasError('required')">
+                Description is required
+              </mat-error>
+            </mat-form-field>
+          </div>
+        </mat-card-content>
+      </mat-card>
+      
+      <!-- Protocol Description (View Mode) -->
+      <mat-card class="protocol-section" *ngIf="!editMode">
+        <mat-card-content>
+          <p class="protocol-description">{{ protocol?.description }}</p>
+        </mat-card-content>
+      </mat-card>
+      
+      <!-- Protocol Steps -->
+      <div class="protocol-steps-section">
+        <h2>Protocol Steps</h2>
+        
+        <!-- View Mode Steps -->
+        <div *ngIf="!editMode && protocol?.steps?.length" class="protocol-steps-view">
+          <mat-vertical-stepper>
+            <mat-step *ngFor="let step of protocol?.steps; let i = index">
+              <ng-template matStepLabel>{{ $any(step).title || step.name }}</ng-template>
+              <div class="step-content">
+                <div class="step-description">{{ step.description }}</div>
+                
+                <div class="step-details" *ngIf="$any(step).category || $any(step).duration || $any(step).temperature">
+                  <div class="step-detail-item" *ngIf="$any(step).category">
+                    <span class="detail-label">Category:</span>
+                    <span class="detail-value">{{ $any(step).category }}</span>
+                  </div>
+                  <div class="step-detail-item" *ngIf="$any(step).duration">
+                    <span class="detail-label">Duration:</span>
+                    <span class="detail-value">{{ $any(step).duration }}</span>
+                  </div>
+                  <div class="step-detail-item" *ngIf="$any(step).temperature">
+                    <span class="detail-label">Temperature:</span>
+                    <span class="detail-value">{{ $any(step).temperature }}</span>
+                  </div>
+                </div>
+                
+                <div class="step-notes" *ngIf="$any(step).notes">
+                  <h4>Notes</h4>
+                  <p>{{ $any(step).notes }}</p>
+                </div>
+                
+                <div class="step-warnings" *ngIf="$any(step).warnings">
+                  <h4>Warnings</h4>
+                  <p class="warning-text">{{ $any(step).warnings }}</p>
+                </div>
+              </div>
+            </mat-step>
+          </mat-vertical-stepper>
+        </div>
+        
+        <!-- Empty State for Steps -->
+        <div *ngIf="!editMode && (!protocol?.steps || protocol?.steps?.length === 0)" class="empty-state">
+          <mat-icon>assignment</mat-icon>
+          <p>No steps have been added to this protocol yet.</p>
+        </div>
+        
+        <!-- Edit Mode Steps -->
+        <div *ngIf="editMode" class="protocol-steps-edit">
+          <div cdkDropList (cdkDropListDropped)="onStepDrop($event)" class="steps-list">
+            <div *ngFor="let stepControl of steps.controls; let i = index" cdkDrag class="step-item">
+              <mat-expansion-panel [expanded]="i === 0">
+                <mat-expansion-panel-header>
+                  <mat-panel-title>
+                    <div class="step-drag-handle" cdkDragHandle>
+                      <mat-icon>drag_indicator</mat-icon>
+                    </div>
+                    Step {{ i + 1 }}: {{ stepControl.get('title')?.value || 'New Step' }}
+                  </mat-panel-title>
+                </mat-expansion-panel-header>
+                
+                <div [formGroup]="$any(stepControl)" class="step-form">
+                  <div class="form-row">
+                    <mat-form-field class="full-width">
+                      <mat-label>Step Title</mat-label>
+                      <input matInput formControlName="title" required>
+                      <mat-error *ngIf="stepControl.get('title')?.hasError('required')">
+                        Step title is required
+                      </mat-error>
+                    </mat-form-field>
+                  </div>
+                  
+                  <div class="form-row">
+                    <mat-form-field class="full-width">
+                      <mat-label>Step Description</mat-label>
+                      <textarea matInput formControlName="description" rows="3" required></textarea>
+                      <mat-error *ngIf="stepControl.get('description')?.hasError('required')">
+                        Step description is required
+                      </mat-error>
+                    </mat-form-field>
+                  </div>
+                  
+                  <div class="form-row form-row-split">
+                    <mat-form-field>
+                      <mat-label>Category</mat-label>
+                      <mat-select formControlName="category">
+                        <mat-option *ngFor="let category of stepCategories" [value]="category">
+                          {{ category }}
+                        </mat-option>
+                      </mat-select>
+                    </mat-form-field>
+                    
+                    <mat-form-field>
+                      <mat-label>Duration</mat-label>
+                      <input matInput formControlName="duration" placeholder="e.g., 30 min">
+                    </mat-form-field>
+                    
+                    <mat-form-field>
+                      <mat-label>Temperature</mat-label>
+                      <input matInput formControlName="temperature" placeholder="e.g., 37°C">
+                    </mat-form-field>
+                  </div>
+                  
+                  <div class="form-row">
+                    <mat-form-field class="full-width">
+                      <mat-label>Notes</mat-label>
+                      <textarea matInput formControlName="notes" rows="2"></textarea>
+                    </mat-form-field>
+                  </div>
+                  
+                  <div class="form-row">
+                    <mat-form-field class="full-width">
+                      <mat-label>Warnings</mat-label>
+                      <textarea matInput formControlName="warnings" rows="2"></textarea>
+                    </mat-form-field>
+                  </div>
+                  
+                  <div class="step-actions">
+                    <button mat-icon-button color="primary" type="button" 
+                            [disabled]="i === 0"
+                            (click)="moveStepUp(i)" 
+                            matTooltip="Move step up">
+                      <mat-icon>arrow_upward</mat-icon>
+                    </button>
+                    <button mat-icon-button color="primary" type="button" 
+                            [disabled]="i === steps.length - 1"
+                            (click)="moveStepDown(i)" 
+                            matTooltip="Move step down">
+                      <mat-icon>arrow_downward</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" type="button" 
+                            (click)="removeStep(i)" 
+                            matTooltip="Remove step">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              </mat-expansion-panel>
+            </div>
+          </div>
+          
+          <div class="add-step-button">
+            <button mat-raised-button color="primary" type="button" (click)="addStep()">
+              <mat-icon>add</mat-icon> Add Step
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Additional Information Tabs -->
+      <mat-tab-group class="protocol-tabs" animationDuration="0ms">
+        <mat-tab label="Materials & Equipment">
+          <div class="tab-content">
+            <ng-container *ngIf="editMode">
+              <div class="form-row">
+                <mat-form-field class="full-width">
+                  <mat-label>Materials</mat-label>
+                  <textarea matInput formControlName="materials" rows="4" 
+                            placeholder="List all materials required for this protocol"></textarea>
+                </mat-form-field>
+              </div>
+              
+              <div class="form-row">
+                <mat-form-field class="full-width">
+                  <mat-label>Equipment</mat-label>
+                  <textarea matInput formControlName="equipment" rows="4"
+                            placeholder="List all equipment required for this protocol"></textarea>
+                </mat-form-field>
+              </div>
+            </ng-container>
+            
+            <ng-container *ngIf="!editMode">
+              <div class="tab-section">
+                <h3>Materials</h3>
+                <p *ngIf="protocol?.materials">{{ protocol?.materials }}</p>
+                <p *ngIf="!protocol?.materials" class="empty-content">No materials specified.</p>
+              </div>
+              
+              <mat-divider></mat-divider>
+              
+              <div class="tab-section">
+                <h3>Equipment</h3>
+                <p *ngIf="protocol?.equipment">{{ protocol?.equipment }}</p>
+                <p *ngIf="!protocol?.equipment" class="empty-content">No equipment specified.</p>
+              </div>
+            </ng-container>
+          </div>
+        </mat-tab>
+        
+        <mat-tab label="Safety & References">
+          <div class="tab-content">
+            <ng-container *ngIf="editMode">
+              <div class="form-row">
+                <mat-form-field class="full-width">
+                  <mat-label>Safety Notes</mat-label>
+                  <textarea matInput formControlName="safety_notes" rows="4"
+                            placeholder="Enter safety precautions and notes"></textarea>
+                </mat-form-field>
+              </div>
+              
+              <div class="form-row">
+                <mat-form-field class="full-width">
+                  <mat-label>References</mat-label>
+                  <textarea matInput formControlName="references" rows="4"
+                            placeholder="Enter references and citations"></textarea>
+                </mat-form-field>
+              </div>
+            </ng-container>
+            
+            <ng-container *ngIf="!editMode">
+              <div class="tab-section">
+                <h3>Safety Notes</h3>
+                <p *ngIf="protocol?.safety_notes">{{ protocol?.safety_notes }}</p>
+                <p *ngIf="!protocol?.safety_notes" class="empty-content">No safety notes specified.</p>
+              </div>
+              
+              <mat-divider></mat-divider>
+              
+              <div class="tab-section">
+                <h3>References</h3>
+                <p *ngIf="protocol?.references">{{ protocol?.references }}</p>
+                <p *ngIf="!protocol?.references" class="empty-content">No references specified.</p>
+              </div>
+            </ng-container>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </form>
+  </div>
+</div>

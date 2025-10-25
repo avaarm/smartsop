@@ -40,13 +40,34 @@
               </div>
             } @else {
               <div>{{message.content}}</div>
-              <!-- Word document download link -->
-              @if (message.wordDocument) {
-                <div class="word-document-download">
-                  <p><strong>Word Document Available:</strong></p>
-                  <a [href]="message.wordDocument.downloadUrl" target="_blank" class="download-button">
-                    <i class="fas fa-file-word"></i> Download {{ message.wordDocument.filename }}
-                  </a>
+              <!-- Document downloads -->
+              @if (message.role === 'assistant' && message.docId) {
+                <div class="document-actions">
+                  <!-- Word document download link -->
+                  @if (message.wordDocument) {
+                    <div class="download-section">
+                      <p><strong>Word Document:</strong></p>
+                      <a [href]="message.wordDocument.downloadUrl" target="_blank" class="download-button">
+                        📄 Download {{ message.wordDocument.filename }}
+                      </a>
+                    </div>
+                  }
+                  
+                  <!-- Export options -->
+                  <div class="export-section">
+                    <p><strong>Export as:</strong></p>
+                    <div class="export-buttons">
+                      <button (click)="exportDocument(message, 'pdf')" class="export-btn pdf-btn">
+                        📕 PDF
+                      </button>
+                      <button (click)="exportDocument(message, 'excel')" class="export-btn excel-btn">
+                        📊 Excel
+                      </button>
+                      <button (click)="exportDocument(message, 'csv')" class="export-btn csv-btn">
+                        📋 CSV
+                      </button>
+                    </div>
+                  </div>
                 </div>
               }
             }

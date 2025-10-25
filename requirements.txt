@@ -1,0 +1,16 @@
+flask
+flask-cors
+python-dotenv
+torch
+transformers
+datasets
+accelerate
+requests
+beautifulsoup4
+python-docx
+openpyxl
+pandas
+reportlab
+PyPDF2
+sqlalchemy
+flask-sqlalchemy
