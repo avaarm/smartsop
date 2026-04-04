@@ -16,6 +16,7 @@ from ml_model.web_data_collector import save_training_data as save_web_training_
 from ml_model.database import engine, Base
 from ml_model.db_session import init_db_session
 from ml_model.api import register_api_routes
+from ml_model.api.gmp_routes import gmp_bp
 
 # Load environment variables from .env file
 load_dotenv()
@@ -38,6 +39,7 @@ db_session = init_db_session(app)
 
 # Register API routes
 register_api_routes(app)
+app.register_blueprint(gmp_bp)
 
 # Initialize components
 model = SOPModel()

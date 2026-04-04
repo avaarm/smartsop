@@ -1,0 +1,123 @@
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, catchError, throwError, timeout } from 'rxjs';
+
+export interface GMPTemplate {
+  id: string;
+  name: string;
+  doc_type: string;
+}
+
+export interface GMPTemplateSchema {
+  id: string;
+  name: string;
+  doc_type: string;
+  orientation: string;
+  sections: GMPSectionSchema[];
+}
+
+export interface GMPSectionSchema {
+  id: string;
+  title: string;
+  type: string;
+  required: boolean;
+  llm_prompt?: string;
+  step_config?: any;
+  columns?: any[];
+  default_data?: any;
+}
+
+export interface GMPDocumentRequest {
+  doc_type: string;
+  title: string;
+  product_name: string;
+  process_type: string;
+  description: string;
+  doc_number?: string;
+  revision?: string;
+  sections?: Record<string, any>;
+}
+
+export interface GMPDocumentResponse {
+  success: boolean;
+  doc_id?: string;
+  filename?: string;
+  download_url?: string;
+  preview_sections?: PreviewSection[];
+  error?: string;
+}
+
+export interface PreviewSection {
+  id: string;
+  title: string;
+  type: string;
+  has_content: boolean;
+}
+
+export interface OllamaStatus {
+  success: boolean;
+  available: boolean;
+  model: string;
+  models: string[];
+}
+
+export interface SectionPreviewRequest {
+  doc_type: string;
+  section_id: string;
+  context: Record<string, any>;
+}
+
+@Injectable({
+  providedIn: 'root'
+})
+export class GMPDocumentService {
+  private baseUrl = 'http://localhost:5001/api/gmp';
+
+  constructor(private http: HttpClient) {}
+
+  getTemplates(): Observable<{ success: boolean; templates: GMPTemplate[] }> {
+    return this.http.get<{ success: boolean; templates: GMPTemplate[] }>(
+      `${this.baseUrl}/templates`
+    ).pipe(timeout(30000), catchError(this.handleError));
+  }
+
+  getTemplateSchema(templateId: string): Observable<{ success: boolean; template: GMPTemplateSchema }> {
+    return this.http.get<{ success: boolean; template: GMPTemplateSchema }>(
+      `${this.baseUrl}/templates/${templateId}`
+    ).pipe(timeout(30000), catchError(this.handleError));
+  }
+
+  generateDocument(request: GMPDocumentRequest): Observable<GMPDocumentResponse> {
+    return this.http.post<GMPDocumentResponse>(
+      `${this.baseUrl}/generate`, request
+    ).pipe(timeout(120000), catchError(this.handleError));
+  }
+
+  previewSection(request: SectionPreviewRequest): Observable<{ success: boolean; data: any }> {
+    return this.http.post<{ success: boolean; data: any }>(
+      `${this.baseUrl}/preview`, request
+    ).pipe(timeout(60000), catchError(this.handleError));
+  }
+
+  getOllamaStatus(): Observable<OllamaStatus> {
+    return this.http.get<OllamaStatus>(
+      `${this.baseUrl}/ollama/status`
+    ).pipe(timeout(10000), catchError(this.handleError));
+  }
+
+  getDownloadUrl(filename: string): string {
+    return `http://localhost:5001/api/download/${filename}`;
+  }
+
+  private handleError(error: HttpErrorResponse): Observable<never> {
+    let message = 'An error occurred';
+    if (error.status === 0) {
+      message = 'Cannot connect to server. Is the backend running?';
+    } else if (error.status === 503) {
+      message = 'Ollama LLM is not available. Start it with: ollama serve';
+    } else if (error.error?.error) {
+      message = error.error.error;
+    }
+    return throwError(() => new Error(message));
+  }
+}

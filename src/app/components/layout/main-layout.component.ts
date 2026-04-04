@@ -31,6 +31,18 @@ import { CommonModule } from '@angular/common';
           </div>
 
           <div class="nav-section">
+            <h3 class="nav-section-title">GMP Documents</h3>
+            <a routerLink="/gmp" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">
+              <span class="nav-icon">📄</span>
+              <span>Document Builder</span>
+            </a>
+            <a routerLink="/gmp/new" routerLinkActive="active" class="nav-link">
+              <span class="nav-icon">➕</span>
+              <span>New Document</span>
+            </a>
+          </div>
+
+          <div class="nav-section">
             <h3 class="nav-section-title">Lab Management</h3>
             <a routerLink="/eln/dashboard" routerLinkActive="active" class="nav-link">
               <span class="nav-icon">📊</span>

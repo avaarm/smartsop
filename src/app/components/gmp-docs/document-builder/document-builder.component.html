@@ -1,0 +1,261 @@
+<div class="document-builder">
+  <div class="builder-header">
+    <h1>GMP Document Builder</h1>
+    <div class="ollama-status" *ngIf="ollamaStatus">
+      <mat-chip [color]="ollamaStatus.available ? 'primary' : 'warn'" selected>
+        <mat-icon>{{ ollamaStatus.available ? 'check_circle' : 'warning' }}</mat-icon>
+        {{ ollamaStatus.available ? 'AI Ready (' + ollamaStatus.model + ')' : 'AI Offline' }}
+      </mat-chip>
+    </div>
+  </div>
+
+  <mat-stepper linear #stepper>
+    <!-- Step 1: Select Document Type -->
+    <mat-step [completed]="!!selectedTemplateId && !!templateSchema">
+      <ng-template matStepLabel>Document Type</ng-template>
+      <div class="step-content">
+        <h2>Select Document Type</h2>
+        <p class="step-description">Choose the type of GMP document to create.</p>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Document Type</mat-label>
+          <mat-select [(ngModel)]="selectedTemplateId" (selectionChange)="onTemplateSelect()">
+            <mat-option *ngFor="let t of templates" [value]="t.id">
+              {{ t.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <div class="loading-spinner" *ngIf="loading">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p>Loading template...</p>
+        </div>
+
+        <div class="template-info" *ngIf="templateSchema">
+          <mat-card>
+            <mat-card-header>
+              <mat-card-title>{{ templateSchema.name }}</mat-card-title>
+              <mat-card-subtitle>{{ templateSchema.sections.length }} sections | {{ templateSchema.orientation }} orientation</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="section-chips">
+                <mat-chip *ngFor="let s of templateSchema.sections" [matTooltip]="s.type">
+                  <mat-icon>{{ getSectionIcon(s.type) }}</mat-icon>
+                  {{ s.title }}
+                </mat-chip>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <div class="step-actions">
+          <button mat-raised-button color="primary" matStepperNext
+                  [disabled]="!templateSchema">Next</button>
+        </div>
+      </div>
+    </mat-step>
+
+    <!-- Step 2: Basic Information -->
+    <mat-step [completed]="!!docTitle && !!productName">
+      <ng-template matStepLabel>Basic Information</ng-template>
+      <div class="step-content">
+        <h2>Document Information</h2>
+        <p class="step-description">Enter the basic details for your document.</p>
+
+        <div class="form-grid">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Document Title</mat-label>
+            <input matInput [(ngModel)]="docTitle"
+                   placeholder="e.g., CD8+ Enrichment Batch Record">
+          </mat-form-field>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline">
+              <mat-label>Product Name</mat-label>
+              <input matInput [(ngModel)]="productName"
+                     placeholder="e.g., CD8+ T Cells">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Process Type</mat-label>
+              <input matInput [(ngModel)]="processType"
+                     placeholder="e.g., CD8 Enrichment">
+            </mat-form-field>
+          </div>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Process Description</mat-label>
+            <textarea matInput [(ngModel)]="description" rows="4"
+                      placeholder="Describe the manufacturing process..."></textarea>
+          </mat-form-field>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline">
+              <mat-label>Document Number (optional)</mat-label>
+              <input matInput [(ngModel)]="docNumber" placeholder="e.g., BR-001-01">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Revision</mat-label>
+              <input matInput [(ngModel)]="revision" placeholder="01">
+            </mat-form-field>
+          </div>
+        </div>
+
+        <div class="step-actions">
+          <button mat-button matStepperPrevious>Back</button>
+          <button mat-raised-button color="primary" matStepperNext
+                  [disabled]="!docTitle || !productName">Next</button>
+        </div>
+      </div>
+    </mat-step>
+
+    <!-- Step 3: Section Content -->
+    <mat-step>
+      <ng-template matStepLabel>Section Content</ng-template>
+      <div class="step-content">
+        <h2>Document Sections</h2>
+        <p class="step-description">
+          Review and edit each section. Use "Fill with AI" to auto-generate content.
+        </p>
+
+        <div class="sections-list" *ngIf="templateSchema">
+          <mat-accordion multi>
+            <mat-expansion-panel *ngFor="let section of templateSchema.sections"
+                                 [expanded]="false">
+              <mat-expansion-panel-header>
+                <mat-panel-title>
+                  <mat-icon>{{ getSectionIcon(section.type) }}</mat-icon>
+                  <span>{{ section.title }}</span>
+                  <mat-chip *ngIf="sectionData[section.id]" class="has-content-chip">
+                    Content
+                  </mat-chip>
+                </mat-panel-title>
+                <mat-panel-description>
+                  {{ section.type | titlecase }}
+                  <span *ngIf="section.required" class="required-badge">Required</span>
+                </mat-panel-description>
+              </mat-expansion-panel-header>
+
+              <div class="section-content">
+                <!-- AI Fill Button -->
+                <div class="ai-actions" *ngIf="section.llm_prompt && ollamaStatus?.available">
+                  <button mat-stroked-button color="accent"
+                          (click)="fillSectionWithAI(section)"
+                          [disabled]="sectionGenerating[section.id]">
+                    <mat-icon *ngIf="!sectionGenerating[section.id]">auto_awesome</mat-icon>
+                    <mat-spinner *ngIf="sectionGenerating[section.id]"
+                                 diameter="20"></mat-spinner>
+                    {{ sectionGenerating[section.id] ? 'Generating...' : 'Fill with AI' }}
+                  </button>
+                </div>
+
+                <!-- Step Procedure Editor -->
+                <app-step-builder
+                  *ngIf="isStepProcedure(section.type)"
+                  [sectionId]="section.id"
+                  [stepConfig]="section.step_config"
+                  [data]="sectionData[section.id] || {}"
+                  (dataChange)="onSectionDataChange(section.id, $event)">
+                </app-step-builder>
+
+                <!-- Equipment/Materials Editor -->
+                <app-equipment-list
+                  *ngIf="isEquipmentOrMaterials(section.type)"
+                  [sectionId]="section.id"
+                  [sectionType]="section.type"
+                  [data]="sectionData[section.id] || {}"
+                  (dataChange)="onSectionDataChange(section.id, $event)">
+                </app-equipment-list>
+
+                <!-- Generic Section Editor -->
+                <app-section-editor
+                  *ngIf="!isStepProcedure(section.type) && !isEquipmentOrMaterials(section.type)"
+                  [sectionId]="section.id"
+                  [sectionType]="section.type"
+                  [sectionTitle]="section.title"
+                  [data]="sectionData[section.id] || {}"
+                  (dataChange)="onSectionDataChange(section.id, $event)">
+                </app-section-editor>
+              </div>
+            </mat-expansion-panel>
+          </mat-accordion>
+        </div>
+
+        <div class="step-actions">
+          <button mat-button matStepperPrevious>Back</button>
+          <button mat-raised-button color="primary" matStepperNext>
+            Review & Generate
+          </button>
+        </div>
+      </div>
+    </mat-step>
+
+    <!-- Step 4: Review & Generate -->
+    <mat-step>
+      <ng-template matStepLabel>Generate</ng-template>
+      <div class="step-content">
+        <h2>Review & Generate Document</h2>
+
+        <mat-card class="review-card">
+          <mat-card-header>
+            <mat-card-title>{{ docTitle }}</mat-card-title>
+            <mat-card-subtitle>
+              {{ templateSchema?.name }} | {{ productName }} | {{ processType }}
+            </mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="review-sections">
+              <div *ngFor="let section of templateSchema?.sections"
+                   class="review-section-item">
+                <mat-icon [class.has-data]="sectionData[section.id]">
+                  {{ sectionData[section.id] ? 'check_circle' : 'radio_button_unchecked' }}
+                </mat-icon>
+                <span>{{ section.title }}</span>
+                <span class="section-status">
+                  {{ sectionData[section.id] ? 'Ready' : (section.llm_prompt ? 'Will use AI' : 'Empty') }}
+                </span>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <div class="generate-actions">
+          <button mat-button matStepperPrevious>Back</button>
+          <button mat-raised-button color="primary"
+                  (click)="generateDocument()"
+                  [disabled]="generating"
+                  class="generate-btn">
+            <mat-icon *ngIf="!generating">description</mat-icon>
+            <mat-spinner *ngIf="generating" diameter="20"></mat-spinner>
+            {{ generating ? 'Generating Document...' : 'Generate DOCX' }}
+          </button>
+        </div>
+
+        <!-- Generated Document -->
+        <div class="generated-result" *ngIf="generatedDocUrl">
+          <mat-divider></mat-divider>
+          <h3>Document Generated!</h3>
+          <div class="download-section">
+            <mat-icon class="success-icon">check_circle</mat-icon>
+            <span>{{ generatedFilename }}</span>
+            <button mat-raised-button color="accent" (click)="downloadDocument()">
+              <mat-icon>download</mat-icon>
+              Download DOCX
+            </button>
+          </div>
+
+          <div class="preview-sections" *ngIf="generatedPreview.length > 0">
+            <h4>Sections Generated:</h4>
+            <div *ngFor="let section of generatedPreview" class="preview-item">
+              <mat-icon [class.has-content]="section.has_content">
+                {{ section.has_content ? 'check' : 'remove' }}
+              </mat-icon>
+              {{ section.title }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-step>
+  </mat-stepper>
+</div>
