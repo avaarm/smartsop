@@ -44,22 +44,88 @@ import { GMPDocumentService, GMPTemplate } from '../../../services/gmp-document.
     </div>
   `,
   styles: [`
-    .document-list { padding: 24px; }
+    :host {
+      --card-border: hsl(240 5.9% 90%);
+      --muted-fg: hsl(240 3.8% 46.1%);
+      --primary: hsl(240 5.9% 10%);
+      --radius: 0.75rem;
+    }
+    .document-list {
+      padding: 32px 40px;
+      max-width: 1100px;
+      margin: 0 auto;
+      font-family: 'Inter', -apple-system, sans-serif;
+    }
     .list-header {
-      display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;
-      h1 { margin: 0; font-size: 28px; color: #1a237e; }
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+      h1 {
+        margin: 0;
+        font-size: 30px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        color: var(--primary);
+      }
+      button {
+        height: 40px;
+        font-size: 14px;
+        font-weight: 500;
+        border-radius: var(--radius);
+        letter-spacing: -0.01em;
+      }
     }
     .templates-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 12px;
     }
     .template-card {
-      .type-icon { font-size: 32px; width: 40px; height: 40px; color: #1a237e;
-        display: flex; align-items: center; justify-content: center; }
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      transition: border-color 0.15s, box-shadow 0.15s;
+      &:hover {
+        border-color: hsl(240 5.9% 80%);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      }
+      .type-icon {
+        font-size: 28px;
+        width: 36px;
+        height: 36px;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      mat-card-title {
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      mat-card-subtitle {
+        font-size: 13px;
+        color: var(--muted-fg);
+      }
+      button {
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+      }
     }
     .empty-state {
-      text-align: center; padding: 48px; color: #999;
-      mat-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 16px; }
+      text-align: center;
+      padding: 64px;
+      color: var(--muted-fg);
+      mat-icon {
+        font-size: 40px;
+        width: 40px;
+        height: 40px;
+        margin-bottom: 12px;
+        color: hsl(0 0% 80%);
+      }
+      p { font-size: 14px; }
     }
   `],
 })
