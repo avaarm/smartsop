@@ -82,100 +82,94 @@ import { CommonModule } from '@angular/common';
       display: flex;
       height: 100vh;
       overflow: hidden;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
     .sidebar {
       width: 260px;
-      background: linear-gradient(180deg, #1a237e 0%, #283593 100%);
-      color: white;
+      background: hsl(0 0% 3%);
+      color: hsl(0 0% 90%);
       display: flex;
       flex-direction: column;
-      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+      border-right: 1px solid hsl(0 0% 12%);
       overflow-y: auto;
     }
 
     .sidebar-header {
-      padding: 24px 20px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 20px 16px;
+      border-bottom: 1px solid hsl(0 0% 12%);
     }
 
     .sidebar-header h2 {
       margin: 0;
-      font-size: 18px;
+      font-size: 15px;
       font-weight: 600;
-      line-height: 1.4;
+      letter-spacing: -0.02em;
+      color: hsl(0 0% 98%);
     }
 
     .sidebar-nav {
       flex: 1;
-      padding: 16px 0;
+      padding: 12px 0;
     }
 
     .nav-section {
-      margin-bottom: 24px;
+      margin-bottom: 16px;
     }
 
     .nav-section-title {
-      padding: 0 20px;
-      margin: 0 0 12px 0;
+      padding: 0 16px;
+      margin: 0 0 6px 0;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 500;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      opacity: 0.6;
+      letter-spacing: 0.05em;
+      color: hsl(0 0% 45%);
     }
 
     .nav-link {
       display: flex;
       align-items: center;
-      padding: 12px 20px;
-      color: rgba(255, 255, 255, 0.8);
+      padding: 8px 16px;
+      margin: 1px 8px;
+      color: hsl(0 0% 65%);
       text-decoration: none;
-      transition: all 0.2s ease;
-      border-left: 3px solid transparent;
+      font-size: 14px;
+      font-weight: 400;
+      border-radius: 6px;
+      transition: all 0.15s ease;
     }
 
     .nav-link:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: white;
+      background: hsl(0 0% 10%);
+      color: hsl(0 0% 95%);
     }
 
     .nav-link.active {
-      background: rgba(255, 255, 255, 0.15);
-      color: white;
-      border-left-color: #4CAF50;
+      background: hsl(0 0% 12%);
+      color: hsl(0 0% 98%);
+      font-weight: 500;
     }
 
     .nav-icon {
-      margin-right: 12px;
-      font-size: 18px;
-      width: 24px;
-      display: inline-block;
+      margin-right: 10px;
+      font-size: 16px;
+      width: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.8;
     }
 
     .main-content {
       flex: 1;
       overflow-y: auto;
-      background: #f5f5f5;
+      background: hsl(0 0% 98.5%);
     }
 
-    /* Scrollbar styling */
-    .sidebar::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    .sidebar::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.1);
-    }
-
-    .sidebar::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.3);
-      border-radius: 3px;
-    }
-
-    .sidebar::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.5);
-    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: hsl(0 0% 18%); border-radius: 2px; }
   `]
 })
 export class MainLayoutComponent {}

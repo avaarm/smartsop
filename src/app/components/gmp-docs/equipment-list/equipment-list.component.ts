@@ -63,15 +63,34 @@ import { MatIconModule } from '@angular/material/icon';
     </div>
   `,
   styles: [`
-    .equipment-list-editor { padding: 8px 0; }
-    h4 { margin: 0 0 12px 0; }
-    .item-row, .material-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 4px; }
+    :host {
+      --border: hsl(240 5.9% 90%);
+      --muted: hsl(240 4.8% 95.9%);
+      --muted-fg: hsl(240 3.8% 46.1%);
+      --primary: hsl(240 5.9% 10%);
+      --radius: 0.75rem;
+    }
+    .equipment-list-editor { padding: 8px 0; font-family: 'Inter', sans-serif; }
+    h4 {
+      margin: 0 0 12px 0; font-size: 15px; font-weight: 600;
+      letter-spacing: -0.01em; color: var(--primary);
+    }
+    .item-row, .material-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 2px; }
     .full-width { flex: 1; }
     .flex-field { flex: 1; }
     .pn-field { width: 160px; }
     .qty-field { width: 120px; }
-    .empty-state { color: #999; text-align: center; padding: 16px; }
-    button[mat-stroked-button] { margin-top: 8px; }
+    .empty-state {
+      color: var(--muted-fg); text-align: center; padding: 24px;
+      font-size: 14px; background: var(--muted); border-radius: var(--radius);
+      border: 1px dashed var(--border);
+    }
+    button[mat-stroked-button] {
+      margin-top: 8px; height: 34px; font-size: 13px; font-weight: 500;
+      border-radius: var(--radius); border: 1px solid var(--border); color: var(--muted-fg);
+    }
+    button[mat-icon-button] { opacity: 0.4; }
+    button[mat-icon-button]:hover { opacity: 1; }
   `],
 })
 export class EquipmentListComponent implements OnChanges {

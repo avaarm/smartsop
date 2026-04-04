@@ -135,23 +135,36 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
     </div>
   `,
   styles: [`
-    .section-editor { padding: 8px 0; }
+    :host {
+      --border: hsl(240 5.9% 90%);
+      --muted: hsl(240 4.8% 95.9%);
+      --muted-fg: hsl(240 3.8% 46.1%);
+      --radius: 0.75rem;
+    }
+    .section-editor { padding: 8px 0; font-family: 'Inter', sans-serif; }
     .approver-row, .ref-row, .att-row, .instr-row, .checklist-row {
-      display: flex; gap: 8px; align-items: flex-start; margin-bottom: 4px;
+      display: flex; gap: 8px; align-items: flex-start; margin-bottom: 2px;
     }
     .flex-field { flex: 1; }
     .doc-num-field { width: 180px; }
     .qty-field { width: 80px; }
     .date-field { width: 140px; }
     .full-width { width: 100%; }
-    .editor-note { color: #666; margin-bottom: 8px; }
+    .editor-note { color: var(--muted-fg); margin-bottom: 8px; font-size: 13px; }
     .info-note {
-      display: flex; align-items: center; gap: 8px;
-      color: #888; font-size: 14px; padding: 12px;
-      background: #f5f5f5; border-radius: 4px;
+      display: flex; align-items: center; gap: 10px;
+      color: var(--muted-fg); font-size: 13px; padding: 14px 16px;
+      background: var(--muted); border-radius: var(--radius);
+      border: 1px solid var(--border);
     }
-    .info-note mat-icon { font-size: 18px; color: #1565c0; }
-    button[mat-stroked-button] { margin-top: 8px; }
+    .info-note mat-icon { font-size: 16px; width: 16px; height: 16px; color: hsl(217 91% 60%); }
+    button[mat-stroked-button] {
+      margin-top: 8px; height: 34px; font-size: 13px; font-weight: 500;
+      border-radius: var(--radius); border: 1px solid var(--border);
+      color: var(--muted-fg);
+    }
+    button[mat-icon-button] { opacity: 0.5; }
+    button[mat-icon-button]:hover { opacity: 1; }
   `],
 })
 export class SectionEditorComponent implements OnChanges {

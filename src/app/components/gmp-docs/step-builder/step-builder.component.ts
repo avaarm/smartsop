@@ -140,25 +140,55 @@ interface StepResult {
     </div>
   `,
   styles: [`
-    .step-builder { padding: 8px 0; }
-    .step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .step-header h4 { margin: 0; }
+    :host {
+      --border: hsl(240 5.9% 90%);
+      --muted: hsl(240 4.8% 95.9%);
+      --muted-fg: hsl(240 3.8% 46.1%);
+      --primary: hsl(240 5.9% 10%);
+      --radius: 0.75rem;
+    }
+    .step-builder { padding: 8px 0; font-family: 'Inter', sans-serif; }
+    .step-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+      h4 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: var(--primary); }
+      button { height: 34px; font-size: 13px; font-weight: 500; border-radius: var(--radius); }
+    }
     .steps-list { min-height: 40px; }
-    .step-panel { margin-bottom: 8px; }
-    .step-panel:last-child { margin-bottom: 0; }
-    .drag-handle { cursor: grab; color: #999; margin-right: 8px; }
-    .step-title-text { margin-left: 8px; }
+    .step-panel {
+      margin-bottom: 8px;
+      border: 1px solid var(--border) !important;
+      border-radius: var(--radius) !important;
+      box-shadow: none !important;
+    }
+    .drag-handle { cursor: grab; color: hsl(0 0% 75%); margin-right: 8px; font-size: 18px; }
+    .step-title-text { margin-left: 6px; font-size: 14px; color: var(--muted-fg); }
     .step-detail { padding: 8px 0; }
-    .step-detail h5 { margin: 16px 0 8px 0; font-size: 14px; color: #555; }
+    .step-detail h5 {
+      margin: 20px 0 8px 0; font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted-fg);
+    }
     .step-meta { display: flex; gap: 8px; align-items: flex-start; }
-    .step-num-field { width: 100px; }
+    .step-num-field { width: 90px; }
     .flex-field { flex: 1; }
-    .type-field { width: 140px; }
-    .instruction-row, .variable-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 4px; }
-    .add-btn { margin-top: 4px; }
-    .empty-state { color: #999; text-align: center; padding: 24px; }
-    .cdk-drag-preview { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-    .cdk-drag-placeholder { opacity: 0.3; }
+    .type-field { width: 130px; }
+    .instruction-row, .variable-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 2px; }
+    .add-btn {
+      margin-top: 6px; height: 30px; font-size: 12px; font-weight: 500;
+      border-radius: var(--radius); border: 1px dashed var(--border); color: var(--muted-fg);
+    }
+    .empty-state {
+      color: var(--muted-fg); text-align: center; padding: 32px;
+      font-size: 14px; background: var(--muted); border-radius: var(--radius);
+      border: 1px dashed var(--border);
+    }
+    .cdk-drag-preview {
+      border-radius: var(--radius);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    .cdk-drag-placeholder { opacity: 0.2; }
+    mat-checkbox { font-size: 13px; }
+    button[mat-icon-button] { opacity: 0.4; }
+    button[mat-icon-button]:hover { opacity: 1; }
   `],
 })
 export class StepBuilderComponent implements OnChanges {
