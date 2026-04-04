@@ -14,6 +14,23 @@ export const routes: Routes = [
       { path: 'training', component: ModelTrainingComponent },
       { path: 'portal/model-training', component: ModelTrainingComponent },
       
+      // GMP Document Builder
+      {
+        path: 'gmp',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./components/gmp-docs/document-list/document-list.component')
+              .then(m => m.DocumentListComponent)
+          },
+          {
+            path: 'new',
+            loadComponent: () => import('./components/gmp-docs/document-builder/document-builder.component')
+              .then(m => m.DocumentBuilderComponent)
+          },
+        ]
+      },
+
       // ELN Module Routes
       {
         path: 'eln',
