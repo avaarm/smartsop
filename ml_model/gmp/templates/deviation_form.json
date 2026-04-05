@@ -1,0 +1,153 @@
+{
+  "id": "deviation_form",
+  "name": "Deviation / Nonconformance Form",
+  "doc_type": "form",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1440,
+    "right": 1080,
+    "bottom": 1080,
+    "left": 1080,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 6,
+    "column_widths": [650, 1200, 3800, 1800, 1200, 1430],
+    "total_width": 10080,
+    "row_height_dxa": 288,
+    "rows": 3,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "CONFIDENTIAL",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": true,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "approval_block",
+      "title": "APPROVED BY",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Reporter", "name": "", "date": ""},
+          {"role": "Area Supervisor", "name": "", "date": ""},
+          {"role": "QA Investigator", "name": "", "date": ""},
+          {"role": "Quality Assurance", "name": "", "date": ""}
+        ]
+      }
+    },
+    {
+      "id": "deviation_identification",
+      "title": "Deviation Identification",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "Deviation Number", "value": ""},
+          {"label": "Date/Time of Occurrence", "value": ""},
+          {"label": "Date/Time of Discovery", "value": ""},
+          {"label": "Area / Equipment", "value": ""},
+          {"label": "Product / Batch Affected", "value": ""},
+          {"label": "Classification", "value": "Minor / Major / Critical"}
+        ]
+      }
+    },
+    {
+      "id": "references",
+      "title": "REFERENCES",
+      "type": "references",
+      "required": true,
+      "llm_prompt": "Generate references for a deviation form affecting {process_type} on {product_name}. Include relevant QA- procedures (QA-010 Deviation Management, QA-020 Investigation), PR- process procedures, and any batch records. {description}"
+    },
+    {
+      "id": "description",
+      "title": "Description of Deviation",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write a concise, factual description of a deviation in {process_type} of {product_name}. {description}. State what happened, when, where, who observed it, and what conditions applied. Avoid speculation about root cause."
+    },
+    {
+      "id": "immediate_actions",
+      "title": "Immediate Actions Taken",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "List immediate containment actions for a deviation in {process_type} of {product_name}. Include product quarantine, equipment lockout, sample retention, stakeholder notification, and preservation of evidence."
+    },
+    {
+      "id": "impact_assessment",
+      "title": "Impact Assessment",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write an initial impact assessment for a deviation in {product_name}. Address: (1) product quality impact, (2) patient safety impact, (3) other batches impacted, (4) regulatory reporting obligations, (5) data integrity implications."
+    },
+    {
+      "id": "investigation",
+      "title": "Root-Cause Investigation",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Outline a root-cause investigation plan for a deviation. Cover the 5 Whys or Ishikawa (6M) approach, evidence to collect, interviews, document review, and the analytical tests or retests required for {product_name}."
+    },
+    {
+      "id": "corrective_actions",
+      "title": "Corrective & Preventive Actions (CAPA)",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "Action", "width_dxa": 5200},
+          {"id": "variable", "title": "Type (CA/PA)", "width_dxa": 1600},
+          {"id": "result", "title": "Owner", "width_dxa": 1900},
+          {"id": "performed_by", "title": "Target Date", "width_dxa": 1380}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate CAPA items for a deviation in {process_type} of {product_name}. Include both corrective (CA) actions addressing the specific event and preventive (PA) actions addressing the systemic cause."
+    },
+    {
+      "id": "disposition",
+      "title": "Product Disposition",
+      "type": "free_text",
+      "required": true,
+      "default_data": {
+        "text": "Disposition decision (Accept / Rework / Reject / Use-As-Is) with justification. Cross-reference analytical results and QA disposition memo."
+      }
+    },
+    {
+      "id": "comments",
+      "title": "Comments",
+      "type": "comments",
+      "required": true,
+      "default_data": {"num_rows": 4}
+    },
+    {
+      "id": "qa_review",
+      "title": "QUALITY ASSURANCE REVIEW",
+      "type": "review",
+      "required": true,
+      "default_data": {
+        "review_type": "QUALITY ASSURANCE REVIEW (Refer to QA-010)"
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "Forms",
+    "regulatory_framework": "21 CFR 211.192, ICH Q10"
+  }
+}

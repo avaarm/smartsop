@@ -66,27 +66,35 @@
         <span>Loading templates…</span>
       </div>
 
-      <div *ngIf="!loading" class="template-grid">
-        <button *ngFor="let t of templates"
-                class="template-card"
-                [class.selected]="selectedTemplateId === t.id"
-                (click)="selectTemplate(t.id)">
-          <div class="template-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-            </svg>
+      <div *ngIf="!loading" class="template-categories">
+        <div *ngFor="let category of templateCategories" class="template-category">
+          <div class="category-header">
+            <div class="category-label">{{ category.label }}</div>
+            <div class="category-description">{{ category.description }}</div>
           </div>
-          <div class="template-info">
-            <div class="template-name">{{ t.name }}</div>
-            <div class="template-type">{{ formatSectionType(t.doc_type) }}</div>
+          <div class="template-grid">
+            <button *ngFor="let t of category.templates"
+                    class="template-card"
+                    [class.selected]="selectedTemplateId === t.id"
+                    (click)="selectTemplate(t.id)">
+              <div class="template-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>
+              </div>
+              <div class="template-info">
+                <div class="template-name">{{ t.name }}</div>
+                <div class="template-type">{{ category.label }}</div>
+              </div>
+              <div class="template-check" *ngIf="selectedTemplateId === t.id">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </div>
+            </button>
           </div>
-          <div class="template-check" *ngIf="selectedTemplateId === t.id">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-          </div>
-        </button>
+        </div>
       </div>
 
       <div *ngIf="templateSchema" class="template-preview">

@@ -86,6 +86,28 @@ export class DocumentBuilderComponent implements OnInit {
     });
   }
 
+  // Group templates into the record categories the user wants:
+  // Records (batch records, reports, forms, validations, qualifications) and
+  // Procedures (SOPs + deviation/change forms). The card UI renders one
+  // group per category heading.
+  private readonly categoryOrder: { key: string; label: string; description: string }[] = [
+    { key: 'batch_record',  label: 'Batch Records',   description: 'Executed GMP manufacturing records' },
+    { key: 'validation',    label: 'Validations',     description: 'IQ / OQ / PQ protocols and reports' },
+    { key: 'qualification', label: 'Qualifications',  description: 'Equipment and facility qualification' },
+    { key: 'form',          label: 'Forms',           description: 'Deviation, change control, and quality forms' },
+    { key: 'report',        label: 'Reports',         description: 'Investigations, annual reviews, and summaries' },
+    { key: 'sop',           label: 'Procedures (SOP)', description: 'Standard operating procedures' },
+  ];
+
+  get templateCategories(): { key: string; label: string; description: string; templates: GMPTemplate[] }[] {
+    return this.categoryOrder
+      .map(cat => ({
+        ...cat,
+        templates: this.templates.filter(t => t.doc_type === cat.key),
+      }))
+      .filter(cat => cat.templates.length > 0);
+  }
+
   checkOllamaStatus(): void {
     this.gmp.getOllamaStatus().subscribe({
       next: (s) => (this.ollamaStatus = s),

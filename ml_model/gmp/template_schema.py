@@ -8,6 +8,10 @@ from pydantic import BaseModel, Field
 
 class DocumentType(str, Enum):
     BATCH_RECORD = "batch_record"
+    VALIDATION = "validation"
+    QUALIFICATION = "qualification"
+    FORM = "form"
+    REPORT = "report"
     SOP = "sop"
     DEVIATION_REPORT = "deviation_report"
     CAPA = "capa"
