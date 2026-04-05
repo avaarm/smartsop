@@ -3,13 +3,13 @@
 import logging
 from flask import Blueprint, request, jsonify
 
-from ml_model.gmp.document_generator import GMPDocumentGenerator
+from .document_generator import GMPDocumentGenerator
 
 logger = logging.getLogger(__name__)
 
 gmp_bp = Blueprint("gmp", __name__, url_prefix="/api/gmp")
 
-# Initialize generator (lazy)
+# Lazy initialization
 _generator = None
 
 
@@ -25,8 +25,7 @@ def list_templates():
     """List all available GMP document templates."""
     try:
         gen = get_generator()
-        templates = gen.list_templates()
-        return jsonify({"success": True, "templates": templates})
+        return jsonify({"success": True, "templates": gen.list_templates()})
     except Exception as e:
         logger.error(f"Failed to list templates: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
@@ -34,7 +33,7 @@ def list_templates():
 
 @gmp_bp.route("/templates/<template_id>", methods=["GET"])
 def get_template(template_id: str):
-    """Get the full schema for a template (for dynamic form building)."""
+    """Get the full schema for a template."""
     try:
         gen = get_generator()
         schema = gen.get_template_schema(template_id)
@@ -48,23 +47,7 @@ def get_template(template_id: str):
 
 @gmp_bp.route("/generate", methods=["POST"])
 def generate_document():
-    """Generate a GMP document.
-
-    Request body:
-    {
-        "doc_type": "batch_record",
-        "title": "CD8+ Enrichment Batch Record",
-        "product_name": "CD8+ T Cells",
-        "process_type": "CD8 Enrichment",
-        "description": "CliniMACS Prodigy CD8 enrichment process...",
-        "doc_number": "BR-001-01",  // optional
-        "revision": "01",  // optional
-        "sections": {  // optional pre-filled sections
-            "approval_block": { "approvers": [...] },
-            "references": { "references": [...] }
-        }
-    }
-    """
+    """Generate a GMP document."""
     try:
         data = request.get_json()
         if not data:
@@ -87,7 +70,6 @@ def generate_document():
     except FileNotFoundError as e:
         return jsonify({"success": False, "error": str(e)}), 404
     except RuntimeError as e:
-        # Ollama not running, etc.
         return jsonify({"success": False, "error": str(e)}), 503
     except Exception as e:
         logger.error(f"Document generation failed: {e}", exc_info=True)
@@ -96,19 +78,7 @@ def generate_document():
 
 @gmp_bp.route("/preview", methods=["POST"])
 def preview_section():
-    """Generate a preview for a single document section.
-
-    Request body:
-    {
-        "doc_type": "batch_record",
-        "section_id": "references",
-        "context": {
-            "product_name": "CD8+ T Cells",
-            "process_type": "CD8 Enrichment",
-            "description": "..."
-        }
-    }
-    """
+    """Generate a preview for a single document section."""
     try:
         data = request.get_json()
         doc_type = data.get("doc_type")
@@ -123,7 +93,6 @@ def preview_section():
 
         gen = get_generator()
         result = gen.preview_section(doc_type, section_id, context)
-
         return jsonify({"success": True, "data": result})
     except ValueError as e:
         return jsonify({"success": False, "error": str(e)}), 404
@@ -134,10 +103,9 @@ def preview_section():
 
 @gmp_bp.route("/ollama/status", methods=["GET"])
 def ollama_status():
-    """Check Ollama service status and available models."""
+    """Check Ollama service status."""
     try:
         gen = get_generator()
-        status = gen.get_ollama_status()
-        return jsonify({"success": True, **status})
+        return jsonify({"success": True, **gen.get_ollama_status()})
     except Exception as e:
         return jsonify({"success": False, "available": False, "error": str(e)})

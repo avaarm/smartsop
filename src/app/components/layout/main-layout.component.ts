@@ -7,69 +7,39 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
   template: `
-    <div class="layout-container">
+    <div class="layout">
       <aside class="sidebar">
         <div class="sidebar-header">
-          <h2>SmartSOP Lab Platform</h2>
+          <div class="logo">
+            <div class="logo-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+            </div>
+            <span>GMP Docs</span>
+          </div>
         </div>
-        
+
         <nav class="sidebar-nav">
           <div class="nav-section">
-            <h3 class="nav-section-title">Documents</h3>
-            <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">
-              <span class="nav-icon">💬</span>
-              <span>AI Chat</span>
-            </a>
-            <a routerLink="/form" routerLinkActive="active" class="nav-link">
-              <span class="nav-icon">📝</span>
-              <span>SOP Form</span>
-            </a>
-            <a routerLink="/training" routerLinkActive="active" class="nav-link">
-              <span class="nav-icon">🎓</span>
-              <span>Model Training</span>
-            </a>
-          </div>
-
-          <div class="nav-section">
-            <h3 class="nav-section-title">GMP Documents</h3>
-            <a routerLink="/gmp" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">
-              <span class="nav-icon">📄</span>
+            <div class="nav-section-title">Workspace</div>
+            <a routerLink="/gmp" routerLinkActive="active" class="nav-link">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
               <span>Document Builder</span>
-            </a>
-            <a routerLink="/gmp/new" routerLinkActive="active" class="nav-link">
-              <span class="nav-icon">➕</span>
-              <span>New Document</span>
-            </a>
-          </div>
-
-          <div class="nav-section">
-            <h3 class="nav-section-title">Lab Management</h3>
-            <a routerLink="/eln/dashboard" routerLinkActive="active" class="nav-link">
-              <span class="nav-icon">📊</span>
-              <span>Dashboard</span>
-            </a>
-            <a routerLink="/eln/projects" routerLinkActive="active" class="nav-link">
-              <span class="nav-icon">📁</span>
-              <span>Projects</span>
-            </a>
-            <a routerLink="/eln/experiments" routerLinkActive="active" class="nav-link">
-              <span class="nav-icon">🔬</span>
-              <span>Experiments</span>
-            </a>
-            <a routerLink="/eln/protocols" routerLinkActive="active" class="nav-link">
-              <span class="nav-icon">📋</span>
-              <span>Protocols</span>
-            </a>
-            <a routerLink="/eln/inventory" routerLinkActive="active" class="nav-link">
-              <span class="nav-icon">📦</span>
-              <span>Inventory</span>
-            </a>
-            <a routerLink="/eln/users" routerLinkActive="active" class="nav-link">
-              <span class="nav-icon">👥</span>
-              <span>Users</span>
             </a>
           </div>
         </nav>
+
+        <div class="sidebar-footer">
+          <div class="footer-text">Powered by Llama 3</div>
+        </div>
       </aside>
 
       <main class="main-content">
@@ -78,48 +48,61 @@ import { CommonModule } from '@angular/common';
     </div>
   `,
   styles: [`
-    .layout-container {
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
+    :host {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
+    .layout {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
     .sidebar {
-      width: 260px;
-      background: hsl(0 0% 3%);
+      width: 240px;
+      background: hsl(0 0% 3.5%);
       color: hsl(0 0% 90%);
       display: flex;
       flex-direction: column;
       border-right: 1px solid hsl(0 0% 12%);
-      overflow-y: auto;
+      flex-shrink: 0;
     }
 
     .sidebar-header {
-      padding: 20px 16px;
-      border-bottom: 1px solid hsl(0 0% 12%);
+      padding: 18px 16px;
+      border-bottom: 1px solid hsl(0 0% 10%);
     }
 
-    .sidebar-header h2 {
-      margin: 0;
-      font-size: 15px;
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
       font-weight: 600;
       letter-spacing: -0.02em;
       color: hsl(0 0% 98%);
     }
 
-    .sidebar-nav {
-      flex: 1;
-      padding: 12px 0;
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, hsl(263 70% 60%) 0%, hsl(217 91% 60%) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
     }
 
-    .nav-section {
-      margin-bottom: 16px;
+    .sidebar-nav {
+      flex: 1;
+      padding: 16px 8px;
+      overflow-y: auto;
     }
 
     .nav-section-title {
-      padding: 0 16px;
-      margin: 0 0 6px 0;
+      padding: 0 10px;
+      margin-bottom: 6px;
       font-size: 11px;
       font-weight: 500;
       text-transform: uppercase;
@@ -130,46 +113,59 @@ import { CommonModule } from '@angular/common';
     .nav-link {
       display: flex;
       align-items: center;
-      padding: 8px 16px;
-      margin: 1px 8px;
-      color: hsl(0 0% 65%);
+      gap: 10px;
+      padding: 7px 10px;
+      margin-bottom: 2px;
+      color: hsl(0 0% 68%);
       text-decoration: none;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 400;
       border-radius: 6px;
       transition: all 0.15s ease;
     }
 
+    .nav-link svg {
+      opacity: 0.7;
+    }
+
     .nav-link:hover {
-      background: hsl(0 0% 10%);
+      background: hsl(0 0% 9%);
       color: hsl(0 0% 95%);
     }
 
+    .nav-link:hover svg {
+      opacity: 1;
+    }
+
     .nav-link.active {
-      background: hsl(0 0% 12%);
+      background: hsl(0 0% 11%);
       color: hsl(0 0% 98%);
       font-weight: 500;
     }
 
-    .nav-icon {
-      margin-right: 10px;
-      font-size: 16px;
-      width: 20px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0.8;
+    .nav-link.active svg {
+      opacity: 1;
+    }
+
+    .sidebar-footer {
+      padding: 14px 18px;
+      border-top: 1px solid hsl(0 0% 10%);
+    }
+
+    .footer-text {
+      font-size: 11px;
+      color: hsl(0 0% 40%);
     }
 
     .main-content {
       flex: 1;
       overflow-y: auto;
-      background: hsl(0 0% 98.5%);
+      background: hsl(0 0% 99%);
     }
 
     .sidebar::-webkit-scrollbar { width: 4px; }
     .sidebar::-webkit-scrollbar-track { background: transparent; }
-    .sidebar::-webkit-scrollbar-thumb { background: hsl(0 0% 18%); border-radius: 2px; }
+    .sidebar::-webkit-scrollbar-thumb { background: hsl(0 0% 15%); border-radius: 2px; }
   `]
 })
 export class MainLayoutComponent {}
