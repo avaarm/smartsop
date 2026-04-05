@@ -86,14 +86,21 @@ class GMPDocumentGenerator:
         # Pre-filled section data from user
         user_sections = user_input.get("sections", {})
 
-        # Generate content for each section
+        # Whether to auto-fill missing sections via LLM (opt-in, off by default)
+        # During Generate, we do NOT call LLM implicitly because it takes 10-50s
+        # per section and can cause browser timeouts. Users should explicitly
+        # click "Fill with AI" on the sections they want, or use the
+        # /api/gmp/preview endpoint for parallel pre-generation.
+        auto_fill_llm = user_input.get("auto_fill_llm", False)
+
+        # Build content for each section (no LLM calls unless explicitly requested)
         preview_sections = []
         for section_def in template.sections:
             section_id = section_def.id
             section_data = user_sections.get(section_id, {})
 
-            # If section has an LLM prompt and user hasn't pre-filled it
-            if section_def.llm_prompt and not section_data:
+            # Optional: auto-fill missing LLM sections (slow, opt-in only)
+            if auto_fill_llm and section_def.llm_prompt and not section_data:
                 section_data = self._generate_section_with_llm(
                     section_def, llm_context
                 )
