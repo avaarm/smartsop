@@ -1,19 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MatStepperModule } from '@angular/material/stepper';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatExpansionModule } from '@angular/material/expansion';
-import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatDividerModule } from '@angular/material/divider';
 
 import {
   GMPDocumentService,
@@ -23,68 +10,52 @@ import {
   GMPDocumentRequest,
   OllamaStatus,
 } from '../../../services/gmp-document.service';
-import { SectionEditorComponent } from '../section-editor/section-editor.component';
-import { StepBuilderComponent } from '../step-builder/step-builder.component';
-import { EquipmentListComponent } from '../equipment-list/equipment-list.component';
 
 @Component({
   selector: 'app-document-builder',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    MatStepperModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatCardModule,
-    MatChipsModule,
-    MatExpansionModule,
-    MatSnackBarModule,
-    MatTooltipModule,
-    MatDividerModule,
-    SectionEditorComponent,
-    StepBuilderComponent,
-    EquipmentListComponent,
-  ],
+  imports: [CommonModule, FormsModule],
   templateUrl: './document-builder.component.html',
   styleUrl: './document-builder.component.scss',
 })
 export class DocumentBuilderComponent implements OnInit {
-  // Step 1: Template selection
+  // Stepper state
+  currentStep = 1;
+  totalSteps = 4;
+
+  // Template
   templates: GMPTemplate[] = [];
-  selectedTemplateId: string = '';
+  selectedTemplateId = '';
   templateSchema: GMPTemplateSchema | null = null;
 
-  // Step 2: Basic info
-  docTitle: string = '';
-  productName: string = '';
-  processType: string = '';
-  description: string = '';
-  docNumber: string = '';
-  revision: string = '01';
+  // Basic info
+  docTitle = '';
+  productName = '';
+  processType = '';
+  description = '';
+  docNumber = '';
+  revision = '01';
 
-  // Step 3: Section data
+  // Section data
   sectionData: Record<string, any> = {};
+  expandedSections: Record<string, boolean> = {};
 
   // Status
   loading = false;
   generating = false;
   ollamaStatus: OllamaStatus | null = null;
-  generatedDocUrl: string = '';
-  generatedFilename: string = '';
-  generatedPreview: any[] = [];
 
-  // Section AI generation tracking
+  // Generated result
+  generatedDocUrl = '';
+  generatedFilename = '';
+  generatedPreview: any[] = [];
+  errorMessage = '';
+  successMessage = '';
+
+  // Per-section AI loading
   sectionGenerating: Record<string, boolean> = {};
 
-  constructor(
-    private gmpService: GMPDocumentService,
-    private snackBar: MatSnackBar
-  ) {}
+  constructor(private gmp: GMPDocumentService) {}
 
   ngOnInit(): void {
     this.loadTemplates();
@@ -93,54 +64,77 @@ export class DocumentBuilderComponent implements OnInit {
 
   loadTemplates(): void {
     this.loading = true;
-    this.gmpService.getTemplates().subscribe({
+    this.gmp.getTemplates().subscribe({
       next: (res) => {
         this.templates = res.templates || [];
         this.loading = false;
       },
       error: (err) => {
-        this.snackBar.open(err.message, 'Close', { duration: 5000 });
+        this.errorMessage = err.message;
         this.loading = false;
       },
     });
   }
 
   checkOllamaStatus(): void {
-    this.gmpService.getOllamaStatus().subscribe({
-      next: (status) => {
-        this.ollamaStatus = status;
-      },
-      error: () => {
-        this.ollamaStatus = { success: false, available: false, model: '', models: [] };
-      },
+    this.gmp.getOllamaStatus().subscribe({
+      next: (s) => (this.ollamaStatus = s),
+      error: () => (this.ollamaStatus = { success: false, available: false, model: '', models: [] }),
     });
   }
 
-  onTemplateSelect(): void {
-    if (!this.selectedTemplateId) return;
+  selectTemplate(id: string): void {
+    this.selectedTemplateId = id;
     this.loading = true;
-    this.gmpService.getTemplateSchema(this.selectedTemplateId).subscribe({
+    this.gmp.getTemplateSchema(id).subscribe({
       next: (res) => {
         this.templateSchema = res.template;
-        // Initialize section data with defaults
         this.sectionData = {};
-        for (const section of this.templateSchema.sections) {
-          if (section.default_data) {
-            this.sectionData[section.id] = { ...section.default_data };
+        for (const s of this.templateSchema.sections) {
+          if (s.default_data) {
+            this.sectionData[s.id] = { ...s.default_data };
           }
         }
         this.loading = false;
       },
       error: (err) => {
-        this.snackBar.open(err.message, 'Close', { duration: 5000 });
+        this.errorMessage = err.message;
         this.loading = false;
       },
     });
   }
 
+  canProceedFromStep(step: number): boolean {
+    if (step === 1) return !!this.templateSchema;
+    if (step === 2) return !!this.docTitle && !!this.productName && !!this.processType;
+    return true;
+  }
+
+  nextStep(): void {
+    if (this.currentStep < this.totalSteps && this.canProceedFromStep(this.currentStep)) {
+      this.currentStep++;
+    }
+  }
+
+  prevStep(): void {
+    if (this.currentStep > 1) {
+      this.currentStep--;
+    }
+  }
+
+  goToStep(n: number): void {
+    if (n < this.currentStep || (n === this.currentStep + 1 && this.canProceedFromStep(this.currentStep))) {
+      this.currentStep = n;
+    }
+  }
+
+  toggleSection(id: string): void {
+    this.expandedSections[id] = !this.expandedSections[id];
+  }
+
   fillSectionWithAI(section: GMPSectionSchema): void {
     this.sectionGenerating[section.id] = true;
-    this.gmpService.previewSection({
+    this.gmp.previewSection({
       doc_type: this.selectedTemplateId,
       section_id: section.id,
       context: {
@@ -154,21 +148,20 @@ export class DocumentBuilderComponent implements OnInit {
           this.sectionData[section.id] = res.data;
         }
         this.sectionGenerating[section.id] = false;
-        this.snackBar.open(`${section.title} generated with AI`, 'OK', { duration: 3000 });
+        this.successMessage = `${section.title} filled with AI`;
+        setTimeout(() => (this.successMessage = ''), 3000);
       },
       error: (err) => {
         this.sectionGenerating[section.id] = false;
-        this.snackBar.open(`Failed to generate ${section.title}: ${err.message}`, 'Close', { duration: 5000 });
+        this.errorMessage = `Failed to generate ${section.title}: ${err.message}`;
+        setTimeout(() => (this.errorMessage = ''), 5000);
       },
     });
   }
 
-  onSectionDataChange(sectionId: string, data: any): void {
-    this.sectionData[sectionId] = data;
-  }
-
   generateDocument(): void {
     this.generating = true;
+    this.errorMessage = '';
     const request: GMPDocumentRequest = {
       doc_type: this.selectedTemplateId,
       title: this.docTitle,
@@ -180,23 +173,19 @@ export class DocumentBuilderComponent implements OnInit {
       sections: this.sectionData,
     };
 
-    this.gmpService.generateDocument(request).subscribe({
+    this.gmp.generateDocument(request).subscribe({
       next: (res) => {
         this.generating = false;
         if (res.success) {
-          this.generatedDocUrl = this.gmpService.getDownloadUrl(res.filename!);
+          this.generatedDocUrl = this.gmp.getDownloadUrl(res.filename!);
           this.generatedFilename = res.filename!;
           this.generatedPreview = res.preview_sections || [];
-          this.snackBar.open('Document generated successfully!', 'Download', {
-            duration: 10000,
-          }).onAction().subscribe(() => {
-            window.open(this.generatedDocUrl, '_blank');
-          });
+          this.successMessage = 'Document generated successfully';
         }
       },
       error: (err) => {
         this.generating = false;
-        this.snackBar.open(err.message, 'Close', { duration: 5000 });
+        this.errorMessage = err.message;
       },
     });
   }
@@ -207,30 +196,55 @@ export class DocumentBuilderComponent implements OnInit {
     }
   }
 
+  resetBuilder(): void {
+    this.currentStep = 1;
+    this.selectedTemplateId = '';
+    this.templateSchema = null;
+    this.docTitle = '';
+    this.productName = '';
+    this.processType = '';
+    this.description = '';
+    this.docNumber = '';
+    this.revision = '01';
+    this.sectionData = {};
+    this.expandedSections = {};
+    this.generatedDocUrl = '';
+    this.generatedFilename = '';
+    this.generatedPreview = [];
+    this.loadTemplates();
+  }
+
   getSectionIcon(type: string): string {
     const icons: Record<string, string> = {
-      approval_block: 'verified',
-      references: 'menu_book',
-      attachments: 'attach_file',
-      general_instructions: 'info',
-      step_procedure: 'format_list_numbered',
-      equipment_list: 'build',
-      materials_list: 'science',
-      flowchart: 'account_tree',
-      checklist: 'checklist',
-      comments: 'comment',
-      review: 'rate_review',
-      label_accountability: 'label',
-      free_text: 'notes',
+      approval_block: '✓',
+      references: '📖',
+      attachments: '📎',
+      general_instructions: 'ℹ',
+      step_procedure: '≡',
+      equipment_list: '⚙',
+      materials_list: '◉',
+      flowchart: '◈',
+      checklist: '☑',
+      comments: '💬',
+      review: '★',
+      label_accountability: '▣',
+      free_text: '¶',
     };
-    return icons[type] || 'description';
+    return icons[type] || '●';
   }
 
-  isStepProcedure(type: string): boolean {
-    return type === 'step_procedure';
+  sectionHasContent(id: string): boolean {
+    const data = this.sectionData[id];
+    if (!data) return false;
+    return Object.keys(data).length > 0;
   }
 
-  isEquipmentOrMaterials(type: string): boolean {
-    return type === 'equipment_list' || type === 'materials_list';
+  formatSectionType(type: string): string {
+    return type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  get filledSectionsCount(): number {
+    if (!this.templateSchema) return 0;
+    return this.templateSchema.sections.filter(s => this.sectionHasContent(s.id)).length;
   }
 }

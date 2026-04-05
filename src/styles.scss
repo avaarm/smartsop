@@ -1,76 +1,6 @@
-/* 21st.dev / shadcn-inspired design system */
+/* Global styles - shadcn/21st.dev-inspired design system */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-:root {
-  /* Background */
-  --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
-
-  /* Card */
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
-
-  /* Popover */
-  --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
-
-  /* Primary */
-  --primary: 240 5.9% 10%;
-  --primary-foreground: 0 0% 98%;
-
-  /* Secondary */
-  --secondary: 240 4.8% 95.9%;
-  --secondary-foreground: 240 5.9% 10%;
-
-  /* Muted */
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
-
-  /* Accent */
-  --accent: 240 4.8% 95.9%;
-  --accent-foreground: 240 5.9% 10%;
-
-  /* Destructive */
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 0 0% 98%;
-
-  /* Border & Input */
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
-  --ring: 240 5.9% 10%;
-
-  /* Radius */
-  --radius: 0.75rem;
-
-  /* Sidebar */
-  --sidebar: 0 0% 3%;
-  --sidebar-foreground: 0 0% 90%;
-  --sidebar-border: 0 0% 12%;
-  --sidebar-accent: 240 60% 55%;
-}
-
-.dark {
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
-  --card: 240 10% 5.5%;
-  --card-foreground: 0 0% 98%;
-  --popover: 240 10% 5.5%;
-  --popover-foreground: 0 0% 98%;
-  --primary: 0 0% 98%;
-  --primary-foreground: 240 5.9% 10%;
-  --secondary: 240 3.7% 15.9%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-  --accent: 240 3.7% 15.9%;
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 240 4.9% 83.9%;
-}
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -78,20 +8,26 @@
   padding: 0;
 }
 
-html {
+html, body {
+  height: 100%;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 16px;
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: hsl(0 0% 99%);
+  color: hsl(240 10% 3.9%);
+  line-height: 1.5;
 }
 
-body {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-  line-height: 1.6;
+button {
+  font-family: inherit;
 }
 
-/* Global scrollbar styling */
+input, textarea, select {
+  font-family: inherit;
+}
+
+/* Global scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -100,71 +36,9 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
+  background: hsl(240 5.9% 85%);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground));
-}
-
-/* Override Angular Material theme for shadcn aesthetics */
-.mat-mdc-form-field {
-  font-family: 'Inter', sans-serif !important;
-}
-
-.mat-mdc-raised-button.mat-primary {
-  --mdc-protected-button-container-color: hsl(var(--primary));
-  --mdc-protected-button-label-text-color: hsl(var(--primary-foreground));
-  border-radius: var(--radius) !important;
-  text-transform: none !important;
-  font-weight: 500 !important;
-  letter-spacing: -0.01em !important;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
-}
-
-.mat-mdc-button, .mat-mdc-raised-button, .mat-mdc-stroked-button {
-  border-radius: var(--radius) !important;
-  text-transform: none !important;
-  font-weight: 500 !important;
-  letter-spacing: -0.01em !important;
-}
-
-.mat-mdc-card {
-  border: 1px solid hsl(var(--border)) !important;
-  border-radius: var(--radius) !important;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04) !important;
-}
-
-.mat-expansion-panel {
-  border: 1px solid hsl(var(--border)) !important;
-  border-radius: var(--radius) !important;
-  box-shadow: none !important;
-  margin-bottom: 8px !important;
-}
-
-.mat-mdc-form-field-subscript-wrapper {
-  display: none;
-}
-
-.mat-mdc-text-field-wrapper {
-  border-radius: var(--radius) !important;
-}
-
-.mat-mdc-snack-bar-container {
-  border-radius: var(--radius) !important;
-}
-
-.mat-mdc-chip {
-  border-radius: calc(var(--radius) - 2px) !important;
-  font-weight: 500 !important;
-  font-size: 13px !important;
-}
-
-.mat-step-header .mat-step-icon {
-  background-color: hsl(var(--primary)) !important;
-}
-
-.mat-horizontal-stepper-header-container {
-  border-bottom: 1px solid hsl(var(--border));
-  padding-bottom: 16px;
+  background: hsl(240 3.8% 60%);
 }
