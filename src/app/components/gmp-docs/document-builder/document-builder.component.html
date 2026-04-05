@@ -160,6 +160,97 @@
         </div>
       </div>
 
+      <!-- Paper Scraping Section -->
+      <div class="paper-scraper-section">
+        <div class="scraper-header">
+          <div>
+            <div class="scraper-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              </svg>
+              Import from published research
+            </div>
+            <div class="scraper-subtitle">
+              Search PubMed Central open-access papers and import their methods sections
+            </div>
+          </div>
+        </div>
+
+        <div class="paper-search-bar">
+          <div class="search-input-wrap">
+            <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text"
+                   [(ngModel)]="paperSearchQuery"
+                   (keyup.enter)="searchPapers()"
+                   placeholder="e.g., CD8 enrichment CliniMACS Prodigy" />
+          </div>
+          <button class="btn btn-ghost btn-sm" (click)="suggestPaperQuery()" *ngIf="productName || processType">
+            Use my info
+          </button>
+          <button class="btn btn-primary btn-sm" (click)="searchPapers()" [disabled]="!paperSearchQuery.trim() || paperSearchLoading">
+            <div *ngIf="paperSearchLoading" class="spinner spinner-sm"></div>
+            {{ paperSearchLoading ? 'Searching…' : 'Search papers' }}
+          </button>
+        </div>
+
+        <div *ngIf="paperSearchResults.length > 0" class="paper-results">
+          <div class="results-header">
+            <span>{{ paperSearchResults.length }} open-access papers found</span>
+          </div>
+          <div class="paper-card" *ngFor="let paper of paperSearchResults">
+            <div class="paper-meta">
+              <div class="paper-title">{{ paper.title }}</div>
+              <div class="paper-details">
+                <span>{{ formatAuthors(paper.authors) }}</span>
+                <span class="sep">·</span>
+                <span class="paper-journal">{{ paper.journal }}</span>
+                <span class="sep">·</span>
+                <span>{{ paper.year }}</span>
+              </div>
+            </div>
+            <div class="paper-actions">
+              <a *ngIf="paper.url" [href]="paper.url" target="_blank" rel="noopener" class="paper-link">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/>
+                  <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+                View
+              </a>
+              <button class="btn btn-ai btn-sm"
+                      (click)="importFromPaper(paper)"
+                      [disabled]="paperAutofillLoading[paper.pmcid]">
+                <div *ngIf="paperAutofillLoading[paper.pmcid]" class="spinner spinner-sm"></div>
+                <svg *ngIf="!paperAutofillLoading[paper.pmcid]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                {{ paperAutofillLoading[paper.pmcid] ? 'Extracting…' : 'Import methods' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="importedPapers.length > 0" class="imported-papers">
+          <div class="imported-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Imported from {{ importedPapers.length }} paper{{ importedPapers.length > 1 ? 's' : '' }}
+          </div>
+          <div class="imported-list">
+            <div *ngFor="let p of importedPapers" class="imported-item">
+              <span class="imported-title">{{ p.title }}</span>
+              <span class="imported-journal">{{ p.journal }} {{ p.year }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="step-actions">
         <button class="btn btn-ghost" (click)="prevStep()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">

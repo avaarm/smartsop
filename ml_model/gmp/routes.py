@@ -109,3 +109,82 @@ def ollama_status():
         return jsonify({"success": True, **gen.get_ollama_status()})
     except Exception as e:
         return jsonify({"success": False, "available": False, "error": str(e)})
+
+
+# ── Paper Scraping Endpoints ──
+
+@gmp_bp.route("/papers/search", methods=["GET"])
+def search_papers():
+    """Search PubMed Central for open-access papers.
+
+    Query params:
+        q: search terms (required)
+        limit: max results (default 10)
+    """
+    query = request.args.get("q", "").strip()
+    if not query:
+        return jsonify({"success": False, "error": "Query parameter 'q' is required"}), 400
+
+    try:
+        limit = int(request.args.get("limit", 10))
+        limit = max(1, min(limit, 30))
+    except ValueError:
+        limit = 10
+
+    try:
+        gen = get_generator()
+        papers = gen.search_papers(query, max_results=limit)
+        return jsonify({"success": True, "papers": papers, "query": query})
+    except Exception as e:
+        logger.error(f"Paper search failed: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@gmp_bp.route("/papers/<pmcid>/methods", methods=["GET"])
+def get_paper_methods(pmcid: str):
+    """Fetch the methods section of a specific paper."""
+    try:
+        gen = get_generator()
+        result = gen.fetch_paper_methods(pmcid)
+        if result is None:
+            return jsonify({
+                "success": False,
+                "error": "Methods section not found or paper not accessible"
+            }), 404
+        return jsonify({"success": True, **result})
+    except Exception as e:
+        logger.error(f"Failed to fetch methods for {pmcid}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@gmp_bp.route("/papers/autofill", methods=["POST"])
+def autofill_from_paper():
+    """Extract GMP section data from a paper and return it for autofill.
+
+    Request body:
+    {
+        "pmcid": "PMC1234567",
+        "context": {
+            "product_name": "CD8+ T Cells",
+            "process_type": "CD8 Enrichment"
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        pmcid = data.get("pmcid")
+        context = data.get("context", {})
+
+        if not pmcid:
+            return jsonify({"success": False, "error": "pmcid is required"}), 400
+
+        gen = get_generator()
+        result = gen.autofill_from_paper(pmcid, context)
+        return jsonify({"success": True, **result})
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except RuntimeError as e:
+        return jsonify({"success": False, "error": str(e)}), 503
+    except Exception as e:
+        logger.error(f"Autofill failed: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
