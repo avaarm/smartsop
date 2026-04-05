@@ -179,8 +179,22 @@
     <!-- Step 3: Section Content -->
     <section *ngIf="currentStep === 3" class="step-panel">
       <div class="panel-header">
-        <h2>Review sections</h2>
-        <p>Click "Fill with AI" on any section to auto-generate content with Llama 3</p>
+        <div class="panel-header-row">
+          <div>
+            <h2>Review sections</h2>
+            <p>Fill sections with AI or leave empty to use template defaults</p>
+          </div>
+          <button *ngIf="ollamaStatus?.available"
+                  class="btn btn-ai"
+                  (click)="fillAllSectionsWithAI()"
+                  [disabled]="fillAllInProgress">
+            <svg *ngIf="!fillAllInProgress" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 2l1.7 5.3L19 9l-5.3 1.7L12 16l-1.7-5.3L5 9l5.3-1.7z"/>
+            </svg>
+            <div *ngIf="fillAllInProgress" class="spinner spinner-sm"></div>
+            {{ fillAllInProgress ? 'Filling ' + fillAllProgress.current + '/' + fillAllProgress.total + '…' : 'Fill all with AI' }}
+          </button>
+        </div>
       </div>
 
       <div class="sections-list">

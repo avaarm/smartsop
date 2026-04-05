@@ -88,15 +88,17 @@ export class GMPDocumentService {
   }
 
   generateDocument(request: GMPDocumentRequest): Observable<GMPDocumentResponse> {
+    // Generate no longer calls the LLM implicitly, so it completes in <1s
     return this.http.post<GMPDocumentResponse>(
       `${this.baseUrl}/generate`, request
-    ).pipe(timeout(120000), catchError(this.handleError));
+    ).pipe(timeout(30000), catchError(this.handleError));
   }
 
   previewSection(request: SectionPreviewRequest): Observable<{ success: boolean; data: any }> {
+    // Each LLM section generation can take 10-50 seconds
     return this.http.post<{ success: boolean; data: any }>(
       `${this.baseUrl}/preview`, request
-    ).pipe(timeout(60000), catchError(this.handleError));
+    ).pipe(timeout(90000), catchError(this.handleError));
   }
 
   getOllamaStatus(): Observable<OllamaStatus> {

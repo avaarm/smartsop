@@ -54,6 +54,8 @@ export class DocumentBuilderComponent implements OnInit {
 
   // Per-section AI loading
   sectionGenerating: Record<string, boolean> = {};
+  fillAllInProgress = false;
+  fillAllProgress = { current: 0, total: 0 };
 
   constructor(private gmp: GMPDocumentService) {}
 
@@ -156,6 +158,60 @@ export class DocumentBuilderComponent implements OnInit {
         this.errorMessage = `Failed to generate ${section.title}: ${err.message}`;
         setTimeout(() => (this.errorMessage = ''), 5000);
       },
+    });
+  }
+
+  fillAllSectionsWithAI(): void {
+    if (!this.templateSchema) return;
+    const sectionsToFill = this.templateSchema.sections.filter(
+      s => s.llm_prompt && !this.sectionHasContent(s.id)
+    );
+    if (sectionsToFill.length === 0) {
+      this.successMessage = 'All sections already have content';
+      setTimeout(() => (this.successMessage = ''), 3000);
+      return;
+    }
+
+    this.fillAllInProgress = true;
+    this.fillAllProgress = { current: 0, total: sectionsToFill.length };
+    let completed = 0;
+
+    // Run all section fills in parallel
+    sectionsToFill.forEach((section) => {
+      this.sectionGenerating[section.id] = true;
+      this.gmp.previewSection({
+        doc_type: this.selectedTemplateId,
+        section_id: section.id,
+        context: {
+          product_name: this.productName,
+          process_type: this.processType,
+          description: this.description,
+        },
+      }).subscribe({
+        next: (res) => {
+          if (res.data) {
+            this.sectionData[section.id] = res.data;
+          }
+          this.sectionGenerating[section.id] = false;
+          completed++;
+          this.fillAllProgress.current = completed;
+          if (completed === sectionsToFill.length) {
+            this.fillAllInProgress = false;
+            this.successMessage = `${sectionsToFill.length} sections filled with AI`;
+            setTimeout(() => (this.successMessage = ''), 4000);
+          }
+        },
+        error: (err) => {
+          this.sectionGenerating[section.id] = false;
+          completed++;
+          this.fillAllProgress.current = completed;
+          if (completed === sectionsToFill.length) {
+            this.fillAllInProgress = false;
+          }
+          this.errorMessage = `Failed on ${section.title}: ${err.message}`;
+          setTimeout(() => (this.errorMessage = ''), 5000);
+        },
+      });
     });
   }
 
