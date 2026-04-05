@@ -67,6 +67,30 @@ export interface SectionPreviewRequest {
   context: Record<string, any>;
 }
 
+export interface Paper {
+  pmcid: string;
+  pmid?: string;
+  title: string;
+  authors: string[];
+  journal: string;
+  year: string;
+  abstract?: string;
+  doi?: string;
+  url?: string;
+}
+
+export interface PaperMethods {
+  paper: Paper;
+  methods_text: string;
+  sections: { heading: string; text: string }[];
+}
+
+export interface PaperAutofillResponse {
+  paper: Paper;
+  section_data: Record<string, any>;
+  notes?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -105,6 +129,29 @@ export class GMPDocumentService {
     return this.http.get<OllamaStatus>(
       `${this.baseUrl}/ollama/status`
     ).pipe(timeout(10000), catchError(this.handleError));
+  }
+
+  // ── Paper Scraping ──
+
+  searchPapers(query: string, limit = 10): Observable<{ success: boolean; papers: Paper[] }> {
+    const params = new URLSearchParams({ q: query, limit: String(limit) });
+    return this.http.get<{ success: boolean; papers: Paper[] }>(
+      `${this.baseUrl}/papers/search?${params}`
+    ).pipe(timeout(45000), catchError(this.handleError));
+  }
+
+  getPaperMethods(pmcid: string): Observable<{ success: boolean } & PaperMethods> {
+    return this.http.get<{ success: boolean } & PaperMethods>(
+      `${this.baseUrl}/papers/${pmcid}/methods`
+    ).pipe(timeout(60000), catchError(this.handleError));
+  }
+
+  autofillFromPaper(pmcid: string, context: Record<string, any>):
+    Observable<{ success: boolean } & PaperAutofillResponse> {
+    return this.http.post<{ success: boolean } & PaperAutofillResponse>(
+      `${this.baseUrl}/papers/autofill`,
+      { pmcid, context }
+    ).pipe(timeout(120000), catchError(this.handleError));
   }
 
   getDownloadUrl(filename: string): string {

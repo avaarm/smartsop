@@ -9,6 +9,7 @@ import {
   GMPSectionSchema,
   GMPDocumentRequest,
   OllamaStatus,
+  Paper,
 } from '../../../services/gmp-document.service';
 
 @Component({
@@ -56,6 +57,13 @@ export class DocumentBuilderComponent implements OnInit {
   sectionGenerating: Record<string, boolean> = {};
   fillAllInProgress = false;
   fillAllProgress = { current: 0, total: 0 };
+
+  // Paper scraping state
+  paperSearchQuery = '';
+  paperSearchResults: Paper[] = [];
+  paperSearchLoading = false;
+  paperAutofillLoading: Record<string, boolean> = {};
+  importedPapers: Paper[] = [];
 
   constructor(private gmp: GMPDocumentService) {}
 
@@ -252,6 +260,74 @@ export class DocumentBuilderComponent implements OnInit {
     }
   }
 
+  // ── Paper Scraping ──
+
+  searchPapers(): void {
+    const query = this.paperSearchQuery.trim();
+    if (!query) return;
+    this.paperSearchLoading = true;
+    this.paperSearchResults = [];
+    this.gmp.searchPapers(query, 10).subscribe({
+      next: (res) => {
+        this.paperSearchResults = res.papers || [];
+        this.paperSearchLoading = false;
+        if (this.paperSearchResults.length === 0) {
+          this.errorMessage = 'No open-access papers found for that query';
+          setTimeout(() => (this.errorMessage = ''), 5000);
+        }
+      },
+      error: (err) => {
+        this.paperSearchLoading = false;
+        this.errorMessage = err.message;
+      },
+    });
+  }
+
+  suggestPaperQuery(): void {
+    // Pre-fill search with relevant terms from basic info
+    const parts = [this.productName, this.processType].filter(Boolean);
+    this.paperSearchQuery = parts.join(' ');
+    if (this.paperSearchQuery) {
+      this.searchPapers();
+    }
+  }
+
+  importFromPaper(paper: Paper): void {
+    this.paperAutofillLoading[paper.pmcid] = true;
+    this.gmp.autofillFromPaper(paper.pmcid, {
+      product_name: this.productName,
+      process_type: this.processType,
+    }).subscribe({
+      next: (res) => {
+        this.paperAutofillLoading[paper.pmcid] = false;
+        if (res.section_data) {
+          // Merge into existing section data
+          for (const [sectionId, data] of Object.entries(res.section_data)) {
+            this.sectionData[sectionId] = data;
+          }
+        }
+        if (!this.importedPapers.find(p => p.pmcid === paper.pmcid)) {
+          this.importedPapers.push(paper);
+        }
+        const imported = Object.keys(res.section_data || {}).length;
+        this.successMessage = `Imported ${imported} sections from "${paper.title.slice(0, 60)}…"`;
+        setTimeout(() => (this.successMessage = ''), 5000);
+      },
+      error: (err) => {
+        this.paperAutofillLoading[paper.pmcid] = false;
+        this.errorMessage = `Failed to import from paper: ${err.message}`;
+        setTimeout(() => (this.errorMessage = ''), 6000);
+      },
+    });
+  }
+
+  formatAuthors(authors: string[]): string {
+    if (!authors || authors.length === 0) return '';
+    if (authors.length === 1) return authors[0];
+    if (authors.length <= 3) return authors.join(', ');
+    return `${authors[0]}, ${authors[1]}, et al.`;
+  }
+
   resetBuilder(): void {
     this.currentStep = 1;
     this.selectedTemplateId = '';
@@ -267,6 +343,9 @@ export class DocumentBuilderComponent implements OnInit {
     this.generatedDocUrl = '';
     this.generatedFilename = '';
     this.generatedPreview = [];
+    this.paperSearchQuery = '';
+    this.paperSearchResults = [];
+    this.importedPapers = [];
     this.loadTemplates();
   }
 

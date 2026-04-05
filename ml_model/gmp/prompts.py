@@ -240,6 +240,57 @@ Return a JSON object:
 }}"""
 
 
+PAPER_METHODS_EXTRACTION_PROMPT = """You are extracting a GMP batch record from a published scientific paper's methods section.
+
+PAPER CONTEXT:
+Title: {paper_title}
+Journal: {paper_journal} ({paper_year})
+Authors: {paper_authors}
+
+PRODUCT BEING MANUFACTURED: {product_name}
+PROCESS TYPE: {process_type}
+
+METHODS SECTION FROM PAPER:
+{methods_text}
+
+Extract the key GMP manufacturing information from this methods section and return a JSON object with these fields:
+
+{{
+  "equipment": [
+    {{"description": "Biosafety Cabinet"}},
+    {{"description": "Centrifuge"}}
+  ],
+  "materials": [
+    {{"part_number": "", "description": "RPMI 1640 Medium", "quantity": "500 mL"}},
+    {{"part_number": "", "description": "Fetal Bovine Serum", "quantity": "10% final"}}
+  ],
+  "procedure_steps": [
+    {{
+      "number": "1",
+      "title": "Sample Preparation",
+      "instructions": [
+        {{"text": "Thaw sample at 37C for 2 minutes", "type": "action", "bsc": false}},
+        {{"text": "Centrifuge at 400g for 5 minutes", "type": "action", "bsc": false}}
+      ]
+    }}
+  ],
+  "references": [
+    {{"doc_number": "", "title": "Any cited protocol or method reference mentioned"}}
+  ],
+  "notes": "Any critical parameters, concentrations, temperatures, or timings from the paper"
+}}
+
+IMPORTANT:
+- Extract REAL equipment names and materials actually mentioned in the paper
+- Preserve exact concentrations, temperatures, times, and volumes from the paper
+- Use [BSC] prefix (bsc: true) for aseptic operations
+- Break continuous prose into discrete numbered steps
+- If equipment/materials not explicitly named, leave that category empty
+- Do not invent CPF part numbers - leave part_number empty if not in paper
+- Cite the paper in the notes field
+"""
+
+
 FLOWCHART_GENERATION_PROMPT = """Generate a process flowchart for the following manufacturing process:
 
 {process_description}

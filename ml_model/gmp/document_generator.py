@@ -16,6 +16,7 @@ from .template_schema import DocumentTemplate, SectionType
 from .template_loader import TemplateLoader
 from .word_engine import GMPWordEngine
 from .ollama_service import OllamaService
+from .paper_scraper import PaperScraper, Paper, PaperMethods
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +32,105 @@ class GMPDocumentGenerator:
         self.template_loader = TemplateLoader(templates_dir)
         self.word_engine = GMPWordEngine()
         self.ollama = OllamaService(base_url=ollama_url, model=ollama_model)
+        self.paper_scraper = PaperScraper()
         self.generated_docs_dir = GENERATED_DOCS_DIR
         self.generated_docs_dir.mkdir(parents=True, exist_ok=True)
+
+    # ── Paper Scraping ──
+
+    def search_papers(self, query: str, max_results: int = 10) -> list[dict]:
+        """Search PubMed Central for open-access papers."""
+        papers = self.paper_scraper.search(query, max_results)
+        return [p.to_dict() for p in papers]
+
+    def fetch_paper_methods(self, pmcid: str) -> Optional[dict]:
+        """Fetch and return the methods section of a paper."""
+        result = self.paper_scraper.fetch_methods(pmcid)
+        if result is None:
+            return None
+        return result.to_dict()
+
+    def extract_gmp_from_paper(self, pmcid: str, context: dict) -> dict:
+        """Extract GMP-structured data from a paper's methods section using LLM.
+
+        Args:
+            pmcid: PMC ID of the paper
+            context: Dict with product_name, process_type
+
+        Returns:
+            Structured data with equipment, materials, procedure_steps, references
+        """
+        methods = self.paper_scraper.fetch_methods(pmcid)
+        if methods is None:
+            raise ValueError(f"Could not fetch methods for {pmcid}")
+
+        if not self.ollama.check_health():
+            raise RuntimeError("Ollama not available for paper extraction")
+
+        from .prompts import PAPER_METHODS_EXTRACTION_PROMPT
+
+        prompt = PAPER_METHODS_EXTRACTION_PROMPT.format(
+            paper_title=methods.paper.title,
+            paper_journal=methods.paper.journal,
+            paper_year=methods.paper.year,
+            paper_authors=", ".join(methods.paper.authors[:5]),
+            product_name=context.get("product_name", ""),
+            process_type=context.get("process_type", ""),
+            methods_text=methods.methods_text,
+        )
+
+        try:
+            structured = self.ollama.generate_json(prompt, temperature=0.2)
+        except Exception as e:
+            logger.error(f"LLM extraction failed for {pmcid}: {e}")
+            raise RuntimeError(f"Failed to extract GMP data: {e}")
+
+        # Return structured data plus paper metadata
+        return {
+            "paper": methods.paper.to_dict(),
+            "extracted": structured,
+        }
+
+    def autofill_from_paper(self, pmcid: str, context: dict) -> dict:
+        """Extract data from a paper and map it to template section IDs.
+
+        Returns a dict keyed by section_id that can be merged directly into
+        the document builder's sectionData state.
+        """
+        result = self.extract_gmp_from_paper(pmcid, context)
+        extracted = result.get("extracted", {})
+
+        # Map extracted fields onto template section IDs
+        section_data = {}
+
+        if extracted.get("equipment"):
+            section_data["equipment_list"] = {"equipment": extracted["equipment"]}
+
+        if extracted.get("materials"):
+            section_data["materials_list"] = {"materials": extracted["materials"]}
+
+        if extracted.get("procedure_steps"):
+            # Map procedure steps to Day 0 processing section
+            section_data["day0_processing"] = {
+                "title": "Day 0 Processing (from literature)",
+                "steps": extracted["procedure_steps"],
+            }
+
+        if extracted.get("references"):
+            # Merge with paper citation
+            refs = list(extracted["references"])
+            paper = result["paper"]
+            refs.append({
+                "doc_number": paper.get("doi", paper.get("pmcid", "")),
+                "title": f"{paper.get('title', '')} ({paper.get('journal', '')}, {paper.get('year', '')})",
+            })
+            section_data["references"] = {"references": refs}
+
+        return {
+            "paper": result["paper"],
+            "section_data": section_data,
+            "notes": extracted.get("notes", ""),
+        }
 
     def generate_document(self, doc_type: str, user_input: dict) -> dict:
         """Generate a complete GMP document.
