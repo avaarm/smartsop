@@ -72,6 +72,11 @@
 
 /* Tab panel */
 .tab-panel { animation: fadeIn 0.15s ease; }
+.create-form-panel {
+  padding: 24px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  h3 { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+  .hint { font-size: 13px; color: var(--muted-fg); margin: 0 0 16px; }
+}
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
 /* Form */

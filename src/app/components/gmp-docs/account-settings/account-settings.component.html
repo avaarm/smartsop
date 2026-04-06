@@ -19,12 +19,50 @@
           <option [ngValue]="null">-- Select or create an account --</option>
           <option *ngFor="let a of accounts" [ngValue]="a">{{ a.name }}</option>
         </select>
-        <button *ngIf="!activeAccount" class="btn btn-primary btn-sm" (click)="createAccount()" [disabled]="!accountForm.name.trim() || saving">
-          {{ saving ? 'Creating…' : 'Create new' }}
+        <button *ngIf="!activeAccount && !showCreateForm" class="btn btn-primary btn-sm" (click)="showCreateForm = true">
+          + New Account
         </button>
       </div>
     </div>
   </div>
+
+  <!-- Create Account Form (shown when no account selected) -->
+  <section *ngIf="!activeAccount && showCreateForm" class="tab-panel create-form-panel">
+    <h3>Create a new account</h3>
+    <p class="hint">Set up an organization profile so generated documents match your facility's style and terminology.</p>
+    <div class="form">
+      <div class="field-row">
+        <div class="field">
+          <label>Organization Name *</label>
+          <input type="text" [(ngModel)]="accountForm.name" placeholder="e.g., Fred Hutch Cell Processing Facility" />
+        </div>
+        <div class="field">
+          <label>Facility Name</label>
+          <input type="text" [(ngModel)]="accountForm.facility_name" placeholder="e.g., Cell Processing Facility" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Department</label>
+          <input type="text" [(ngModel)]="accountForm.department" placeholder="e.g., Manufacturing" />
+        </div>
+        <div class="field">
+          <label>Default Product</label>
+          <input type="text" [(ngModel)]="accountForm.default_product" placeholder="e.g., CD8+ T Cells" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Default Process</label>
+        <input type="text" [(ngModel)]="accountForm.default_process" placeholder="e.g., CliniMACS Prodigy Enrichment" />
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" (click)="createAccount()" [disabled]="!accountForm.name.trim() || saving">
+          {{ saving ? 'Creating…' : 'Create Account' }}
+        </button>
+        <button class="btn btn-ghost" (click)="showCreateForm = false" style="margin-left: 8px;">Cancel</button>
+      </div>
+    </div>
+  </section>
 
   <!-- Tabs -->
   <nav *ngIf="activeAccount" class="tabs">

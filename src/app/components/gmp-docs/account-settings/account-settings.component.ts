@@ -27,6 +27,7 @@ export class AccountSettingsComponent implements OnInit {
   saving = false;
   successMessage = '';
   errorMessage = '';
+  showCreateForm = false;
 
   // Account form
   accountForm = {
@@ -78,6 +79,9 @@ export class AccountSettingsComponent implements OnInit {
       next: (res) => {
         this.accounts = res.accounts;
         this.loading = false;
+        if (this.accounts.length === 0) {
+          this.showCreateForm = true;
+        }
         // Auto-select if there's a saved active account
         this.accountService.loadSavedAccount();
       },
@@ -112,6 +116,7 @@ export class AccountSettingsComponent implements OnInit {
         this.accounts.push(res.account);
         this.selectAccount(res.account);
         this.saving = false;
+        this.showCreateForm = false;
         this.successMessage = 'Account created';
         setTimeout(() => this.successMessage = '', 3000);
       },
