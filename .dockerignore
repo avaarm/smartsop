@@ -1,0 +1,13 @@
+node_modules
+dist
+.angular
+.git
+.claude
+*.pyc
+__pycache__
+.env
+generated_docs
+ml_model/saved_models
+*.safetensors
+venv
+.venv

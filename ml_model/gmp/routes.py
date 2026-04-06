@@ -16,7 +16,9 @@ _generator = None
 def get_generator() -> GMPDocumentGenerator:
     global _generator
     if _generator is None:
-        _generator = GMPDocumentGenerator()
+        import os
+        ollama_url = os.environ.get('OLLAMA_HOST', 'http://localhost:11434')
+        _generator = GMPDocumentGenerator(ollama_url=ollama_url)
     return _generator
 
 

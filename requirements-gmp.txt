@@ -1,0 +1,13 @@
+flask
+flask-cors
+python-dotenv
+requests
+beautifulsoup4
+python-docx
+openpyxl
+pandas
+reportlab
+PyPDF2
+pydantic
+lxml
+gunicorn

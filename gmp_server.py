@@ -23,6 +23,10 @@ CORS(app,
 GENERATED_DOCS_DIR = os.path.join(os.path.dirname(__file__), 'generated_docs')
 os.makedirs(GENERATED_DOCS_DIR, exist_ok=True)
 
+# Allow Ollama host override via environment variable (for Docker networking)
+OLLAMA_HOST = os.environ.get('OLLAMA_HOST', 'http://localhost:11434')
+app.config['OLLAMA_HOST'] = OLLAMA_HOST
+
 app.register_blueprint(gmp_bp)
 
 

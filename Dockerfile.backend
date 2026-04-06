@@ -1,0 +1,22 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system deps for lxml, reportlab
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc libxml2-dev libxslt1-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY requirements-gmp.txt .
+RUN pip install --no-cache-dir -r requirements-gmp.txt
+
+COPY ml_model/ ml_model/
+COPY gmp_server.py .
+
+# Generated documents are written here at runtime
+RUN mkdir -p generated_docs
+
+EXPOSE 5001
+
+# Use gunicorn for production (4 workers, 120s timeout for LLM calls)
+CMD ["gunicorn", "--bind", "0.0.0.0:5001", "--workers", "4", "--timeout", "120", "gmp_server:app"]
