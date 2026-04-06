@@ -1,138 +1,206 @@
-# SmartSOP
+# SmartSOP - GMP Document Builder
 
-SmartSOP is an intelligent document generation tool that helps create Standard Operating Procedures (SOPs) and Batch Records using a fine-tunable AI model. Built with Angular and Python, it leverages the `microsoft/phi-2` model to generate professionally formatted documents based on user input.
+A web application for generating GMP-compliant pharmaceutical documents with AI-assisted content. Built with Angular 18 (SSR) and Flask, it uses a local Ollama LLM to fill in procedure steps, equipment lists, references, and more.
 
-## Features
+## What it does
 
-- Generate detailed Standard Operating Procedures (SOPs)
-- Create comprehensive Batch Records
-- AI-powered document formatting
-- User-friendly interface
-- Real-time document generation
-- Professional document structure
+- **8 document templates** covering the full GMP record/procedure taxonomy:
+
+  | Category | Templates |
+  |----------|-----------|
+  | Batch Records | Cell Processing Facility Batch Record |
+  | Validations | Validation Protocol (IQ/OQ/PQ) |
+  | Qualifications | Equipment Qualification Record |
+  | Forms | Deviation/Nonconformance Form, Change Control Form |
+  | Reports | Investigation Report, Annual Product Review (APR) |
+  | Procedures | Standard Operating Procedure (SOP) |
+
+- **AI content generation** per section (or "Fill all with AI" in parallel)
+- **Paper scraping** from PubMed Central open-access literature to auto-fill equipment, materials, and procedure steps from published methods
+- **Word document output** with exact pharmaceutical formatting (landscape/portrait, gray-shaded headers, step procedure tables, approval blocks, flowchart placeholders)
+- **GMP procedure prefix conventions** baked into prompts: EQ- (Equipment), GN- (General), PR- (Processing), QA- (Quality Assurance), TM- (Test Method)
+
+## Architecture
+
+```
+Browser (port 4200 dev / 4000 prod)
+  |
+  |  /api/*  ── proxy ──>  Flask backend (port 5001)
+  |                            |
+  |                            |── Ollama LLM (port 11434)
+  |                            |── PubMed Central API
+  |                            └── python-docx + OOXML
+  |
+Angular 18 SSR (Express)
+```
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
-- Node.js (v18 or higher)
-- Python (v3.8 or higher)
-- Angular CLI
-- A machine with a GPU is recommended for fine-tuning the model.
+- **Node.js** 20+ and npm
+- **Python** 3.9+
+- **Ollama** (for AI features) - [install instructions](https://ollama.com/download)
 
-## Installation
+## Quick start (local development)
 
-1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/smartsop.git
+# 1. Clone and install
+git clone https://github.com/avaarm/smartsop.git
 cd smartsop
-```
-
-2. Install frontend dependencies:
-```bash
 npm install
-```
+pip install -r requirements-gmp.txt
 
-3. Install backend dependencies:
-```bash
-pip install -r requirements.txt
-```
+# 2. Start Ollama and pull a model
+ollama serve &
+ollama pull llama3
 
-4. Create a `.env` file in the root directory. No API key is required for the default model.
+# 3. Start the Flask backend
+python gmp_server.py
 
-## Running the Application
-
-1. Start the Python backend on port 5001 (required for frontend connectivity):
-```bash
-python app.py --port=5001
-```
-
-2. In a new terminal, start the Angular frontend:
-```bash
+# 4. In a new terminal, start the Angular dev server
 npm start
+
+# 5. Open http://localhost:4200
 ```
 
-3. Open your browser and navigate to `http://localhost:4200`
+The Angular dev server proxies `/api` requests to `localhost:5001` (configured in `proxy.conf.json`).
 
-**Important Notes:**
-- The backend must run on port 5001 as the Angular frontend is configured to connect to http://localhost:5001
-- If you need to use a different port for the backend, you'll need to update the API URL in the frontend services
+> **Note:** Ollama is optional. The app works without it - you just won't have the "Fill with AI" and paper extraction features. Documents still generate with template defaults.
 
-## Using SmartSOP
+## Docker deployment
 
-1. Select Document Type:
-   - Choose between SOP or Batch Record
+```bash
+# Build and start all services (frontend + backend + Ollama)
+docker compose up --build
 
-2. Enter Process Information:
-   - Process Steps: Detail the steps of your procedure
-   - Roles Involved: List all roles and responsibilities
-   - Additional Notes: Add any special requirements or considerations
+# After Ollama starts, pull a model into the container
+docker compose exec ollama ollama pull llama3
+```
 
-3. Generate Document:
-   - Click 'Generate Document' to create your document
-   - The AI will process your input and generate a professionally formatted document
+| Service | Port | Description |
+|---------|------|-------------|
+| `frontend` | 4000 | Angular SSR (production) |
+| `backend` | 5001 | Flask + gunicorn |
+| `ollama` | 11434 | Local LLM |
 
-## Document Structure
+The frontend proxies `/api` to the backend container automatically via `API_URL` env var.
 
-### SOPs include:
-- Purpose
-- Scope
-- Responsibilities
-- Safety Precautions
-- Required Materials
-- Detailed Procedure Steps
-- Quality Control
-- Documentation Requirements
+## Project structure
 
-### Batch Records include:
-- Batch Identification
-- Material Information
-- Equipment Setup Verification
-- Process Steps with Sign-offs
-- In-Process Controls
-- Quality Checks
-- Deviation Recording
-- Final Product Details
+```
+smartsop/
+├── src/                            # Angular frontend
+│   ├── app/
+│   │   ├── components/gmp-docs/    # Document builder UI
+│   │   │   └── document-builder/   # Main 4-step builder component
+│   │   └── services/
+│   │       └── gmp-document.service.ts  # API client
+│   └── main.ts
+├── server.ts                       # Angular SSR Express server
+├── ml_model/gmp/                   # Python GMP package
+│   ├── templates/                  # JSON template definitions
+│   │   ├── batch_record.json
+│   │   ├── sop.json
+│   │   ├── validation_protocol.json
+│   │   ├── equipment_qualification.json
+│   │   ├── deviation_form.json
+│   │   ├── change_control_form.json
+│   │   ├── investigation_report.json
+│   │   └── annual_product_review.json
+│   ├── template_schema.py          # Pydantic models for templates
+│   ├── template_loader.py          # JSON template loader + cache
+│   ├── word_engine.py              # DOCX generation (python-docx + OOXML)
+│   ├── ooxml_helpers.py            # Low-level Word XML helpers
+│   ├── ollama_service.py           # Ollama HTTP client
+│   ├── prompts.py                  # LLM prompt templates per section type
+│   ├── paper_scraper.py            # PubMed Central API client
+│   ├── document_generator.py       # Orchestrator
+│   └── routes.py                   # Flask blueprint
+├── gmp_server.py                   # Flask entry point
+├── Dockerfile.backend
+├── Dockerfile.frontend
+├── docker-compose.yml
+├── requirements-gmp.txt            # Python deps (no torch/transformers)
+└── .github/workflows/ci.yml        # GitHub Actions CI
+```
 
-## Technology Stack
+## API endpoints
 
-- Frontend: Angular 18
-- Backend: Flask (Python)
-- AI: `microsoft/phi-2` (fine-tunable)
-- API: RESTful architecture
-- Styling: Modern CSS with responsive design
+All routes are prefixed with `/api/gmp`.
 
-## Contributing
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/templates` | List all templates |
+| `GET` | `/templates/:id` | Get template schema (sections, fields) |
+| `POST` | `/generate` | Generate DOCX from template + data |
+| `POST` | `/preview` | AI-generate a single section |
+| `GET` | `/ollama/status` | Check Ollama availability |
+| `GET` | `/papers/search?q=...&limit=10` | Search PubMed Central |
+| `GET` | `/papers/:pmcid/methods` | Fetch paper methods section |
+| `POST` | `/papers/autofill` | Extract GMP data from paper via LLM |
+| `GET` | `/api/download/:filename` | Download generated DOCX |
+| `GET` | `/health` | Backend health check |
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+## Adding a new template
+
+1. Create a JSON file in `ml_model/gmp/templates/` following the schema of existing templates. Key fields:
+
+   ```json
+   {
+     "id": "my_template",
+     "name": "My New Template",
+     "doc_type": "form",
+     "orientation": "portrait",
+     "sections": [
+       {
+         "id": "approval_block",
+         "title": "APPROVED BY",
+         "type": "approval_block",
+         "required": true,
+         "default_data": { ... }
+       },
+       {
+         "id": "procedure",
+         "title": "PROCEDURE",
+         "type": "step_procedure",
+         "llm_prompt": "Generate steps for {process_type} of {product_name}...",
+         "step_config": { ... }
+       }
+     ]
+   }
+   ```
+
+2. The `doc_type` determines the UI category grouping. Valid values: `batch_record`, `validation`, `qualification`, `form`, `report`, `sop`.
+
+3. Available section types: `approval_block`, `references`, `attachments`, `general_instructions`, `step_procedure`, `equipment_list`, `materials_list`, `flowchart`, `checklist`, `comments`, `review`, `label_accountability`, `free_text`, `table`.
+
+4. If you add a new `doc_type`, add it to the `DocumentType` enum in `ml_model/gmp/template_schema.py` and the `categoryOrder` array in `document-builder.component.ts`.
+
+5. Templates are auto-discovered from the `templates/` directory - no registration needed.
+
+## Environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OLLAMA_HOST` | `http://localhost:11434` | Ollama API URL |
+| `API_URL` | `http://localhost:5001` | Backend URL (used by SSR proxy) |
+| `PORT` | `4000` | Frontend SSR port |
+| `FLASK_ENV` | `development` | Flask environment |
+
+## CI/CD
+
+GitHub Actions runs on every push/PR to `main`:
+1. **Frontend** - TypeScript typecheck + production build
+2. **Backend** - Template validation (all 8 templates) + DOCX smoke tests
+3. **Docker** - Build both images
+
+## Development tips
+
+- **Frontend only**: `npm start` (port 4200, proxies API to 5001)
+- **Backend only**: `python gmp_server.py` (port 5001, debug mode)
+- **Build check**: `npx tsc --noEmit -p tsconfig.app.json`
+- **Test templates**: `python -c "from ml_model.gmp.template_loader import TemplateLoader; [print(t) for t in TemplateLoader().list_templates()]"`
+- **Generate test DOCX**: `python -c "from ml_model.gmp.document_generator import GMPDocumentGenerator; print(GMPDocumentGenerator().generate_document('sop', {'title':'Test','product_name':'X','process_type':'Y','description':'Z'})['filename'])"`
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Support
-
-For support, please open an issue in the GitHub repository or contact the development team.
-
-## Development server
-
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
-
-## Code scaffolding
-
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
-
-## Build
-
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
-
-## Running unit tests
-
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
-
-## Running end-to-end tests
-
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
-
-## Further help
-
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+MIT
