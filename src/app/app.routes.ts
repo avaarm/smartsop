@@ -13,6 +13,12 @@ export const routes: Routes = [
           import('./components/gmp-docs/document-builder/document-builder.component')
             .then(m => m.DocumentBuilderComponent),
       },
+      {
+        path: 'account',
+        loadComponent: () =>
+          import('./components/gmp-docs/account-settings/account-settings.component')
+            .then(m => m.AccountSettingsComponent),
+      },
     ],
   },
 ];

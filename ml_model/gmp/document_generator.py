@@ -17,6 +17,7 @@ from .template_loader import TemplateLoader
 from .word_engine import GMPWordEngine
 from .ollama_service import OllamaService
 from .paper_scraper import PaperScraper, Paper, PaperMethods
+from .data_collector import DataCollector
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ class GMPDocumentGenerator:
         self.word_engine = GMPWordEngine()
         self.ollama = OllamaService(base_url=ollama_url, model=ollama_model)
         self.paper_scraper = PaperScraper()
+        self.data_collector = DataCollector()
         self.generated_docs_dir = GENERATED_DOCS_DIR
         self.generated_docs_dir.mkdir(parents=True, exist_ok=True)
 
@@ -231,7 +233,7 @@ class GMPDocumentGenerator:
 
         logger.info(f"Generated GMP document: {filename} ({doc_type})")
 
-        return {
+        result = {
             "doc_id": doc_id,
             "file_path": str(file_path),
             "filename": filename,
@@ -240,6 +242,20 @@ class GMPDocumentGenerator:
             "content_data": data,
         }
 
+        # Record document in database if account is provided
+        account_id = user_input.get("account_id")
+        if account_id:
+            doc_record = self.data_collector.record_document(
+                account_id=account_id,
+                doc_type=doc_type,
+                user_input=user_input,
+                result=result,
+            )
+            if doc_record:
+                result["document_record_id"] = doc_record.id
+
+        return result
+
     def preview_section(self, doc_type: str, section_id: str,
                         context: dict) -> dict:
         """Generate a preview for a single section using the LLM.
@@ -247,7 +263,7 @@ class GMPDocumentGenerator:
         Args:
             doc_type: Template ID
             section_id: Section to preview
-            context: LLM context dict
+            context: LLM context dict (may include account_id)
 
         Returns:
             Dict with generated section data
@@ -259,17 +275,53 @@ class GMPDocumentGenerator:
         if not section_def:
             raise ValueError(f"Section '{section_id}' not found in template '{doc_type}'")
 
-        return self._generate_section_with_llm(section_def, context)
+        # Inject account context if account_id is provided
+        account_id = context.get("account_id")
+        enriched_context = dict(context)
+        if account_id:
+            acct_ctx = self.data_collector.get_account_context(account_id)
+            if acct_ctx.get("facility_name"):
+                enriched_context.setdefault("facility_name", acct_ctx["facility_name"])
+            if acct_ctx.get("style_notes"):
+                enriched_context["_style_notes"] = acct_ctx["style_notes"]
+            if acct_ctx.get("reference_sops"):
+                enriched_context["_reference_sops"] = acct_ctx["reference_sops"]
+            if acct_ctx.get("terminology"):
+                enriched_context["_terminology"] = acct_ctx["terminology"]
+
+        result = self._generate_section_with_llm(section_def, enriched_context)
+
+        # Capture training data
+        if account_id and result:
+            prompt = section_def.llm_prompt or section_def.type.value
+            self.data_collector.record_section_generation(
+                account_id=account_id,
+                section_type=section_def.type.value,
+                prompt=prompt.format(**{k: v for k, v in enriched_context.items() if not k.startswith("_")}),
+                completion=result,
+                context=context,
+                source="ai",
+            )
+
+        return result
 
     def _generate_section_with_llm(self, section_def, context: dict) -> dict:
         """Generate section content using the LLM.
 
         Maps section types to appropriate prompt types and parses the response.
+        If context contains account-specific keys (_style_notes, _terminology,
+        _reference_sops), they are appended to the system prompt so the LLM
+        produces account-tailored output.
         """
         # Check if Ollama is available
         if not self.ollama.check_health():
             logger.warning("Ollama not available, returning empty section data")
             return {}
+
+        # Build account-aware system prompt supplement
+        system_supplement = self._build_account_supplement(context)
+        # Strip private keys before formatting prompt templates
+        clean_ctx = {k: v for k, v in context.items() if not k.startswith("_")}
 
         section_type_to_prompt = {
             SectionType.STEP_PROCEDURE: "procedure_steps",
@@ -289,7 +341,8 @@ class GMPDocumentGenerator:
             if section_def.llm_prompt:
                 try:
                     raw = self.ollama.generate(
-                        section_def.llm_prompt.format(**context),
+                        section_def.llm_prompt.format(**clean_ctx),
+                        system_prompt=system_supplement or None,
                         temperature=0.3,
                     )
                     return {"text": raw}
@@ -299,7 +352,9 @@ class GMPDocumentGenerator:
             return {}
 
         try:
-            raw = self.ollama.generate_section_content(prompt_type, context)
+            raw = self.ollama.generate_section_content(
+                prompt_type, clean_ctx, custom_prompt=None,
+            )
             # Try to parse as JSON for structured sections
             try:
                 parsed = json.loads(raw)
@@ -310,6 +365,24 @@ class GMPDocumentGenerator:
         except Exception as e:
             logger.error(f"LLM generation failed for {section_def.id}: {e}")
             return {}
+
+    @staticmethod
+    def _build_account_supplement(context: dict) -> str:
+        """Build an account-specific system prompt supplement from context."""
+        parts = []
+        if context.get("_style_notes"):
+            parts.append(f"Follow these style guidelines: {context['_style_notes']}")
+        if context.get("_terminology"):
+            terms = context["_terminology"]
+            if isinstance(terms, dict) and terms:
+                lines = [f"- {k}: {v}" for k, v in terms.items()]
+                parts.append("Use this organization-specific terminology:\n" + "\n".join(lines))
+        if context.get("_reference_sops"):
+            sops = context["_reference_sops"]
+            if isinstance(sops, list) and sops:
+                lines = [f"- {s}" for s in sops[:15]]
+                parts.append("Reference these organization SOPs where applicable:\n" + "\n".join(lines))
+        return "\n\n".join(parts)
 
     def get_ollama_status(self) -> dict:
         """Check Ollama service status and available models."""

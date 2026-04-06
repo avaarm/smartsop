@@ -36,6 +36,7 @@ export interface GMPDocumentRequest {
   doc_number?: string;
   revision?: string;
   sections?: Record<string, any>;
+  account_id?: number;
 }
 
 export interface GMPDocumentResponse {

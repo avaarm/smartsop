@@ -10,6 +10,8 @@ import os
 import logging
 
 from ml_model.gmp.routes import gmp_bp
+from ml_model.gmp.account_routes import account_bp
+from ml_model.gmp.database import init_db
 
 logging.basicConfig(level=logging.INFO)
 
@@ -27,7 +29,11 @@ os.makedirs(GENERATED_DOCS_DIR, exist_ok=True)
 OLLAMA_HOST = os.environ.get('OLLAMA_HOST', 'http://localhost:11434')
 app.config['OLLAMA_HOST'] = OLLAMA_HOST
 
+# Initialize SQLite database
+init_db(app)
+
 app.register_blueprint(gmp_bp)
+app.register_blueprint(account_bp)
 
 
 @app.route('/api/download/<filename>')
