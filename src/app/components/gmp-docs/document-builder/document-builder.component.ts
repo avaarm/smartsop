@@ -11,6 +11,7 @@ import {
   OllamaStatus,
   Paper,
 } from '../../../services/gmp-document.service';
+import { AccountService, Account } from '../../../services/account.service';
 
 @Component({
   selector: 'app-document-builder',
@@ -65,11 +66,15 @@ export class DocumentBuilderComponent implements OnInit {
   paperAutofillLoading: Record<string, boolean> = {};
   importedPapers: Paper[] = [];
 
-  constructor(private gmp: GMPDocumentService) {}
+  activeAccount: Account | null = null;
+
+  constructor(private gmp: GMPDocumentService, private accountService: AccountService) {}
 
   ngOnInit(): void {
     this.loadTemplates();
     this.checkOllamaStatus();
+    this.accountService.activeAccount$.subscribe(a => this.activeAccount = a);
+    this.accountService.loadSavedAccount();
   }
 
   loadTemplates(): void {
@@ -166,14 +171,16 @@ export class DocumentBuilderComponent implements OnInit {
 
   fillSectionWithAI(section: GMPSectionSchema): void {
     this.sectionGenerating[section.id] = true;
+    const ctx: Record<string, any> = {
+      product_name: this.productName,
+      process_type: this.processType,
+      description: this.description,
+    };
+    if (this.activeAccount) ctx['account_id'] = this.activeAccount.id;
     this.gmp.previewSection({
       doc_type: this.selectedTemplateId,
       section_id: section.id,
-      context: {
-        product_name: this.productName,
-        process_type: this.processType,
-        description: this.description,
-      },
+      context: ctx,
     }).subscribe({
       next: (res) => {
         if (res.data) {
@@ -209,14 +216,16 @@ export class DocumentBuilderComponent implements OnInit {
     // Run all section fills in parallel
     sectionsToFill.forEach((section) => {
       this.sectionGenerating[section.id] = true;
+      const ctx: Record<string, any> = {
+        product_name: this.productName,
+        process_type: this.processType,
+        description: this.description,
+      };
+      if (this.activeAccount) ctx['account_id'] = this.activeAccount.id;
       this.gmp.previewSection({
         doc_type: this.selectedTemplateId,
         section_id: section.id,
-        context: {
-          product_name: this.productName,
-          process_type: this.processType,
-          description: this.description,
-        },
+        context: ctx,
       }).subscribe({
         next: (res) => {
           if (res.data) {
@@ -257,6 +266,7 @@ export class DocumentBuilderComponent implements OnInit {
       doc_number: this.docNumber || undefined,
       revision: this.revision,
       sections: this.sectionData,
+      account_id: this.activeAccount?.id,
     };
 
     this.gmp.generateDocument(request).subscribe({

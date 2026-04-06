@@ -68,3 +68,5 @@ ENV/
 # Generated documents and data
 /generated_docs/
 /collected_data/
+/training_exports/
+*.db
