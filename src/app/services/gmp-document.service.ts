@@ -95,7 +95,7 @@ export interface PaperAutofillResponse {
   providedIn: 'root'
 })
 export class GMPDocumentService {
-  private baseUrl = 'http://localhost:5001/api/gmp';
+  private baseUrl = '/api/gmp';
 
   constructor(private http: HttpClient) {}
 
@@ -155,7 +155,7 @@ export class GMPDocumentService {
   }
 
   getDownloadUrl(filename: string): string {
-    return `http://localhost:5001/api/download/${filename}`;
+    return `/api/download/${filename}`;
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {
