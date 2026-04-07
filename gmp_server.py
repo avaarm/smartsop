@@ -16,8 +16,9 @@ from ml_model.gmp.database import init_db
 logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
+allowed_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:4200,http://127.0.0.1:4200').split(',')
 CORS(app,
-     origins=["http://localhost:4200", "http://127.0.0.1:4200"],
+     origins=allowed_origins,
      supports_credentials=True,
      allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
      expose_headers=["Content-Disposition"])
