@@ -1,0 +1,155 @@
+{
+  "id": "sop",
+  "name": "Standard Operating Procedure (SOP)",
+  "doc_type": "sop",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1440,
+    "right": 1080,
+    "bottom": 1080,
+    "left": 1080,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 6,
+    "column_widths": [650, 1200, 3800, 1800, 1200, 1430],
+    "total_width": 10080,
+    "row_height_dxa": 288,
+    "rows": 3,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "CONFIDENTIAL",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": true,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "approval_block",
+      "title": "APPROVED BY",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Author", "name": "", "date": ""},
+          {"role": "Subject Matter Expert", "name": "", "date": ""},
+          {"role": "Area Manager", "name": "", "date": ""},
+          {"role": "Quality Assurance", "name": "", "date": ""}
+        ]
+      }
+    },
+    {
+      "id": "references",
+      "title": "REFERENCES",
+      "type": "references",
+      "required": true,
+      "llm_prompt": "Generate a references list for an SOP covering {process_type} for {product_name}. Use GMP prefix conventions (EQ-=Equipment, GN-=General, PR-=Processing, QA-=Quality Assurance, TM-=Test Method). Include parent SOPs, relevant test methods, and regulatory citations. {description}"
+    },
+    {
+      "id": "purpose",
+      "title": "PURPOSE",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the Purpose section for an SOP covering {process_type} of {product_name}. State the intent of the procedure in 2-3 sentences. {description}"
+    },
+    {
+      "id": "scope",
+      "title": "SCOPE",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the Scope section for an SOP on {process_type}. State where and to whom this procedure applies, what is included, and what is excluded."
+    },
+    {
+      "id": "definitions",
+      "title": "DEFINITIONS AND ABBREVIATIONS",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "List key definitions and abbreviations used in an SOP for {process_type} of {product_name}. Include at least 5 entries with clear, GMP-appropriate definitions."
+    },
+    {
+      "id": "responsibilities",
+      "title": "RESPONSIBILITIES",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "List the roles and responsibilities for an SOP covering {process_type}. Include roles such as Operator, Supervisor, Quality Assurance, and Area Manager."
+    },
+    {
+      "id": "safety",
+      "title": "SAFETY AND ENVIRONMENTAL",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write safety and environmental considerations for performing {process_type}. Include PPE requirements, hazards (biological, chemical, mechanical), waste disposal, and emergency procedures."
+    },
+    {
+      "id": "equipment_list",
+      "title": "Equipment & Materials",
+      "type": "equipment_list",
+      "required": true,
+      "llm_prompt": "Generate an equipment and materials list for an SOP on {process_type}."
+    },
+    {
+      "id": "procedure",
+      "title": "PROCEDURE",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "Step", "width_dxa": 5800},
+          {"id": "variable", "title": "Critical Parameter", "width_dxa": 2400},
+          {"id": "result", "title": "Expected Result", "width_dxa": 1880}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate the detailed procedure steps for an SOP covering {process_type} of {product_name}. Use numbered steps (1.0, 1.1, 1.2...), imperative voice, and identify critical parameters. {description}"
+    },
+    {
+      "id": "records",
+      "title": "RECORDS",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "List the records generated and retained by this SOP for {process_type}. Include record type, storage location, and retention period."
+    },
+    {
+      "id": "revision_history",
+      "title": "Revision History",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "Revision", "value": "01"},
+          {"label": "Effective Date", "value": ""},
+          {"label": "Change Summary", "value": "Initial release"},
+          {"label": "Author", "value": ""}
+        ]
+      }
+    },
+    {
+      "id": "qa_review",
+      "title": "QUALITY ASSURANCE REVIEW",
+      "type": "review",
+      "required": true,
+      "default_data": {
+        "review_type": "QUALITY ASSURANCE REVIEW (Refer to QA-005)"
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "Procedures",
+    "regulatory_framework": "21 CFR 211.100, ICH Q7, EU GMP"
+  }
+}

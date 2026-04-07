@@ -1,0 +1,166 @@
+{
+  "id": "investigation_report",
+  "name": "Investigation Report",
+  "doc_type": "report",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1440,
+    "right": 1080,
+    "bottom": 1080,
+    "left": 1080,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 6,
+    "column_widths": [650, 1200, 3800, 1800, 1200, 1430],
+    "total_width": 10080,
+    "row_height_dxa": 288,
+    "rows": 3,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "CONFIDENTIAL",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": true,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "approval_block",
+      "title": "APPROVED BY",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Investigator", "name": "", "date": ""},
+          {"role": "Technical SME", "name": "", "date": ""},
+          {"role": "Manufacturing", "name": "", "date": ""},
+          {"role": "Quality Assurance", "name": "", "date": ""}
+        ]
+      }
+    },
+    {
+      "id": "references",
+      "title": "REFERENCES",
+      "type": "references",
+      "required": true,
+      "llm_prompt": "Generate references for an investigation report on {process_type} involving {product_name}. Include QA- investigation SOPs, TM- test methods, PR- processing procedures, batch records, and any relevant deviations. {description}"
+    },
+    {
+      "id": "executive_summary",
+      "title": "EXECUTIVE SUMMARY",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write a 1-paragraph executive summary of an investigation into {process_type} involving {product_name}. {description}. State the issue, the investigation approach, the probable root cause, and the conclusion in plain language suitable for senior management."
+    },
+    {
+      "id": "background",
+      "title": "BACKGROUND",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the background section of an investigation report for {product_name}. Describe normal operating conditions, the triggering event, chronology of discovery, and prior history of similar events."
+    },
+    {
+      "id": "investigation_scope",
+      "title": "SCOPE OF INVESTIGATION",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Define the scope of an investigation into {process_type} of {product_name}. State what batches, equipment, time period, and systems are included, and what is explicitly excluded."
+    },
+    {
+      "id": "timeline",
+      "title": "Timeline of Events",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "Date/Time", "width_dxa": 2200},
+          {"id": "variable", "title": "Event", "width_dxa": 5400},
+          {"id": "result", "title": "Source", "width_dxa": 1800},
+          {"id": "performed_by", "title": "Verified By", "width_dxa": 680}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate a timeline of events for an investigation into {process_type} on {product_name}. Include the chronological sequence from normal operation through discovery, containment, and investigation."
+    },
+    {
+      "id": "investigation_activities",
+      "title": "Investigation Activities",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe investigation activities performed for {process_type} involving {product_name}. Cover document review, interviews, re-analysis, instrument checks, environmental data, and analytical retesting with relevant TM- test methods."
+    },
+    {
+      "id": "root_cause_analysis",
+      "title": "Root Cause Analysis",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Perform a root cause analysis for an issue in {process_type} of {product_name}. Apply the 5-Why or Fishbone (6M: Man, Method, Machine, Material, Measurement, Environment) approach. Identify the most probable root cause and any contributing factors."
+    },
+    {
+      "id": "findings",
+      "title": "Findings",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Summarize the findings of the investigation into {product_name}. State confirmed facts vs ruled-out hypotheses. Distinguish evidence from inference."
+    },
+    {
+      "id": "impact_conclusion",
+      "title": "Impact & Conclusion",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the impact assessment and conclusion of an investigation report for {product_name}. Cover product quality impact, patient safety impact, regulatory reportability, affected batches, and the disposition decision."
+    },
+    {
+      "id": "capa_summary",
+      "title": "CAPA Summary",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "CAPA Action", "width_dxa": 5000},
+          {"id": "variable", "title": "CAPA ID", "width_dxa": 1600},
+          {"id": "result", "title": "Owner", "width_dxa": 1800},
+          {"id": "performed_by", "title": "Target Date", "width_dxa": 1680}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate CAPA items stemming from an investigation into {process_type} of {product_name}. Include both event-specific and systemic actions."
+    },
+    {
+      "id": "comments",
+      "title": "Comments",
+      "type": "comments",
+      "required": true,
+      "default_data": {"num_rows": 4}
+    },
+    {
+      "id": "qa_review",
+      "title": "QUALITY ASSURANCE REVIEW",
+      "type": "review",
+      "required": true,
+      "default_data": {
+        "review_type": "QUALITY ASSURANCE REVIEW (Refer to QA-020)"
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "Reports",
+    "regulatory_framework": "21 CFR 211.192, ICH Q10"
+  }
+}

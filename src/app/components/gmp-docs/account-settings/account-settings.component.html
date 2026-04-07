@@ -1,0 +1,300 @@
+<div class="settings-page">
+  <header class="header">
+    <div>
+      <h1>Account &amp; Training</h1>
+      <p class="subtitle">Configure organization settings and manage training data for account-specific AI</p>
+    </div>
+  </header>
+
+  <!-- Messages -->
+  <div *ngIf="successMessage" class="toast toast-success">{{ successMessage }}</div>
+  <div *ngIf="errorMessage" class="toast toast-error">{{ errorMessage }}</div>
+
+  <!-- Account Selector -->
+  <div class="account-selector">
+    <div class="selector-row">
+      <div class="selector-label">Active Account</div>
+      <div class="selector-controls">
+        <select [(ngModel)]="activeAccount" (ngModelChange)="selectAccount($event)">
+          <option [ngValue]="null">-- Select or create an account --</option>
+          <option *ngFor="let a of accounts" [ngValue]="a">{{ a.name }}</option>
+        </select>
+        <button *ngIf="!activeAccount && !showCreateForm" class="btn btn-primary btn-sm" (click)="showCreateForm = true">
+          + New Account
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Account Form (shown when no account selected) -->
+  <section *ngIf="!activeAccount && showCreateForm" class="tab-panel create-form-panel">
+    <h3>Create a new account</h3>
+    <p class="hint">Set up an organization profile so generated documents match your facility's style and terminology.</p>
+    <div class="form">
+      <div class="field-row">
+        <div class="field">
+          <label>Organization Name *</label>
+          <input type="text" [(ngModel)]="accountForm.name" placeholder="e.g., Fred Hutch Cell Processing Facility" />
+        </div>
+        <div class="field">
+          <label>Facility Name</label>
+          <input type="text" [(ngModel)]="accountForm.facility_name" placeholder="e.g., Cell Processing Facility" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Department</label>
+          <input type="text" [(ngModel)]="accountForm.department" placeholder="e.g., Manufacturing" />
+        </div>
+        <div class="field">
+          <label>Default Product</label>
+          <input type="text" [(ngModel)]="accountForm.default_product" placeholder="e.g., CD8+ T Cells" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Default Process</label>
+        <input type="text" [(ngModel)]="accountForm.default_process" placeholder="e.g., CliniMACS Prodigy Enrichment" />
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" (click)="createAccount()" [disabled]="!accountForm.name.trim() || saving">
+          {{ saving ? 'Creating…' : 'Create Account' }}
+        </button>
+        <button class="btn btn-ghost" (click)="showCreateForm = false" style="margin-left: 8px;">Cancel</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tabs -->
+  <nav *ngIf="activeAccount" class="tabs">
+    <button [class.active]="activeTab === 'account'" (click)="activeTab = 'account'">Account Settings</button>
+    <button [class.active]="activeTab === 'training'" (click)="activeTab = 'training'; loadTrainingExamples()">
+      Training Data
+      <span *ngIf="trainingStats" class="tab-badge">{{ trainingStats.total_examples }}</span>
+    </button>
+    <button [class.active]="activeTab === 'export'" (click)="activeTab = 'export'">Export &amp; Fine-tune</button>
+    <button [class.active]="activeTab === 'history'" (click)="activeTab = 'history'; loadDocuments()">
+      Document History
+      <span *ngIf="activeAccount" class="tab-badge">{{ activeAccount.document_count }}</span>
+    </button>
+  </nav>
+
+  <!-- Account Settings Tab -->
+  <section *ngIf="activeAccount && activeTab === 'account'" class="tab-panel">
+    <div class="form">
+      <div class="field-row">
+        <div class="field">
+          <label>Organization Name</label>
+          <input type="text" [(ngModel)]="accountForm.name" placeholder="e.g., Fred Hutch Cell Processing Facility" />
+        </div>
+        <div class="field">
+          <label>Facility Name</label>
+          <input type="text" [(ngModel)]="accountForm.facility_name" placeholder="e.g., Cell Processing Facility" />
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Department</label>
+          <input type="text" [(ngModel)]="accountForm.department" placeholder="e.g., Manufacturing" />
+        </div>
+        <div class="field">
+          <label>Default Product</label>
+          <input type="text" [(ngModel)]="accountForm.default_product" placeholder="e.g., CD8+ T Cells" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Default Process</label>
+        <input type="text" [(ngModel)]="accountForm.default_process" placeholder="e.g., CliniMACS Prodigy Enrichment" />
+      </div>
+
+      <div class="field">
+        <label>Style Notes for AI</label>
+        <textarea rows="3" [(ngModel)]="accountForm.style_notes"
+                  placeholder="e.g., Use passive voice. Refer to operators as 'Manufacturing Technician'. Always cite procedure numbers."></textarea>
+        <span class="hint">These instructions are injected into every AI generation for this account</span>
+      </div>
+
+      <div class="field">
+        <label>Organization Terminology</label>
+        <textarea rows="5" [(ngModel)]="accountForm.terminologyText"
+                  placeholder="One term per line in KEY: VALUE format, e.g.&#10;BSC: Biosafety Cabinet&#10;TSCD: Sterile Tubing Welder&#10;CPF: Cell Processing Facility"></textarea>
+        <span class="hint">These terms are provided to the AI so it uses your organization's vocabulary</span>
+      </div>
+
+      <div class="field">
+        <label>Reference SOPs</label>
+        <textarea rows="5" [(ngModel)]="accountForm.referenceSopsText"
+                  placeholder="One SOP per line, e.g.&#10;EQ-002 Operation and Maintenance of Biological Safety Cabinets&#10;GN-005 Aseptic Technique&#10;PR-010 Cell Processing and Cryopreservation"></textarea>
+        <span class="hint">Your standard SOP library. The AI will reference these in generated documents</span>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" (click)="saveAccount()" [disabled]="saving">
+          {{ saving ? 'Saving…' : 'Save Settings' }}
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Training Data Tab -->
+  <section *ngIf="activeAccount && activeTab === 'training'" class="tab-panel">
+    <!-- Stats -->
+    <div *ngIf="trainingStats" class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value">{{ trainingStats.total_examples }}</div>
+        <div class="stat-label">Total examples</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ trainingStats.by_source.ai }}</div>
+        <div class="stat-label">AI generated</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ trainingStats.by_source.user_edited }}</div>
+        <div class="stat-label">User edited</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ trainingStats.by_source.manual }}</div>
+        <div class="stat-label">Manual</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ trainingStats.rated }}</div>
+        <div class="stat-label">Rated</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-row">
+      <button class="btn btn-ghost btn-sm" [class.active]="!trainingSourceFilter" (click)="filterTrainingSource('')">All</button>
+      <button class="btn btn-ghost btn-sm" [class.active]="trainingSourceFilter === 'ai'" (click)="filterTrainingSource('ai')">AI</button>
+      <button class="btn btn-ghost btn-sm" [class.active]="trainingSourceFilter === 'user_edited'" (click)="filterTrainingSource('user_edited')">Edited</button>
+      <button class="btn btn-ghost btn-sm" [class.active]="trainingSourceFilter === 'manual'" (click)="filterTrainingSource('manual')">Manual</button>
+    </div>
+
+    <!-- Training examples list -->
+    <div *ngIf="trainingLoading" class="loading"><div class="spinner"></div> Loading…</div>
+
+    <div class="examples-list">
+      <div *ngFor="let ex of trainingExamples" class="example-card">
+        <div class="example-header">
+          <span class="badge" [ngClass]="'badge-' + ex.source">{{ ex.source }}</span>
+          <span class="example-type">{{ ex.section_type }}</span>
+          <span class="example-date">{{ formatDate(ex.created_at) }}</span>
+        </div>
+        <div class="example-prompt">
+          <div class="example-label">Prompt</div>
+          <div class="example-text">{{ ex.user_prompt.length > 200 ? ex.user_prompt.slice(0, 200) + '…' : ex.user_prompt }}</div>
+        </div>
+        <div class="example-completion">
+          <div class="example-label">Completion</div>
+          <div class="example-text">{{ ex.completion.length > 300 ? ex.completion.slice(0, 300) + '…' : ex.completion }}</div>
+        </div>
+        <div class="example-footer">
+          <div class="rating-row">
+            <span class="rating-label">Quality:</span>
+            <button *ngFor="let star of [1,2,3,4,5]"
+                    class="star-btn"
+                    [class.filled]="ex.quality_rating !== null && star <= ex.quality_rating"
+                    (click)="rateExample(ex, star)">
+              &#9733;
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div *ngIf="trainingPages > 1" class="pagination">
+      <button class="btn btn-ghost btn-sm" (click)="changeTrainingPage(-1)" [disabled]="trainingPage <= 1">Prev</button>
+      <span>{{ trainingPage }} / {{ trainingPages }} ({{ trainingTotal }} total)</span>
+      <button class="btn btn-ghost btn-sm" (click)="changeTrainingPage(1)" [disabled]="trainingPage >= trainingPages">Next</button>
+    </div>
+
+    <!-- Manual entry -->
+    <div class="manual-entry">
+      <h3>Add Training Example Manually</h3>
+      <p class="hint">Paste a gold-standard prompt/completion pair to improve AI quality for your account</p>
+      <div class="field">
+        <label>Section Type</label>
+        <select [(ngModel)]="manualSectionType">
+          <option value="step_procedure">Step Procedure</option>
+          <option value="equipment_list">Equipment List</option>
+          <option value="references">References</option>
+          <option value="general_instructions">General Instructions</option>
+          <option value="free_text">Free Text</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Prompt</label>
+        <textarea rows="3" [(ngModel)]="manualPrompt" placeholder="What you would ask the AI…"></textarea>
+      </div>
+      <div class="field">
+        <label>Ideal Completion</label>
+        <textarea rows="5" [(ngModel)]="manualCompletion" placeholder="The gold-standard response the AI should produce…"></textarea>
+      </div>
+      <button class="btn btn-primary btn-sm" (click)="addManualExample()" [disabled]="!manualPrompt.trim() || !manualCompletion.trim()">
+        Add Example
+      </button>
+    </div>
+  </section>
+
+  <!-- Export Tab -->
+  <section *ngIf="activeAccount && activeTab === 'export'" class="tab-panel">
+    <div class="export-cards">
+      <div class="export-card">
+        <div class="export-title">Training JSONL</div>
+        <div class="export-desc">Export all training examples in Llama 3 chat format for fine-tuning with Unsloth, Axolotl, or OpenAI.</div>
+        <div class="export-actions">
+          <button class="btn btn-primary btn-sm" (click)="exportJsonl()">Download all</button>
+          <button class="btn btn-ghost btn-sm" (click)="exportJsonlEdited()">User-edited only</button>
+        </div>
+      </div>
+
+      <div class="export-card">
+        <div class="export-title">Ollama Modelfile</div>
+        <div class="export-desc">Generate a custom Ollama Modelfile with your account's terminology, style notes, and reference SOPs baked into the system prompt.</div>
+        <div class="export-actions">
+          <button class="btn btn-primary btn-sm" (click)="generateModelfile()" [disabled]="exportLoading">
+            {{ exportLoading ? 'Generating…' : 'Generate Modelfile' }}
+          </button>
+        </div>
+        <div *ngIf="modelfileResult" class="modelfile-result">
+          <div class="result-label">Model name: <strong>{{ modelfileResult.model_name }}</strong></div>
+          <code class="result-code">{{ modelfileResult.instructions }}</code>
+        </div>
+      </div>
+
+      <div class="export-card">
+        <div class="export-title">Full Data Export</div>
+        <div class="export-desc">Export everything: account config, all documents, and all training examples as a single JSON bundle.</div>
+        <div class="export-actions">
+          <button class="btn btn-primary btn-sm" (click)="exportFull()">Download JSON</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Document History Tab -->
+  <section *ngIf="activeAccount && activeTab === 'history'" class="tab-panel">
+    <div *ngIf="documentsLoading" class="loading"><div class="spinner"></div> Loading…</div>
+    <div *ngIf="!documentsLoading && documents.length === 0" class="empty-state">
+      No documents generated yet for this account.
+    </div>
+    <div class="history-list">
+      <div *ngFor="let doc of documents" class="history-card">
+        <div class="history-title">{{ doc.title }}</div>
+        <div class="history-meta">
+          <span class="badge badge-outline">{{ doc.doc_type }}</span>
+          <span>{{ doc.product_name }}</span>
+          <span class="sep">·</span>
+          <span>{{ doc.process_type }}</span>
+          <span class="sep">·</span>
+          <span>{{ formatDate(doc.created_at) }}</span>
+        </div>
+        <div *ngIf="doc.filename" class="history-file">
+          <a [href]="'/api/download/' + doc.filename" target="_blank">{{ doc.filename }}</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

@@ -1,0 +1,172 @@
+{
+  "id": "annual_product_review",
+  "name": "Annual Product Review (APR)",
+  "doc_type": "report",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1440,
+    "right": 1080,
+    "bottom": 1080,
+    "left": 1080,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 6,
+    "column_widths": [650, 1200, 3800, 1800, 1200, 1430],
+    "total_width": 10080,
+    "row_height_dxa": 288,
+    "rows": 3,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "CONFIDENTIAL",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": true,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "approval_block",
+      "title": "APPROVED BY",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Author", "name": "", "date": ""},
+          {"role": "Process Owner", "name": "", "date": ""},
+          {"role": "Manufacturing", "name": "", "date": ""},
+          {"role": "Quality Assurance", "name": "", "date": ""}
+        ]
+      }
+    },
+    {
+      "id": "references",
+      "title": "REFERENCES",
+      "type": "references",
+      "required": true,
+      "llm_prompt": "Generate references for an Annual Product Review for {product_name}. Include QA- product review SOPs, stability protocols, release specs (TM-), and relevant regulatory filings. {description}"
+    },
+    {
+      "id": "review_scope",
+      "title": "Scope of Review",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "Product Name", "value": ""},
+          {"label": "Product Code / NDC", "value": ""},
+          {"label": "Review Period", "value": ""},
+          {"label": "Number of Batches Made", "value": ""},
+          {"label": "Number of Batches Released", "value": ""},
+          {"label": "Number of Batches Rejected", "value": ""}
+        ]
+      }
+    },
+    {
+      "id": "executive_summary",
+      "title": "EXECUTIVE SUMMARY",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write a 1-paragraph executive summary of an Annual Product Review for {product_name}. State the review period, overall product health, number of batches, major trends, and any required actions."
+    },
+    {
+      "id": "manufacturing_summary",
+      "title": "Manufacturing Summary",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Summarize manufacturing activity for {product_name} during the review period. Cover batches produced, process performance trends, critical process parameters, and any out-of-trend observations."
+    },
+    {
+      "id": "quality_data",
+      "title": "Quality Data Trends",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "Attribute", "width_dxa": 3200},
+          {"id": "variable", "title": "Specification", "width_dxa": 2200},
+          {"id": "result", "title": "Mean / Range", "width_dxa": 2400},
+          {"id": "performed_by", "title": "Trend", "width_dxa": 2280}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate critical quality attribute trending rows for {product_name}. Include identity, purity, potency, impurities, sterility, endotoxin, appearance, and any product-specific attributes."
+    },
+    {
+      "id": "deviations_capa",
+      "title": "Deviations & CAPA Summary",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Summarize deviations and CAPA activity for {product_name} during the review period. Categorize by type (minor/major/critical), identify recurring issues, and report CAPA effectiveness."
+    },
+    {
+      "id": "change_control_summary",
+      "title": "Change Control Summary",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Summarize change controls impacting {product_name} during the review period. Include process, equipment, materials, and documentation changes, and their validation status."
+    },
+    {
+      "id": "complaints_recalls",
+      "title": "Complaints, Returns & Recalls",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Summarize complaints, returns, and recalls for {product_name} during the review period. Report volume, categories, investigations, and regulatory impact."
+    },
+    {
+      "id": "stability_data",
+      "title": "Stability Data",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Summarize stability data for {product_name}. Report active stability studies, any OOT or OOS events, shelf-life confirmation, and any regulatory filings."
+    },
+    {
+      "id": "regulatory_commitments",
+      "title": "Regulatory Commitments",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "List regulatory commitments and post-approval obligations relevant to {product_name}. Include status of each and any gaps."
+    },
+    {
+      "id": "conclusion",
+      "title": "Conclusion & Recommendations",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the conclusion and recommendations section of an Annual Product Review for {product_name}. State whether the process remains in a state of control and list any required actions."
+    },
+    {
+      "id": "comments",
+      "title": "Comments",
+      "type": "comments",
+      "required": true,
+      "default_data": {"num_rows": 4}
+    },
+    {
+      "id": "qa_review",
+      "title": "QUALITY ASSURANCE REVIEW",
+      "type": "review",
+      "required": true,
+      "default_data": {
+        "review_type": "QUALITY ASSURANCE REVIEW (Refer to QA-030 Annual Product Review)"
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "Reports",
+    "regulatory_framework": "21 CFR 211.180(e), ICH Q10, EU GMP Chapter 1"
+  }
+}

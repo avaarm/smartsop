@@ -1,0 +1,51 @@
+services:
+  # Angular SSR frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - API_URL=http://backend:5001
+      - NODE_ENV=production
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # Flask GMP backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=production
+      - OLLAMA_HOST=http://ollama:11434
+    volumes:
+      - generated_docs:/app/generated_docs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      - ollama
+
+  # Ollama LLM service
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          memory: 4G
+
+volumes:
+  generated_docs:
+  ollama_data:
