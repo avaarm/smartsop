@@ -1,0 +1,211 @@
+{
+  "id": "batch_record",
+  "name": "Cell Processing Facility Batch Record",
+  "doc_type": "batch_record",
+  "orientation": "landscape",
+  "page_size": {
+    "width_dxa": 15840,
+    "height_dxa": 12240
+  },
+  "margins": {
+    "top": 1080,
+    "right": 720,
+    "bottom": 720,
+    "left": 720,
+    "header": 1080,
+    "footer": 1440,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 6,
+    "column_widths": [775, 1493, 5377, 2520, 1440, 2993],
+    "total_width": 14598,
+    "row_height_dxa": 288,
+    "rows": 3,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "CONFIDENTIAL",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": true,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "approval_block",
+      "title": "APPROVED BY",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Document Owner", "name": "", "date": ""},
+          {"role": "Technical Authority", "name": "", "date": ""},
+          {"role": "TPP Facility Director", "name": "", "date": ""},
+          {"role": "Quality Assurance", "name": "", "date": ""}
+        ]
+      }
+    },
+    {
+      "id": "references",
+      "title": "REFERENCES",
+      "type": "references",
+      "required": true,
+      "llm_prompt": "Generate a references list for a cell processing batch record involving {process_type} for {product_name}. {description}"
+    },
+    {
+      "id": "attachments",
+      "title": "ATTACHMENTS",
+      "type": "attachments",
+      "required": true,
+      "llm_prompt": "Generate an attachments list for a cell processing batch record."
+    },
+    {
+      "id": "general_instructions",
+      "title": "GENERAL INSTRUCTIONS",
+      "type": "general_instructions",
+      "required": true,
+      "llm_prompt": "Generate general instructions for a cell processing batch record.",
+      "default_data": {
+        "instructions": [
+          "Instructions preceded by [BSC] include operations that take place inside the ISO 5 zone of biosafety cabinets to prevent microbial contamination of the product and sterile support solutions. Operations are performed according to EQ-002 and GN-005.",
+          "Sanitize bag ports/penetrations with alcohol prior to connections.",
+          "Centrifugations require the use of a second container to balance the rotor (refer to EQ-003).",
+          "Label containers and materials with the labels staged at the beginning of each section.",
+          "Label cryobags for infusion with the label printed in the designated section."
+        ]
+      }
+    },
+    {
+      "id": "process_flow",
+      "title": "Process Flow",
+      "type": "flowchart",
+      "required": false,
+      "llm_prompt": "Generate a process flowchart for {process_type} of {product_name}."
+    },
+    {
+      "id": "equipment_list",
+      "title": "Equipment List",
+      "type": "equipment_list",
+      "required": true,
+      "llm_prompt": "Generate an equipment list for {process_type}.",
+      "default_data": {
+        "equipment": [
+          {"description": "Biosafety Cabinet"},
+          {"description": "CliniMACS Prodigy"},
+          {"description": "Tubing Sealer"},
+          {"description": "Sterile Tubing Welder (TSCD)"},
+          {"description": "NucleoCounter NC-200"},
+          {"description": "Pipet-Aid"},
+          {"description": "Pipettors"},
+          {"description": "Balance"},
+          {"description": "Centrifuge"},
+          {"description": "Refrigerator"},
+          {"description": "Controlled-Rate Freezer"},
+          {"description": "LN2 Freezer"}
+        ]
+      }
+    },
+    {
+      "id": "materials_list",
+      "title": "Material List",
+      "type": "materials_list",
+      "required": true,
+      "llm_prompt": "Generate a materials list for {process_type} of {product_name}."
+    },
+    {
+      "id": "day_minus1_processing",
+      "title": "Day -1 Apheresis Sampling and Overnight Hold",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "Instruction", "width_dxa": 5400},
+          {"id": "variable", "title": "Variable", "width_dxa": 2160},
+          {"id": "result", "title": "Result / Actual", "width_dxa": 3240},
+          {"id": "performed_by", "title": "Performed By (Initials/Date)", "width_dxa": 1890},
+          {"id": "checked_by", "title": "Checked By (Initials/Date)", "width_dxa": 1890}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate Day -1 procedure steps for apheresis sampling and overnight hold in a {process_type} process for {product_name}."
+    },
+    {
+      "id": "day0_processing",
+      "title": "Day 0 Processing",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "Instruction", "width_dxa": 5400},
+          {"id": "variable", "title": "Variable", "width_dxa": 2160},
+          {"id": "result", "title": "Result / Actual", "width_dxa": 3240},
+          {"id": "performed_by", "title": "Performed By (Initials/Date)", "width_dxa": 1890},
+          {"id": "checked_by", "title": "Checked By (Initials/Date)", "width_dxa": 1890}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate Day 0 main processing procedure steps for {process_type} of {product_name}. Include enrichment, counting, sampling, formulation, and cryopreservation steps."
+    },
+    {
+      "id": "flowchart_figures",
+      "title": "Process Flow Diagrams",
+      "type": "flowchart",
+      "required": false,
+      "llm_prompt": "Generate a detailed process flowchart for the complete {process_type} process for {product_name}."
+    },
+    {
+      "id": "label_accountability",
+      "title": "Label Accountability",
+      "type": "label_accountability",
+      "required": true
+    },
+    {
+      "id": "comments",
+      "title": "Comments",
+      "type": "comments",
+      "required": true,
+      "default_data": {
+        "num_rows": 4
+      }
+    },
+    {
+      "id": "mfg_review",
+      "title": "MANUFACTURING REVIEW",
+      "type": "review",
+      "required": true,
+      "default_data": {
+        "review_type": "MANUFACTURING REVIEW",
+        "checklist_items": [
+          "Label and if applicable expiration date are correct",
+          "Equipment recorded",
+          "All processing steps completed",
+          "Calculations checked",
+          "Deviations identified and documented",
+          "Material consumption in Title 21 reviewed"
+        ]
+      }
+    },
+    {
+      "id": "qa_review",
+      "title": "QUALITY ASSURANCE REVIEW",
+      "type": "review",
+      "required": true,
+      "default_data": {
+        "review_type": "QUALITY ASSURANCE REVIEW (Refer to QA-005)"
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "based_on": "Fred Hutch Cell Processing Facility Batch Record",
+    "regulatory_framework": "21 CFR Part 211, EU GMP Annex"
+  }
+}

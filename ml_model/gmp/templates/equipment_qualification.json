@@ -1,0 +1,184 @@
+{
+  "id": "equipment_qualification",
+  "name": "Equipment Qualification Record",
+  "doc_type": "qualification",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1440,
+    "right": 1080,
+    "bottom": 1080,
+    "left": 1080,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 6,
+    "column_widths": [650, 1200, 3800, 1800, 1200, 1430],
+    "total_width": 10080,
+    "row_height_dxa": 288,
+    "rows": 3,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "CONFIDENTIAL",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": true,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "approval_block",
+      "title": "APPROVED BY",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Equipment Owner", "name": "", "date": ""},
+          {"role": "Engineering / Metrology", "name": "", "date": ""},
+          {"role": "Validation", "name": "", "date": ""},
+          {"role": "Quality Assurance", "name": "", "date": ""}
+        ]
+      }
+    },
+    {
+      "id": "references",
+      "title": "REFERENCES",
+      "type": "references",
+      "required": true,
+      "llm_prompt": "Generate a references list for an Equipment Qualification record. Equipment: {product_name} used for {process_type}. Include EQ- SOPs, TM- test methods, calibration procedures, vendor manuals, and GMP standards (21 CFR 211.63, ICH Q7). {description}"
+    },
+    {
+      "id": "equipment_identification",
+      "title": "Equipment Identification",
+      "type": "table",
+      "required": true,
+      "llm_prompt": "List equipment identification fields for {product_name}.",
+      "default_data": {
+        "rows": [
+          {"label": "Equipment Name", "value": ""},
+          {"label": "Manufacturer", "value": ""},
+          {"label": "Model", "value": ""},
+          {"label": "Serial Number", "value": ""},
+          {"label": "Asset / Tag ID", "value": ""},
+          {"label": "Location", "value": ""},
+          {"label": "Qualification Type", "value": "IQ / OQ / PQ / Requalification"},
+          {"label": "Qualification Date", "value": ""}
+        ]
+      }
+    },
+    {
+      "id": "scope",
+      "title": "SCOPE OF QUALIFICATION",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the scope of qualification for {product_name} being used in {process_type}. Describe intended use, operating ranges, critical parameters, and whether this is initial, periodic, or post-change requalification.",
+      "default_data": {
+        "text": "This record documents qualification activities performed to demonstrate the equipment is suitable for its intended GMP use."
+      }
+    },
+    {
+      "id": "iq_checklist",
+      "title": "Installation Qualification Checklist",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "Verification Item", "width_dxa": 4800},
+          {"id": "variable", "title": "Expected", "width_dxa": 2100},
+          {"id": "result", "title": "Actual / P-F", "width_dxa": 1800},
+          {"id": "performed_by", "title": "Initials / Date", "width_dxa": 1380}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate an Installation Qualification checklist for {product_name}. Include nameplate verification, utility connections (power, water, gas, compressed air), documentation package (manuals, drawings, certificates), material of construction certificates, software/firmware version, and environmental conditions."
+    },
+    {
+      "id": "oq_checklist",
+      "title": "Operational Qualification Checklist",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "Test Item", "width_dxa": 4800},
+          {"id": "variable", "title": "Expected", "width_dxa": 2100},
+          {"id": "result", "title": "Actual / P-F", "width_dxa": 1800},
+          {"id": "performed_by", "title": "Initials / Date", "width_dxa": 1380}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate an Operational Qualification test checklist for {product_name}. Include functional tests (start/stop, range tests, alarm challenges, interlocks), user access controls, data integrity (audit trail, time stamps), and SOP verification."
+    },
+    {
+      "id": "calibration_verification",
+      "title": "Calibration Verification",
+      "type": "table",
+      "required": true,
+      "llm_prompt": "List calibration verification fields for instruments on {product_name}.",
+      "default_data": {
+        "rows": [
+          {"label": "Instrument Tag", "value": ""},
+          {"label": "Parameter", "value": ""},
+          {"label": "Range", "value": ""},
+          {"label": "Tolerance", "value": ""},
+          {"label": "Calibration Standard", "value": ""},
+          {"label": "Calibration Date", "value": ""},
+          {"label": "Next Due", "value": ""},
+          {"label": "Status", "value": "Pass / Fail"}
+        ]
+      }
+    },
+    {
+      "id": "deviations",
+      "title": "DEVIATIONS / DISCREPANCIES",
+      "type": "free_text",
+      "required": true,
+      "default_data": {
+        "text": "Record any discrepancies observed during qualification. Cross-reference deviation record numbers and link to root-cause disposition."
+      }
+    },
+    {
+      "id": "conclusion",
+      "title": "CONCLUSION",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write a conclusion statement for the qualification of {product_name}. State whether acceptance criteria were met and whether the equipment is approved for GMP use.",
+      "default_data": {
+        "text": "Based on successful execution of IQ and OQ protocols, the equipment is qualified for its intended use in GMP manufacturing pending Quality Assurance approval."
+      }
+    },
+    {
+      "id": "comments",
+      "title": "Comments",
+      "type": "comments",
+      "required": true,
+      "default_data": {"num_rows": 4}
+    },
+    {
+      "id": "qa_review",
+      "title": "QUALITY ASSURANCE REVIEW",
+      "type": "review",
+      "required": true,
+      "default_data": {
+        "review_type": "QUALITY ASSURANCE REVIEW (Refer to QA-005)"
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "Qualifications",
+    "regulatory_framework": "21 CFR Part 211.63, ICH Q7, GAMP 5"
+  }
+}

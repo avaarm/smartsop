@@ -1,0 +1,170 @@
+{
+  "id": "change_control_form",
+  "name": "Change Control Form",
+  "doc_type": "form",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1440,
+    "right": 1080,
+    "bottom": 1080,
+    "left": 1080,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 6,
+    "column_widths": [650, 1200, 3800, 1800, 1200, 1430],
+    "total_width": 10080,
+    "row_height_dxa": 288,
+    "rows": 3,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "CONFIDENTIAL",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": true,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "approval_block",
+      "title": "APPROVED BY",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Change Initiator", "name": "", "date": ""},
+          {"role": "Area Owner", "name": "", "date": ""},
+          {"role": "Regulatory Affairs", "name": "", "date": ""},
+          {"role": "Quality Assurance", "name": "", "date": ""}
+        ]
+      }
+    },
+    {
+      "id": "change_identification",
+      "title": "Change Identification",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "Change Control Number", "value": ""},
+          {"label": "Date Initiated", "value": ""},
+          {"label": "Change Type", "value": "Temporary / Permanent / Emergency"},
+          {"label": "Change Category", "value": "Equipment / Process / Materials / Documentation / Facility"},
+          {"label": "System / Product Affected", "value": ""},
+          {"label": "Priority", "value": "Low / Medium / High"}
+        ]
+      }
+    },
+    {
+      "id": "references",
+      "title": "REFERENCES",
+      "type": "references",
+      "required": true,
+      "llm_prompt": "Generate references for a change control impacting {process_type} on {product_name}. Include QA- change management SOPs, affected PR- processing procedures, EQ- equipment SOPs, and any regulatory filings that may be impacted. {description}"
+    },
+    {
+      "id": "change_description",
+      "title": "Description of Proposed Change",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write a detailed description of a proposed change to {process_type} for {product_name}. {description}. State the current condition, the proposed condition, and the scope of affected systems."
+    },
+    {
+      "id": "justification",
+      "title": "Reason & Justification",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the justification for a change to {process_type} in {product_name}. Address business need, quality benefit, safety benefit, regulatory driver, and alternatives considered."
+    },
+    {
+      "id": "impact_assessment",
+      "title": "Impact Assessment",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "Area", "width_dxa": 3200},
+          {"id": "variable", "title": "Impact?", "width_dxa": 1400},
+          {"id": "result", "title": "Assessment", "width_dxa": 4500},
+          {"id": "performed_by", "title": "Assessed By", "width_dxa": 1980}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate impact assessment rows for a change affecting {process_type} in {product_name}. Cover: Product Quality, Patient Safety, Validation State, Regulatory Filings, SOPs/Training, Equipment Qualification, Stability, Supply Chain, and Data Integrity."
+    },
+    {
+      "id": "implementation_plan",
+      "title": "Implementation Plan",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "Task", "width_dxa": 5200},
+          {"id": "variable", "title": "Owner", "width_dxa": 1800},
+          {"id": "result", "title": "Target Date", "width_dxa": 1700},
+          {"id": "performed_by", "title": "Done (Init/Date)", "width_dxa": 1380}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate an implementation plan for a change to {process_type}. Include tasks such as: risk assessment, procedure updates, training delivery, validation/requalification, equipment modification, documentation updates, and effectiveness monitoring."
+    },
+    {
+      "id": "training_requirements",
+      "title": "Training Requirements",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "List the training requirements for a change to {process_type} affecting {product_name}. Identify roles that require training, documents to read, and demonstrated competency requirements."
+    },
+    {
+      "id": "closure_verification",
+      "title": "Closure Verification",
+      "type": "checklist",
+      "required": true,
+      "default_data": {
+        "checklist_items": [
+          "All implementation tasks complete",
+          "All training records verified",
+          "Documentation updates effective",
+          "Validation/requalification complete (if applicable)",
+          "Regulatory notifications sent (if applicable)",
+          "Effectiveness check scheduled"
+        ]
+      }
+    },
+    {
+      "id": "comments",
+      "title": "Comments",
+      "type": "comments",
+      "required": true,
+      "default_data": {"num_rows": 4}
+    },
+    {
+      "id": "qa_review",
+      "title": "QUALITY ASSURANCE REVIEW",
+      "type": "review",
+      "required": true,
+      "default_data": {
+        "review_type": "QUALITY ASSURANCE REVIEW (Refer to QA-015 Change Control)"
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "Forms",
+    "regulatory_framework": "21 CFR 211.100, ICH Q10"
+  }
+}

@@ -1,0 +1,454 @@
+<div class="builder">
+  <!-- Header -->
+  <header class="header">
+    <div>
+      <h1>GMP Document Builder</h1>
+      <p class="subtitle">Create GMP-compliant batch records with AI-assisted content generation</p>
+    </div>
+    <div class="status-chip" [class.online]="ollamaStatus?.available" [class.offline]="!ollamaStatus?.available">
+      <span class="status-dot"></span>
+      <span>{{ ollamaStatus?.available ? 'AI Ready · ' + ollamaStatus?.model : 'AI Offline' }}</span>
+    </div>
+  </header>
+
+  <!-- Stepper -->
+  <nav class="stepper">
+    <div class="stepper-track">
+      <div *ngFor="let step of [1, 2, 3, 4]; let i = index"
+           class="step"
+           [class.active]="currentStep === step"
+           [class.completed]="currentStep > step"
+           [class.clickable]="step < currentStep || (step === currentStep + 1 && canProceedFromStep(currentStep))"
+           (click)="goToStep(step)">
+        <div class="step-indicator">
+          <span *ngIf="currentStep <= step">{{ step }}</span>
+          <svg *ngIf="currentStep > step" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <div class="step-label">
+          <div class="step-number">Step {{ step }}</div>
+          <div class="step-name">
+            {{ step === 1 ? 'Template' : step === 2 ? 'Details' : step === 3 ? 'Content' : 'Generate' }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Content -->
+  <main class="content">
+    <!-- Messages -->
+    <div *ngIf="successMessage" class="toast toast-success">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+      {{ successMessage }}
+    </div>
+    <div *ngIf="errorMessage" class="toast toast-error">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      {{ errorMessage }}
+    </div>
+
+    <!-- Step 1: Select Template -->
+    <section *ngIf="currentStep === 1" class="step-panel">
+      <div class="panel-header">
+        <h2>Choose a document template</h2>
+        <p>Select the type of GMP document you want to create</p>
+      </div>
+
+      <div *ngIf="loading" class="loading">
+        <div class="spinner"></div>
+        <span>Loading templates…</span>
+      </div>
+
+      <div *ngIf="!loading" class="template-categories">
+        <div *ngFor="let category of templateCategories" class="template-category">
+          <div class="category-header">
+            <div class="category-label">{{ category.label }}</div>
+            <div class="category-description">{{ category.description }}</div>
+          </div>
+          <div class="template-grid">
+            <button *ngFor="let t of category.templates"
+                    class="template-card"
+                    [class.selected]="selectedTemplateId === t.id"
+                    (click)="selectTemplate(t.id)">
+              <div class="template-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>
+              </div>
+              <div class="template-info">
+                <div class="template-name">{{ t.name }}</div>
+                <div class="template-type">{{ category.label }}</div>
+              </div>
+              <div class="template-check" *ngIf="selectedTemplateId === t.id">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="templateSchema" class="template-preview">
+        <div class="preview-header">
+          <span class="preview-label">Template includes</span>
+          <span class="section-count">{{ templateSchema.sections.length }} sections</span>
+        </div>
+        <div class="section-tags">
+          <div *ngFor="let s of templateSchema.sections" class="section-tag">
+            <span class="section-tag-icon">{{ getSectionIcon(s.type) }}</span>
+            {{ s.title }}
+          </div>
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <div></div>
+        <button class="btn btn-primary" (click)="nextStep()" [disabled]="!templateSchema">
+          Continue
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- Step 2: Basic Info -->
+    <section *ngIf="currentStep === 2" class="step-panel">
+      <div class="panel-header">
+        <h2>Document details</h2>
+        <p>Provide context for the AI to generate accurate content</p>
+      </div>
+
+      <div class="form">
+        <div class="field">
+          <label>Document Title <span class="required">*</span></label>
+          <input type="text" [(ngModel)]="docTitle"
+                 placeholder="e.g., CD8+ Enrichment Batch Record" />
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Product Name <span class="required">*</span></label>
+            <input type="text" [(ngModel)]="productName"
+                   placeholder="e.g., CD8+ T Cells" />
+          </div>
+          <div class="field">
+            <label>Process Type <span class="required">*</span></label>
+            <input type="text" [(ngModel)]="processType"
+                   placeholder="e.g., CliniMACS Prodigy Enrichment" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Process Description</label>
+          <textarea rows="4" [(ngModel)]="description"
+                    placeholder="Describe the manufacturing process, key steps, and any specific requirements..."></textarea>
+          <span class="hint">The AI will use this description to generate procedure steps, equipment lists, and more</span>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Document Number</label>
+            <input type="text" [(ngModel)]="docNumber"
+                   placeholder="e.g., BR-001-01 (optional)" />
+          </div>
+          <div class="field">
+            <label>Revision</label>
+            <input type="text" [(ngModel)]="revision" placeholder="01" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Paper Scraping Section -->
+      <div class="paper-scraper-section">
+        <div class="scraper-header">
+          <div>
+            <div class="scraper-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              </svg>
+              Import from published research
+            </div>
+            <div class="scraper-subtitle">
+              Search PubMed Central open-access papers and import their methods sections
+            </div>
+          </div>
+        </div>
+
+        <div class="paper-search-bar">
+          <div class="search-input-wrap">
+            <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text"
+                   [(ngModel)]="paperSearchQuery"
+                   (keyup.enter)="searchPapers()"
+                   placeholder="e.g., CD8 enrichment CliniMACS Prodigy" />
+          </div>
+          <button class="btn btn-ghost btn-sm" (click)="suggestPaperQuery()" *ngIf="productName || processType">
+            Use my info
+          </button>
+          <button class="btn btn-primary btn-sm" (click)="searchPapers()" [disabled]="!paperSearchQuery.trim() || paperSearchLoading">
+            <div *ngIf="paperSearchLoading" class="spinner spinner-sm"></div>
+            {{ paperSearchLoading ? 'Searching…' : 'Search papers' }}
+          </button>
+        </div>
+
+        <div *ngIf="paperSearchResults.length > 0" class="paper-results">
+          <div class="results-header">
+            <span>{{ paperSearchResults.length }} open-access papers found</span>
+          </div>
+          <div class="paper-card" *ngFor="let paper of paperSearchResults">
+            <div class="paper-meta">
+              <div class="paper-title">{{ paper.title }}</div>
+              <div class="paper-details">
+                <span>{{ formatAuthors(paper.authors) }}</span>
+                <span class="sep">·</span>
+                <span class="paper-journal">{{ paper.journal }}</span>
+                <span class="sep">·</span>
+                <span>{{ paper.year }}</span>
+              </div>
+            </div>
+            <div class="paper-actions">
+              <a *ngIf="paper.url" [href]="paper.url" target="_blank" rel="noopener" class="paper-link">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/>
+                  <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+                View
+              </a>
+              <button class="btn btn-ai btn-sm"
+                      (click)="importFromPaper(paper)"
+                      [disabled]="paperAutofillLoading[paper.pmcid]">
+                <div *ngIf="paperAutofillLoading[paper.pmcid]" class="spinner spinner-sm"></div>
+                <svg *ngIf="!paperAutofillLoading[paper.pmcid]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                {{ paperAutofillLoading[paper.pmcid] ? 'Extracting…' : 'Import methods' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="importedPapers.length > 0" class="imported-papers">
+          <div class="imported-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Imported from {{ importedPapers.length }} paper{{ importedPapers.length > 1 ? 's' : '' }}
+          </div>
+          <div class="imported-list">
+            <div *ngFor="let p of importedPapers" class="imported-item">
+              <span class="imported-title">{{ p.title }}</span>
+              <span class="imported-journal">{{ p.journal }} {{ p.year }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn btn-ghost" (click)="prevStep()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          Back
+        </button>
+        <button class="btn btn-primary" (click)="nextStep()" [disabled]="!canProceedFromStep(2)">
+          Continue
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- Step 3: Section Content -->
+    <section *ngIf="currentStep === 3" class="step-panel">
+      <div class="panel-header">
+        <div class="panel-header-row">
+          <div>
+            <h2>Review sections</h2>
+            <p>Fill sections with AI or leave empty to use template defaults</p>
+          </div>
+          <button *ngIf="ollamaStatus?.available"
+                  class="btn btn-ai"
+                  (click)="fillAllSectionsWithAI()"
+                  [disabled]="fillAllInProgress">
+            <svg *ngIf="!fillAllInProgress" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 2l1.7 5.3L19 9l-5.3 1.7L12 16l-1.7-5.3L5 9l5.3-1.7z"/>
+            </svg>
+            <div *ngIf="fillAllInProgress" class="spinner spinner-sm"></div>
+            {{ fillAllInProgress ? 'Filling ' + fillAllProgress.current + '/' + fillAllProgress.total + '…' : 'Fill all with AI' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="sections-list">
+        <div *ngFor="let section of templateSchema?.sections" class="section-card">
+          <div class="section-header" (click)="toggleSection(section.id)">
+            <div class="section-left">
+              <span class="section-icon">{{ getSectionIcon(section.type) }}</span>
+              <div class="section-title-group">
+                <div class="section-title">{{ section.title }}</div>
+                <div class="section-subtitle">{{ formatSectionType(section.type) }}</div>
+              </div>
+            </div>
+            <div class="section-right">
+              <span *ngIf="sectionHasContent(section.id)" class="badge badge-success">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Filled
+              </span>
+              <span *ngIf="section.required" class="badge badge-required">Required</span>
+              <svg class="chevron" [class.expanded]="expandedSections[section.id]"
+                   width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </div>
+          </div>
+
+          <div *ngIf="expandedSections[section.id]" class="section-body">
+            <button *ngIf="section.llm_prompt && ollamaStatus?.available"
+                    class="btn btn-ai"
+                    (click)="fillSectionWithAI(section)"
+                    [disabled]="sectionGenerating[section.id]">
+              <svg *ngIf="!sectionGenerating[section.id]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M12 2l1.7 5.3L19 9l-5.3 1.7L12 16l-1.7-5.3L5 9l5.3-1.7z"/>
+              </svg>
+              <div *ngIf="sectionGenerating[section.id]" class="spinner spinner-sm"></div>
+              {{ sectionGenerating[section.id] ? 'Generating…' : 'Fill with AI' }}
+            </button>
+
+            <div *ngIf="sectionHasContent(section.id)" class="data-preview">
+              <pre>{{ sectionData[section.id] | json }}</pre>
+            </div>
+            <div *ngIf="!sectionHasContent(section.id)" class="empty-hint">
+              No content yet. Click "Fill with AI" to generate, or leave empty for defaults.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn btn-ghost" (click)="prevStep()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          Back
+        </button>
+        <button class="btn btn-primary" (click)="nextStep()">
+          Continue
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- Step 4: Generate -->
+    <section *ngIf="currentStep === 4" class="step-panel">
+      <div class="panel-header">
+        <h2>Generate document</h2>
+        <p>Review your selections and generate the Word document</p>
+      </div>
+
+      <div class="review-card">
+        <div class="review-title">{{ docTitle }}</div>
+        <div class="review-meta">
+          <span>{{ templateSchema?.name }}</span>
+          <span class="separator">·</span>
+          <span>{{ productName }}</span>
+          <span class="separator">·</span>
+          <span>{{ processType }}</span>
+        </div>
+
+        <div class="review-stats">
+          <div class="stat">
+            <div class="stat-value">{{ templateSchema?.sections?.length || 0 }}</div>
+            <div class="stat-label">Total sections</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">{{ filledSectionsCount }}</div>
+            <div class="stat-label">With content</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">{{ revision }}</div>
+            <div class="stat-label">Revision</div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="!generatedDocUrl" class="generate-action">
+        <button class="btn btn-primary btn-lg" (click)="generateDocument()" [disabled]="generating">
+          <div *ngIf="generating" class="spinner spinner-sm"></div>
+          <svg *ngIf="!generating" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          {{ generating ? 'Generating document…' : 'Generate DOCX' }}
+        </button>
+      </div>
+
+      <!-- Generated Result -->
+      <div *ngIf="generatedDocUrl" class="result-card">
+        <div class="result-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <div class="result-content">
+          <div class="result-title">Document ready</div>
+          <div class="result-filename">{{ generatedFilename }}</div>
+        </div>
+        <button class="btn btn-primary" (click)="downloadDocument()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download
+        </button>
+      </div>
+
+      <div *ngIf="generatedPreview.length > 0" class="preview-sections-list">
+        <div class="preview-header-label">Generated sections</div>
+        <div *ngFor="let s of generatedPreview" class="preview-item">
+          <svg *ngIf="s.has_content" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <svg *ngIf="!s.has_content" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="3">
+            <circle cx="12" cy="12" r="10"/>
+          </svg>
+          <span>{{ s.title }}</span>
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn btn-ghost" (click)="prevStep()" [disabled]="generating">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          Back
+        </button>
+        <button *ngIf="generatedDocUrl" class="btn btn-ghost" (click)="resetBuilder()">
+          Start over
+        </button>
+      </div>
+    </section>
+  </main>
+</div>

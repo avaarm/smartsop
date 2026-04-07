@@ -1,0 +1,37 @@
+services:
+  # Flask GMP backend
+  - type: web
+    name: smartsop-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile.backend
+    plan: starter
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: OLLAMA_HOST
+        value: http://localhost:11434
+      - key: DATABASE_URL
+        value: sqlite:////app/data/smartsop.db
+      - key: CORS_ORIGINS
+        sync: false
+    disk:
+      name: smartsop-data
+      mountPath: /app/data
+      sizeGB: 1
+
+  # Angular SSR frontend
+  - type: web
+    name: smartsop-frontend
+    runtime: docker
+    dockerfilePath: ./Dockerfile.frontend
+    plan: starter
+    region: oregon
+    envVars:
+      - key: PORT
+        value: "4000"
+      - key: NODE_ENV
+        value: production
+      - key: API_URL
+        sync: false

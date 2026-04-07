@@ -1,0 +1,177 @@
+{
+  "id": "validation_protocol",
+  "name": "Validation Protocol (IQ/OQ/PQ)",
+  "doc_type": "validation",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1440,
+    "right": 1080,
+    "bottom": 1080,
+    "left": 1080,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 6,
+    "column_widths": [650, 1200, 3800, 1800, 1200, 1430],
+    "total_width": 10080,
+    "row_height_dxa": 288,
+    "rows": 3,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "CONFIDENTIAL",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": true,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "approval_block",
+      "title": "APPROVED BY",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Protocol Author", "name": "", "date": ""},
+          {"role": "Validation Lead", "name": "", "date": ""},
+          {"role": "Engineering", "name": "", "date": ""},
+          {"role": "Quality Assurance", "name": "", "date": ""}
+        ]
+      }
+    },
+    {
+      "id": "references",
+      "title": "REFERENCES",
+      "type": "references",
+      "required": true,
+      "llm_prompt": "Generate a references list for a validation protocol (IQ/OQ/PQ) covering {process_type} for {product_name}. Include relevant SOPs with GMP prefixes (EQ-, GN-, PR-, QA-, TM-), regulatory citations (21 CFR 211, ICH Q7, ICH Q9), and any equipment manuals. {description}"
+    },
+    {
+      "id": "purpose_scope",
+      "title": "PURPOSE AND SCOPE",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the Purpose and Scope section for a validation protocol for {process_type} used in {product_name} manufacturing. State the intent (IQ, OQ, PQ), equipment/system under validation, boundaries, and products affected. {description}",
+      "default_data": {
+        "text": "This protocol defines the installation, operational, and performance qualification activities required to demonstrate that the subject equipment/system meets its intended use for GMP manufacturing."
+      }
+    },
+    {
+      "id": "responsibilities",
+      "title": "RESPONSIBILITIES",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Generate the Responsibilities section listing roles (Validation Lead, Engineering, Manufacturing, Quality Assurance, Metrology) and what each is accountable for during the validation of {process_type}.",
+      "default_data": {
+        "text": "Validation Lead: Owns protocol execution and final report.\nEngineering: Installation verification and utilities hookup.\nManufacturing: Operational runs and process data collection.\nQuality Assurance: Protocol/report approval and deviation oversight.\nMetrology: Instrument calibration and traceability."
+      }
+    },
+    {
+      "id": "system_description",
+      "title": "SYSTEM DESCRIPTION",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the system/equipment under validation for {process_type} in {product_name}. Include make, model, intended use, critical components, utilities, software, and operating ranges. {description}"
+    },
+    {
+      "id": "acceptance_criteria",
+      "title": "ACCEPTANCE CRITERIA",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "List the acceptance criteria for validating {process_type}. Include measurable pass/fail criteria for identity, calibration status, operating ranges, alarms, and performance outputs. Structure as a numbered list."
+    },
+    {
+      "id": "iq_procedure",
+      "title": "Installation Qualification (IQ)",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "IQ Check", "width_dxa": 4500},
+          {"id": "variable", "title": "Expected", "width_dxa": 2200},
+          {"id": "result", "title": "Actual / Pass-Fail", "width_dxa": 1800},
+          {"id": "performed_by", "title": "Performed By / Date", "width_dxa": 1580}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate Installation Qualification (IQ) checks for {process_type} equipment used in {product_name}. Include equipment identification, drawing verification, utility connections, calibration certificates, material of construction, software version, and environmental conditions."
+    },
+    {
+      "id": "oq_procedure",
+      "title": "Operational Qualification (OQ)",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "OQ Test", "width_dxa": 4500},
+          {"id": "variable", "title": "Expected", "width_dxa": 2200},
+          {"id": "result", "title": "Actual / Pass-Fail", "width_dxa": 1800},
+          {"id": "performed_by", "title": "Performed By / Date", "width_dxa": 1580}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate Operational Qualification (OQ) tests for {process_type}. Include range testing, alarm challenges, interlock verification, user access controls, data integrity, power failure recovery, and SOP verification."
+    },
+    {
+      "id": "pq_procedure",
+      "title": "Performance Qualification (PQ)",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "PQ Run", "width_dxa": 4500},
+          {"id": "variable", "title": "Expected", "width_dxa": 2200},
+          {"id": "result", "title": "Actual / Pass-Fail", "width_dxa": 1800},
+          {"id": "performed_by", "title": "Performed By / Date", "width_dxa": 1580}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate Performance Qualification (PQ) runs for {process_type} of {product_name}. Include at least three consecutive runs at normal operating conditions, sampling plans, critical quality attributes, and statistical acceptance criteria."
+    },
+    {
+      "id": "deviation_handling",
+      "title": "DEVIATION HANDLING",
+      "type": "free_text",
+      "required": true,
+      "default_data": {
+        "text": "Any deviation from this protocol shall be documented in a Validation Deviation Record, assessed for impact, and dispositioned per QA-010 before protocol closure."
+      }
+    },
+    {
+      "id": "comments",
+      "title": "Comments",
+      "type": "comments",
+      "required": true,
+      "default_data": {"num_rows": 4}
+    },
+    {
+      "id": "qa_review",
+      "title": "QUALITY ASSURANCE REVIEW",
+      "type": "review",
+      "required": true,
+      "default_data": {
+        "review_type": "QUALITY ASSURANCE REVIEW (Refer to QA-005)"
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "based_on": "IQ/OQ/PQ validation protocol structure",
+    "regulatory_framework": "21 CFR Part 211, ICH Q7, GAMP 5"
+  }
+}
