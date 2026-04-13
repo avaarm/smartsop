@@ -207,8 +207,9 @@ async function startDevFrontendServer() {
   const devApp = express();
 
   const staticDir = getStaticDir();
-  // Proxy /api to Flask backend
-  devApp.use('/api', createProxyMiddleware({ target: `http://127.0.0.1:${backendPort}`, changeOrigin: true }));
+  // Proxy /api and /health to Flask backend (must be before static middleware).
+  // Use pathFilter instead of app.use('/api') to preserve the full path.
+  devApp.use(createProxyMiddleware({ target: `http://127.0.0.1:${backendPort}`, changeOrigin: true, pathFilter: ['/api', '/health'] }));
   // Serve Angular static files
   devApp.use(express.static(staticDir));
   // SPA fallback
