@@ -1,0 +1,242 @@
+{
+  "id": "crf_template",
+  "name": "Case Report Form (CRF) Template",
+  "doc_type": "crf",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1080,
+    "right": 1080,
+    "bottom": 1080,
+    "left": 1080,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 4,
+    "column_widths": [2500, 3000, 2400, 2180],
+    "total_width": 10080,
+    "row_height_dxa": 288,
+    "rows": 2,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "Subject ID: ________ Visit: ________ Page ___ of ___",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": false,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "header_block",
+      "title": "SUBJECT IDENTIFICATION",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "Protocol Number", "value": ""},
+          {"label": "Site Number", "value": ""},
+          {"label": "Subject ID", "value": ""},
+          {"label": "Subject Initials", "value": ""},
+          {"label": "Visit Name", "value": ""},
+          {"label": "Visit Date", "value": ""}
+        ]
+      }
+    },
+    {
+      "id": "demographics",
+      "title": "DEMOGRAPHICS (Screening Only)",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "Date of Birth (dd-mmm-yyyy)", "value": ""},
+          {"label": "Age", "value": ""},
+          {"label": "Sex at Birth", "value": "[ ] Male  [ ] Female"},
+          {"label": "Race", "value": "[ ] Asian [ ] Black [ ] White [ ] Other [ ] Not Reported"},
+          {"label": "Ethnicity", "value": "[ ] Hispanic/Latino [ ] Not Hispanic/Latino [ ] Not Reported"},
+          {"label": "Height (cm)", "value": ""},
+          {"label": "Weight (kg)", "value": ""},
+          {"label": "BMI", "value": ""}
+        ]
+      }
+    },
+    {
+      "id": "medical_history",
+      "title": "MEDICAL HISTORY",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "Condition / Diagnosis", "value": "Start Date | Ongoing | End Date"},
+          {"label": "1.", "value": ""},
+          {"label": "2.", "value": ""},
+          {"label": "3.", "value": ""},
+          {"label": "Primary Diagnosis (Study Indication)", "value": ""},
+          {"label": "Date of Primary Diagnosis", "value": ""},
+          {"label": "Disease Stage / Status", "value": ""},
+          {"label": "Prior Therapy Lines", "value": ""}
+        ]
+      }
+    },
+    {
+      "id": "eligibility",
+      "title": "ELIGIBILITY CHECK",
+      "type": "checklist",
+      "required": true,
+      "default_data": {
+        "items": [
+          {"text": "All inclusion criteria met", "checked": false},
+          {"text": "No exclusion criteria present", "checked": false},
+          {"text": "Informed consent signed prior to any study procedure", "checked": false},
+          {"text": "Screening labs within acceptable range", "checked": false},
+          {"text": "Subject agrees to contraception requirements", "checked": false},
+          {"text": "PI has confirmed eligibility", "checked": false}
+        ]
+      }
+    },
+    {
+      "id": "vital_signs",
+      "title": "VITAL SIGNS",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "Time of Assessment", "value": ""},
+          {"label": "Systolic BP (mmHg)", "value": ""},
+          {"label": "Diastolic BP (mmHg)", "value": ""},
+          {"label": "Heart Rate (bpm)", "value": ""},
+          {"label": "Respiratory Rate", "value": ""},
+          {"label": "Temperature (°C)", "value": ""},
+          {"label": "SpO2 (%)", "value": ""},
+          {"label": "Position (sitting/supine)", "value": ""}
+        ]
+      }
+    },
+    {
+      "id": "physical_exam",
+      "title": "PHYSICAL EXAMINATION",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "System", "value": "Normal / Abnormal / Not Done / Finding"},
+          {"label": "General Appearance", "value": ""},
+          {"label": "HEENT", "value": ""},
+          {"label": "Neck", "value": ""},
+          {"label": "Cardiovascular", "value": ""},
+          {"label": "Respiratory", "value": ""},
+          {"label": "Abdominal", "value": ""},
+          {"label": "Musculoskeletal", "value": ""},
+          {"label": "Neurologic", "value": ""},
+          {"label": "Skin", "value": ""},
+          {"label": "Lymphatic", "value": ""}
+        ]
+      }
+    },
+    {
+      "id": "labs",
+      "title": "LABORATORY RESULTS",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "Collection Date/Time", "value": ""},
+          {"label": "WBC (x10^9/L)", "value": ""},
+          {"label": "Hemoglobin (g/dL)", "value": ""},
+          {"label": "Platelet (x10^9/L)", "value": ""},
+          {"label": "ANC (x10^9/L)", "value": ""},
+          {"label": "ALT (U/L)", "value": ""},
+          {"label": "AST (U/L)", "value": ""},
+          {"label": "Total Bilirubin (mg/dL)", "value": ""},
+          {"label": "Creatinine (mg/dL)", "value": ""},
+          {"label": "eGFR (mL/min/1.73m²)", "value": ""},
+          {"label": "Glucose (mg/dL)", "value": ""},
+          {"label": "LDH (U/L)", "value": ""}
+        ]
+      }
+    },
+    {
+      "id": "study_drug_admin",
+      "title": "STUDY DRUG ADMINISTRATION",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "Drug Name", "value": ""},
+          {"label": "Dose Level", "value": ""},
+          {"label": "Planned Dose", "value": ""},
+          {"label": "Actual Dose Administered", "value": ""},
+          {"label": "Route", "value": ""},
+          {"label": "Start Date/Time", "value": ""},
+          {"label": "End Date/Time", "value": ""},
+          {"label": "Administered By (initials)", "value": ""},
+          {"label": "Lot / Batch Number", "value": ""},
+          {"label": "Dose Interrupted (Y/N)", "value": ""},
+          {"label": "Reason for Interruption", "value": ""}
+        ]
+      }
+    },
+    {
+      "id": "adverse_events",
+      "title": "ADVERSE EVENTS",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "AE Term (MedDRA preferred)", "width_dxa": 3400},
+          {"id": "variable", "title": "Onset Date | Ongoing/End Date", "width_dxa": 2400},
+          {"id": "result", "title": "CTCAE Grade (1-5)", "width_dxa": 1400},
+          {"id": "performed_by", "title": "Relationship (None/Unlikely/Possible/Probable/Definite)", "width_dxa": 2800},
+          {"id": "checked_by", "title": "Outcome (Resolved/Ongoing/Fatal/etc)", "width_dxa": 2180}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      }
+    },
+    {
+      "id": "concomitant_meds",
+      "title": "CONCOMITANT MEDICATIONS",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "Medication Name", "value": "Indication | Dose | Frequency | Start | Stop | Ongoing"},
+          {"label": "1.", "value": ""},
+          {"label": "2.", "value": ""},
+          {"label": "3.", "value": ""},
+          {"label": "4.", "value": ""},
+          {"label": "5.", "value": ""}
+        ]
+      }
+    },
+    {
+      "id": "signatures",
+      "title": "PAGE SIGNATURE",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Completed By", "name": "", "date": ""},
+          {"role": "Investigator Verified", "name": "", "date": ""},
+          {"role": "Monitor Reviewed", "name": "", "date": ""}
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "Clinical",
+    "regulatory_framework": "ICH E6(R3), ICH E2A, CDISC CDASH, 21 CFR Part 11"
+  }
+}

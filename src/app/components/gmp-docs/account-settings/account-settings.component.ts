@@ -7,6 +7,8 @@ import {
   DocumentRecord,
   TrainingExample,
   TrainingStats,
+  ProtocolUpload,
+  ProtocolKnowledge,
 } from '../../../services/account.service';
 
 @Component({
@@ -18,7 +20,7 @@ import {
 })
 export class AccountSettingsComponent implements OnInit {
   // Tabs
-  activeTab: 'account' | 'training' | 'export' | 'history' = 'account';
+  activeTab: 'account' | 'training' | 'export' | 'history' | 'protocols' = 'account';
 
   // Accounts
   accounts: Account[] = [];
@@ -62,6 +64,13 @@ export class AccountSettingsComponent implements OnInit {
   // Export
   exportLoading = false;
   modelfileResult: { model_name: string; instructions: string } | null = null;
+
+  // Protocol uploads
+  protocolUploads: ProtocolUpload[] = [];
+  protocolsLoading = false;
+  uploadingProtocol = false;
+  analyzingProtocol: Record<number, boolean> = {};
+  expandedKnowledge: Record<number, boolean> = {};
 
   constructor(private accountService: AccountService) {}
 
@@ -312,5 +321,127 @@ export class AccountSettingsComponent implements OnInit {
     return new Date(iso).toLocaleDateString('en-US', {
       month: 'short', day: 'numeric', year: 'numeric',
     });
+  }
+
+  // ── Protocol Upload & Knowledge ──
+
+  loadProtocols(): void {
+    if (!this.activeAccount) return;
+    this.protocolsLoading = true;
+    this.accountService.listProtocols(this.activeAccount.id).subscribe({
+      next: (res) => {
+        this.protocolUploads = res.uploads;
+        this.protocolsLoading = false;
+      },
+      error: () => this.protocolsLoading = false,
+    });
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length || !this.activeAccount) return;
+    const file = input.files[0];
+
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (ext !== 'docx' && ext !== 'pdf') {
+      this.errorMessage = 'Only .docx and .pdf files are supported';
+      setTimeout(() => this.errorMessage = '', 5000);
+      return;
+    }
+
+    this.uploadingProtocol = true;
+    this.accountService.uploadProtocol(this.activeAccount.id, file).subscribe({
+      next: (res) => {
+        this.protocolUploads.unshift(res.upload);
+        this.uploadingProtocol = false;
+        this.successMessage = `"${file.name}" uploaded and parsed`;
+        setTimeout(() => this.successMessage = '', 4000);
+      },
+      error: (err) => {
+        this.uploadingProtocol = false;
+        this.errorMessage = err.message;
+        setTimeout(() => this.errorMessage = '', 5000);
+      },
+    });
+
+    input.value = '';
+  }
+
+  analyzeUpload(upload: ProtocolUpload): void {
+    if (!this.activeAccount) return;
+    this.analyzingProtocol[upload.id] = true;
+    this.accountService.analyzeProtocol(this.activeAccount.id, upload.id).subscribe({
+      next: (res) => {
+        this.analyzingProtocol[upload.id] = false;
+        const idx = this.protocolUploads.findIndex(u => u.id === upload.id);
+        if (idx >= 0) this.protocolUploads[idx] = res.upload;
+        this.successMessage = `Knowledge extracted from "${upload.filename}"`;
+        setTimeout(() => this.successMessage = '', 4000);
+      },
+      error: (err) => {
+        this.analyzingProtocol[upload.id] = false;
+        this.errorMessage = err.message;
+        setTimeout(() => this.errorMessage = '', 5000);
+      },
+    });
+  }
+
+  toggleKnowledgeActive(knowledge: ProtocolKnowledge): void {
+    if (!this.activeAccount) return;
+    this.accountService.updateKnowledge(this.activeAccount.id, knowledge.id, {
+      is_active: !knowledge.is_active,
+    }).subscribe({
+      next: (res) => {
+        knowledge.is_active = res.knowledge.is_active;
+      },
+    });
+  }
+
+  deleteUpload(upload: ProtocolUpload): void {
+    if (!this.activeAccount) return;
+    this.accountService.deleteProtocol(this.activeAccount.id, upload.id).subscribe({
+      next: () => {
+        this.protocolUploads = this.protocolUploads.filter(u => u.id !== upload.id);
+        this.successMessage = 'Protocol deleted';
+        setTimeout(() => this.successMessage = '', 3000);
+      },
+    });
+  }
+
+  toggleKnowledgeExpand(id: number): void {
+    this.expandedKnowledge[id] = !this.expandedKnowledge[id];
+  }
+
+  getCategoryLabel(category: string): string {
+    const labels: Record<string, string> = {
+      terminology: 'Terminology & Phrases',
+      procedural_rules: 'Procedural Rules',
+      writing_style: 'Writing Style',
+      section_structure: 'Section Structure',
+      formatting: 'Formatting Patterns',
+    };
+    return labels[category] || category;
+  }
+
+  getCategoryIcon(category: string): string {
+    const icons: Record<string, string> = {
+      terminology: 'Aa',
+      procedural_rules: '!!',
+      writing_style: '~~',
+      section_structure: '#',
+      formatting: '{}',
+    };
+    return icons[category] || '?';
+  }
+
+  getStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      uploaded: 'Uploaded',
+      parsed: 'Parsed',
+      analyzing: 'Analyzing...',
+      complete: 'Complete',
+      error: 'Error',
+    };
+    return labels[status] || status;
   }
 }

@@ -1,0 +1,155 @@
+{
+  "id": "cmc_drug_substance",
+  "name": "CMC Module 3.2.S - Drug Substance",
+  "doc_type": "cmc_drug_substance",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1440,
+    "right": 1080,
+    "bottom": 1080,
+    "left": 1080,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 6,
+    "column_widths": [650, 1200, 3800, 1800, 1200, 1430],
+    "total_width": 10080,
+    "row_height_dxa": 288,
+    "rows": 3,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "eCTD Module 3.2.S - Drug Substance",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": true,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "s1_general_info",
+      "title": "3.2.S.1 GENERAL INFORMATION",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write Section 3.2.S.1 General Information for drug substance {product_name}. Include subsections: 3.2.S.1.1 Nomenclature (INN, USAN, chemical name, CAS number, company code); 3.2.S.1.2 Structure (for biologics: amino acid sequence, disulfide bonds, glycosylation, molecular formula, molecular mass; for cell therapy: cell type, source, modifications); 3.2.S.1.3 General Properties (physical description, solubility, stability summary, pKa, other physicochemical properties)."
+    },
+    {
+      "id": "s2_manufacture",
+      "title": "3.2.S.2 MANUFACTURE",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write Section 3.2.S.2 Manufacture for drug substance {product_name}. Include subsections: 3.2.S.2.1 Manufacturer(s) - name, address, facility (including contract manufacturers), responsibility; 3.2.S.2.2 Description of Manufacturing Process and Process Controls - narrative description, flow diagram reference, batch size range, critical process parameters; 3.2.S.2.3 Control of Materials - raw materials, starting materials, cell banks (MCB/WCB for biologics), reference standards, animal-derived materials (TSE/BSE); 3.2.S.2.4 Controls of Critical Steps and Intermediates; 3.2.S.2.5 Process Validation and/or Evaluation (appropriate to phase); 3.2.S.2.6 Manufacturing Process Development."
+    },
+    {
+      "id": "s2_process_flow",
+      "title": "3.2.S.2.2 Manufacturing Process Flow",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "Process Step", "width_dxa": 4200},
+          {"id": "variable", "title": "Critical Process Parameter", "width_dxa": 2700},
+          {"id": "result", "title": "In-Process Control / Acceptance", "width_dxa": 3180}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate a manufacturing process flow for drug substance {product_name} ({process_type}). List each unit operation in order with its critical process parameters (temperature, pH, duration, concentration, flow rate, agitation) and in-process controls (IPCs) with acceptance criteria. For cell therapy include: thaw, activation, transduction if applicable, expansion, harvest, formulation, cryopreservation."
+    },
+    {
+      "id": "s3_characterisation",
+      "title": "3.2.S.3 CHARACTERISATION",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write Section 3.2.S.3 Characterisation for drug substance {product_name}. Include subsections: 3.2.S.3.1 Elucidation of Structure and Other Characteristics (primary/secondary/tertiary/quaternary structure for biologics, potency characterization, cell identity and functional characterization for cell therapy, post-translational modifications); 3.2.S.3.2 Impurities (process-related impurities, product-related impurities/variants, residual materials, residual host cell proteins/DNA)."
+    },
+    {
+      "id": "s4_controls",
+      "title": "3.2.S.4 CONTROL OF DRUG SUBSTANCE",
+      "type": "table",
+      "required": true,
+      "llm_prompt": "Generate the drug substance specification table for {product_name}. Columns: Test | Method | Acceptance Criteria. Include tests for: Identity, Appearance, pH, Osmolality, Concentration/Content, Potency/Bioactivity, Purity (SEC-HPLC, SDS-PAGE, capillary electrophoresis), Impurities (process-related, product-related), Sterility, Mycoplasma, Endotoxin, Adventitious Agents (viral for biologics), Cell count and viability (for cell therapy).",
+      "default_data": {
+        "rows": [
+          {"label": "Identity", "value": "Method + Acceptance criteria"},
+          {"label": "Appearance", "value": "Visual"},
+          {"label": "Potency", "value": "Bioassay"},
+          {"label": "Purity", "value": "HPLC/SDS-PAGE"},
+          {"label": "Sterility", "value": "USP <71> / Ph.Eur. 2.6.1 / 21 CFR 610.12"},
+          {"label": "Endotoxin", "value": "LAL USP <85>"},
+          {"label": "Mycoplasma", "value": "USP <63>"}
+        ]
+      }
+    },
+    {
+      "id": "s4_analytical_procedures",
+      "title": "3.2.S.4.2 Analytical Procedures",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Summarize each analytical procedure for the drug substance {product_name} specification. For each method provide: principle, equipment, reagents, sample preparation, system suitability, and performance characteristics. Reference method validation reports in 3.2.S.4.3."
+    },
+    {
+      "id": "s4_validation",
+      "title": "3.2.S.4.3 Validation of Analytical Procedures",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Summarize validation status of each analytical method per ICH Q2(R2). For compendial methods describe verification; for non-compendial describe validation parameters: specificity, linearity, range, accuracy, precision (repeatability, intermediate precision), LOD, LOQ, robustness. Match validation scope to phase of development."
+    },
+    {
+      "id": "s4_batch_analysis",
+      "title": "3.2.S.4.4 Batch Analyses",
+      "type": "table",
+      "required": true,
+      "llm_prompt": "Generate a batch analysis summary table for drug substance {product_name}. Columns: Batch Number | Manufacturing Date | Scale | Use (clinical/nonclinical/stability) | Key Results (potency, purity, sterility, endotoxin).",
+      "default_data": {
+        "rows": [
+          {"label": "Batch", "value": "Date / Scale / Results"}
+        ]
+      }
+    },
+    {
+      "id": "s5_reference_standards",
+      "title": "3.2.S.5 REFERENCE STANDARDS OR MATERIALS",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the reference standards or materials used for {product_name}. Include: source, qualification of primary reference standard (against international standard if available), working reference standard qualification, storage, stability monitoring, replacement strategy."
+    },
+    {
+      "id": "s6_container_closure",
+      "title": "3.2.S.6 CONTAINER CLOSURE SYSTEM",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the container closure system for drug substance {product_name}. Include: container type and material (bags, vials, cryobags for cell therapy), closure materials, specifications, suitability (protection, compatibility, safety, performance), extractables/leachables considerations. Reference USP <661>, USP <1664>, and ISO 10993 if applicable."
+    },
+    {
+      "id": "s7_stability",
+      "title": "3.2.S.7 STABILITY",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the stability program for drug substance {product_name} per ICH Q5C (biologics) or ICH Q1A(R2) (small molecules). Include: 3.2.S.7.1 Stability Summary and Conclusions (retest period, shelf life, recommended storage); 3.2.S.7.2 Post-approval Stability Protocol and Commitment; 3.2.S.7.3 Stability Data - conditions tested (long-term, accelerated, stressed), time points, tests performed, results tables. For cell therapy typically ultra-low temperature storage."
+    },
+    {
+      "id": "references",
+      "title": "REFERENCES",
+      "type": "references",
+      "required": true,
+      "llm_prompt": "Generate a references list for the CMC drug substance module. Include: ICH Q1A(R2), ICH Q2(R2), ICH Q5A-Q5E, ICH Q6B, ICH Q7, ICH Q8(R2), ICH Q11, 21 CFR 211, 21 CFR 610, 21 CFR 1271, USP/NF, Ph.Eur., FDA CBER guidances for cell and gene therapy."
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "CMC",
+    "regulatory_framework": "ICH M4Q CTD, ICH Q5A-E, ICH Q6B, ICH Q7, ICH Q11, 21 CFR 211, 21 CFR 610, 21 CFR 1271"
+  }
+}

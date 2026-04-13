@@ -1,0 +1,150 @@
+{
+  "id": "cleaning_validation",
+  "name": "Cleaning Validation Protocol",
+  "doc_type": "cleaning_validation",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1440,
+    "right": 1080,
+    "bottom": 1080,
+    "left": 1080,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 6,
+    "column_widths": [650, 1200, 3800, 1800, 1200, 1430],
+    "total_width": 10080,
+    "row_height_dxa": 288,
+    "rows": 3,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "CONFIDENTIAL",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": true,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "approval_block",
+      "title": "PROTOCOL APPROVAL",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Validation Lead", "name": "", "date": ""},
+          {"role": "Manufacturing Manager", "name": "", "date": ""},
+          {"role": "Engineering", "name": "", "date": ""},
+          {"role": "QC Manager", "name": "", "date": ""},
+          {"role": "QA Manager", "name": "", "date": ""}
+        ]
+      }
+    },
+    {
+      "id": "purpose_scope",
+      "title": "PURPOSE AND SCOPE",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write Purpose and Scope for a cleaning validation protocol covering equipment used for {product_name}. State that the objective is to demonstrate that the cleaning procedure consistently reduces residues of previous product, cleaning agent, microbial contamination, and endotoxin to acceptable levels on shared or dedicated equipment. Reference 21 CFR 211.67, EU GMP Annex 15, and PDA TR 29. {description}"
+    },
+    {
+      "id": "equipment_train",
+      "title": "EQUIPMENT AND PRODUCT TRAIN",
+      "type": "equipment_list",
+      "required": true,
+      "llm_prompt": "List all equipment in the manufacturing train for {product_name} to be cleaned and validated. Include: make/model, material of construction (316L SS, glass, silicone, PTFE), product contact surface area (cm²), cleaning method (CIP, COP, manual), and cleaning procedure SOP reference."
+    },
+    {
+      "id": "worst_case",
+      "title": "WORST-CASE RATIONALE",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the worst-case selection rationale. Include: (1) worst-case product (most difficult to clean based on solubility, toxicity, lowest therapeutic dose, hardest-to-clean ingredient), (2) worst-case equipment (most difficult to clean - valves, gaskets, fittings, long tubing), (3) worst-case cleaning scenario (longest campaign, maximum dirty hold time, minimum clean hold time), (4) matrix/bracketing approach if multi-product."
+    },
+    {
+      "id": "acceptance_criteria",
+      "title": "ACCEPTANCE CRITERIA",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Derive cleaning acceptance criteria. Present calculation of: (1) Maximum Allowable Carryover (MAC) using the most stringent of dose-based (0.001 of minimum therapeutic dose in maximum daily dose of next product) OR toxicity-based (PDE per EMA 2014 / ICH Q3D approach) OR visual limit (4 µg/cm² or limit of visible cleanliness) OR 10 ppm criterion, (2) Residue limit per surface area and per swab, (3) Cleaning agent residue limit, (4) Bioburden limits (total aerobic count < 100 CFU/25 cm²), (5) Endotoxin limits (< 0.25 EU/cm² typical), (6) Visual inspection (no visible residue)."
+    },
+    {
+      "id": "sampling_methods",
+      "title": "SAMPLING METHODS",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe sampling methods for cleaning validation. Include: (1) Direct surface sampling (swab) - swab material, solvent, technique, recovery study; (2) Rinse sampling - rinse volume, solvent, technique, recovery study; (3) Visual inspection - qualified inspectors, lighting, defined criteria. Include sampling locations (hardest-to-clean, product contact) with diagrams referenced."
+    },
+    {
+      "id": "swab_recovery",
+      "title": "SWAB RECOVERY STUDIES",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the swab recovery study design. For each surface material (316L SS, glass, PTFE, silicone) spike with known amounts of residue, perform swabbing, and calculate % recovery. Acceptance criterion typically ≥ 70% recovery. Use worst-case analyte. Document correction factor for use in limits."
+    },
+    {
+      "id": "test_procedure",
+      "title": "CLEANING VALIDATION TEST PROCEDURE",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "Step", "width_dxa": 5200},
+          {"id": "variable", "title": "Expected Result", "width_dxa": 2600},
+          {"id": "result", "title": "Actual Result / Pass-Fail", "width_dxa": 2280}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate the cleaning validation test procedure. Steps should include: (1) manufacture worst-case product batch, (2) apply worst-case dirty hold time, (3) execute cleaning procedure per SOP, (4) apply clean hold time, (5) visually inspect equipment, (6) collect swab samples from predefined locations, (7) collect rinse sample, (8) submit to QC for testing (TOC, HPLC assay for API, bioburden, endotoxin, conductivity). Repeat for 3 consecutive cleaning runs."
+    },
+    {
+      "id": "analytical_methods",
+      "title": "ANALYTICAL METHODS",
+      "type": "table",
+      "required": true,
+      "llm_prompt": "List analytical methods used for cleaning validation. Columns: Analyte | Method | LOD/LOQ | Validated (Y/N) | Method SOP.",
+      "default_data": {
+        "rows": [
+          {"label": "Total Organic Carbon", "value": "TOC analyzer per USP <643>"},
+          {"label": "API Residue", "value": "HPLC specific method"},
+          {"label": "Cleaning Agent", "value": "Conductivity or specific assay"},
+          {"label": "Bioburden", "value": "Membrane filtration per USP <61>"},
+          {"label": "Endotoxin", "value": "LAL per USP <85>"},
+          {"label": "Visual Inspection", "value": "Qualified operator"}
+        ]
+      }
+    },
+    {
+      "id": "hold_times",
+      "title": "CLEAN AND DIRTY HOLD TIMES",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Define clean hold time (CHT - maximum time from end of cleaning to start of next campaign) and dirty hold time (DHT - maximum time from end of production to start of cleaning). Both must be validated; state how they will be challenged during PPQ."
+    },
+    {
+      "id": "references",
+      "title": "REFERENCES",
+      "type": "references",
+      "required": true,
+      "llm_prompt": "Generate references for cleaning validation. Include: 21 CFR 211.67, EU GMP Chapter 3 and Annex 15, EMA Guideline on Setting Health-Based Exposure Limits (2014), PDA Technical Report 29 (Points to Consider for Cleaning Validation), ICH Q3D, ICH Q7, ISPE Baseline Guide Risk-Based Manufacture, USP <643> Total Organic Carbon, USP <645> Water Conductivity, relevant company cleaning SOPs."
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "Validation",
+    "regulatory_framework": "21 CFR 211.67, EU GMP Annex 15, EMA 2014 HBEL Guideline, PDA TR 29, ICH Q3D"
+  }
+}

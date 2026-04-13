@@ -158,3 +158,67 @@ class TrainingExample(db.Model):
         messages.append({"role": "user", "content": self.user_prompt})
         messages.append({"role": "assistant", "content": self.completion})
         return {"messages": messages}
+
+
+class ProtocolUpload(db.Model):
+    """An uploaded protocol document used for knowledge extraction."""
+
+    __tablename__ = "protocol_uploads"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False)
+    filename = db.Column(db.String(500), nullable=False)
+    file_type = db.Column(db.String(10), nullable=False)
+    file_path = db.Column(db.String(1000), default="")
+    status = db.Column(db.String(50), default="uploaded")
+    error_message = db.Column(db.Text, nullable=True)
+    raw_text = db.Column(db.Text, default="")
+    structure_json = db.Column(db.Text, default="{}")
+    formatting_json = db.Column(db.Text, default="{}")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    knowledge_items = db.relationship("ProtocolKnowledge", backref="upload", lazy="dynamic",
+                                      cascade="all, delete-orphan")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "account_id": self.account_id,
+            "filename": self.filename,
+            "file_type": self.file_type,
+            "status": self.status,
+            "error_message": self.error_message,
+            "structure_json": self.structure_json,
+            "formatting_json": self.formatting_json,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "knowledge": [k.to_dict() for k in self.knowledge_items],
+        }
+
+
+class ProtocolKnowledge(db.Model):
+    """Extracted knowledge from an uploaded protocol, per category."""
+
+    __tablename__ = "protocol_knowledge"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False)
+    upload_id = db.Column(db.Integer, db.ForeignKey("protocol_uploads.id"), nullable=False)
+    category = db.Column(db.String(50), nullable=False)
+    knowledge_json = db.Column(db.Text, default="{}")
+    summary = db.Column(db.Text, default="")
+    confidence = db.Column(db.Float, nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "account_id": self.account_id,
+            "upload_id": self.upload_id,
+            "category": self.category,
+            "knowledge_json": self.knowledge_json,
+            "summary": self.summary,
+            "confidence": self.confidence,
+            "is_active": self.is_active,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }

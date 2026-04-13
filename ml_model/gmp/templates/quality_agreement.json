@@ -1,0 +1,172 @@
+{
+  "id": "quality_agreement",
+  "name": "Quality Agreement (Contract Manufacturer)",
+  "doc_type": "quality_agreement",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1440,
+    "right": 1080,
+    "bottom": 1080,
+    "left": 1080,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 6,
+    "column_widths": [650, 1200, 3800, 1800, 1200, 1430],
+    "total_width": 10080,
+    "row_height_dxa": 288,
+    "rows": 3,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "CONFIDENTIAL - Quality Agreement",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": true,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "approval_block",
+      "title": "AGREEMENT EXECUTION",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Sponsor/Owner Quality Head", "name": "", "date": ""},
+          {"role": "Sponsor/Owner Authorized Signatory", "name": "", "date": ""},
+          {"role": "Contract Manufacturer Quality Head", "name": "", "date": ""},
+          {"role": "Contract Manufacturer Authorized Signatory", "name": "", "date": ""}
+        ]
+      }
+    },
+    {
+      "id": "introduction",
+      "title": "INTRODUCTION AND PARTIES",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the Introduction section defining the parties to this Quality Agreement between the Owner/Sponsor and Contract Manufacturer (CMO/CDMO) for {product_name}. Identify the parties, effective date, relationship to the underlying Master Services Agreement (MSA) or Supply Agreement, product(s) covered, and services covered (manufacturing, testing, packaging, storage, distribution). Reference FDA Guidance on Contract Manufacturing Arrangements for Drugs: Quality Agreements (2016) and EU GMP Chapter 7. {description}"
+    },
+    {
+      "id": "scope",
+      "title": "SCOPE",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Define the scope of the quality agreement. List the products, dosage forms, markets, and services. Identify which activities are subject to this agreement and which are excluded. Specify the facilities involved (site address, registration/licenses)."
+    },
+    {
+      "id": "roles_responsibilities",
+      "title": "ROLES AND RESPONSIBILITIES MATRIX",
+      "type": "table",
+      "required": true,
+      "llm_prompt": "Generate a RACI matrix for quality activities between Owner and Contract Manufacturer. For each activity indicate: Owner Responsible/Approves (O), CMO Responsible/Executes (C), Both (B), N/A (-). Activities to include: facility qualification, personnel qualification, material qualification, material sourcing, production, cleaning, IPCs, release testing, stability, batch disposition, deviation management, CAPA, change control, complaint handling, recalls, quality metrics, regulatory submissions, annual product review, audit hosting, supplier management.",
+      "default_data": {
+        "rows": [
+          {"label": "Material Qualification", "value": "O / C / B"},
+          {"label": "Production", "value": "O / C / B"},
+          {"label": "Release Testing", "value": "O / C / B"},
+          {"label": "Batch Disposition", "value": "O / C / B"},
+          {"label": "Deviation Management", "value": "O / C / B"},
+          {"label": "Change Control", "value": "O / C / B"},
+          {"label": "Complaint Handling", "value": "O / C / B"},
+          {"label": "Recalls", "value": "O / C / B"},
+          {"label": "Stability", "value": "O / C / B"},
+          {"label": "Regulatory", "value": "O / C / B"}
+        ]
+      }
+    },
+    {
+      "id": "material_management",
+      "title": "MATERIALS AND SUPPLIER MANAGEMENT",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe responsibilities for materials and supplier management. Cover: approved supplier list, material specifications, COA requirements, incoming inspection, sampling, testing, qualification of new suppliers/materials, handling of out-of-specification materials, traceability."
+    },
+    {
+      "id": "manufacturing",
+      "title": "MANUFACTURING AND PACKAGING",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe manufacturing and packaging responsibilities. Cover: approved batch records and procedures, production records, equipment use, label control, yield reconciliation, in-process controls, hold times, segregation, environmental monitoring during production."
+    },
+    {
+      "id": "qc_testing",
+      "title": "QUALITY CONTROL TESTING",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe QC testing responsibilities. Cover: release testing per approved specification, stability testing, analytical method transfer, method validation/verification, reference standards, OOS/OOT handling, retesting policy, trending, sample retention."
+    },
+    {
+      "id": "batch_disposition",
+      "title": "BATCH DISPOSITION AND CERTIFICATION",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe batch disposition process. State which party performs quality disposition, documents required (executed batch record, deviation reports, COAs, environmental data), timelines, and authority to reject. If Qualified Person (QP) certification is required for EU, describe that process per EU GMP Annex 16."
+    },
+    {
+      "id": "deviations_capa",
+      "title": "DEVIATIONS, INVESTIGATIONS, AND CAPA",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe responsibilities for deviations, OOS, and CAPA. Include: notification timelines (e.g., within 1 business day for major deviations), investigation ownership, joint review expectations, CAPA tracking, effectiveness checks, and trending."
+    },
+    {
+      "id": "change_control",
+      "title": "CHANGE CONTROL",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe change control responsibilities. List categories of changes requiring Owner approval before implementation (critical equipment, process, specifications, suppliers, facility, analytical methods, computer systems, site changes). Define notification timelines, approval process, and regulatory assessment responsibilities."
+    },
+    {
+      "id": "complaints_recalls",
+      "title": "COMPLAINTS AND RECALLS",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe complaint and recall handling. Include: complaint notification timelines (within 1 business day of receipt), investigation responsibility, root cause analysis, recall decision authority, reverse traceability, mock recall exercises, and regulatory notification requirements."
+    },
+    {
+      "id": "audits",
+      "title": "AUDITS AND INSPECTIONS",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe audit and inspection provisions. Include: Owner's right to audit (frequency, duration, scope, notice), for-cause audits, regulatory inspections (notification, support, observations sharing), and response timelines to audit findings."
+    },
+    {
+      "id": "documentation",
+      "title": "DOCUMENTATION AND RECORD RETENTION",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe documentation and record retention requirements. Specify: retention periods (at least 1 year past expiry or 3-5 years beyond last batch, whichever is longer; longer for cell therapy per 21 CFR 1271.270), copy ownership, document formats (electronic per 21 CFR Part 11), archive and destruction procedures, right to access."
+    },
+    {
+      "id": "dispute_resolution",
+      "title": "DISPUTE RESOLUTION AND AMENDMENTS",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the dispute resolution and amendment process. Include: escalation to senior quality leadership, timeline for resolution, amendment procedure (both parties must sign), regular review (typically every 2-3 years), and effective date of amendments."
+    },
+    {
+      "id": "references",
+      "title": "REFERENCES",
+      "type": "references",
+      "required": true,
+      "llm_prompt": "Generate references for a Quality Agreement. Include: FDA Guidance on Contract Manufacturing Arrangements for Drugs: Quality Agreements (2016), EU GMP Chapter 7, ICH Q7, ICH Q10, 21 CFR 210/211, 21 CFR 1271, ISPE GPG Supply Chain Quality, and MSA reference."
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "Quality",
+    "regulatory_framework": "FDA Contract Manufacturing Guidance 2016, EU GMP Chapter 7, ICH Q7, ICH Q10"
+  }
+}

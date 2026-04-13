@@ -1,0 +1,176 @@
+{
+  "id": "quality_risk_assessment",
+  "name": "Quality Risk Assessment (ICH Q9)",
+  "doc_type": "risk_assessment",
+  "orientation": "landscape",
+  "page_size": {
+    "width_dxa": 15840,
+    "height_dxa": 12240
+  },
+  "margins": {
+    "top": 1080,
+    "right": 720,
+    "bottom": 720,
+    "left": 720,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 6,
+    "column_widths": [775, 1493, 5377, 2520, 1440, 2993],
+    "total_width": 14598,
+    "row_height_dxa": 288,
+    "rows": 3,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "CONFIDENTIAL - Quality Risk Management",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": true,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "approval_block",
+      "title": "RISK ASSESSMENT APPROVAL",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Risk Assessment Lead", "name": "", "date": ""},
+          {"role": "Subject Matter Expert", "name": "", "date": ""},
+          {"role": "Quality Assurance", "name": "", "date": ""},
+          {"role": "Operations Manager", "name": "", "date": ""},
+          {"role": "Quality Risk Management Owner", "name": "", "date": ""}
+        ]
+      }
+    },
+    {
+      "id": "purpose_scope",
+      "title": "PURPOSE AND SCOPE",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write Purpose and Scope for a quality risk assessment on {process_type} of {product_name}. State the objective (e.g., identify, evaluate, and mitigate risks to product quality and patient safety), the boundaries of the assessment, and patient impact. Reference ICH Q9(R1). {description}"
+    },
+    {
+      "id": "risk_question",
+      "title": "RISK QUESTION",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "State the risk question (or questions) being evaluated in this assessment for {process_type}. Example: 'What are the potential failure modes during [process step], their effects on product quality and patient safety, and how can they be mitigated?'"
+    },
+    {
+      "id": "team",
+      "title": "RISK ASSESSMENT TEAM",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "Facilitator", "value": ""},
+          {"label": "Process SME", "value": ""},
+          {"label": "Quality SME", "value": ""},
+          {"label": "Regulatory SME", "value": ""},
+          {"label": "Operations Representative", "value": ""},
+          {"label": "Patient Safety Advocate", "value": ""}
+        ]
+      }
+    },
+    {
+      "id": "methodology",
+      "title": "RISK ASSESSMENT METHODOLOGY",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the risk assessment methodology used. Choose the most appropriate tool from ICH Q9(R1): FMEA (Failure Modes and Effects Analysis), FMECA, FTA (Fault Tree Analysis), HACCP (Hazard Analysis Critical Control Points), HAZOP (Hazard and Operability Analysis), PHA (Preliminary Hazard Analysis), or a hybrid approach. For the selected method, define: severity scale (1-5), probability/likelihood scale (1-5), detectability scale (1-5), RPN calculation formula, acceptance threshold (e.g., RPN > 100 requires mitigation), and risk prioritization rules."
+    },
+    {
+      "id": "severity_matrix",
+      "title": "SEVERITY, PROBABILITY, AND DETECTABILITY SCALES",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "Severity 1 - Negligible", "value": "No impact on product quality or patient"},
+          {"label": "Severity 2 - Minor", "value": "Minor deviation, no product or patient impact"},
+          {"label": "Severity 3 - Moderate", "value": "Product quality issue, correctable"},
+          {"label": "Severity 4 - Major", "value": "Product non-conformance, potential patient impact"},
+          {"label": "Severity 5 - Critical", "value": "Serious product failure, direct patient harm"},
+          {"label": "Probability 1 - Rare", "value": "< 1 in 10,000 batches"},
+          {"label": "Probability 3 - Occasional", "value": "1 in 100 batches"},
+          {"label": "Probability 5 - Frequent", "value": "> 1 in 10 batches"},
+          {"label": "Detectability 1 - High", "value": "Detected by validated in-line controls"},
+          {"label": "Detectability 3 - Moderate", "value": "Detected by end-product testing"},
+          {"label": "Detectability 5 - Low", "value": "Unlikely to be detected before release"}
+        ]
+      }
+    },
+    {
+      "id": "risk_identification",
+      "title": "RISK IDENTIFICATION AND ANALYSIS",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "Process Step / Hazard", "width_dxa": 3200},
+          {"id": "variable", "title": "Failure Mode / Cause", "width_dxa": 3200},
+          {"id": "result", "title": "Effect on Quality / Patient", "width_dxa": 3200},
+          {"id": "performed_by", "title": "S x P x D = RPN", "width_dxa": 1800},
+          {"id": "checked_by", "title": "Risk Level", "width_dxa": 3180}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "For each process step or hazard in {process_type} of {product_name}, identify: failure modes, causes, effects on product quality and patient, and initial risk scoring (Severity x Probability x Detectability = RPN). Also classify as Low/Medium/High. Be comprehensive - typical assessment has 20-40 entries."
+    },
+    {
+      "id": "risk_mitigation",
+      "title": "RISK CONTROL AND MITIGATION",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "Risk ID / Description", "width_dxa": 3600},
+          {"id": "variable", "title": "Mitigation Action", "width_dxa": 3600},
+          {"id": "result", "title": "Owner / Due Date", "width_dxa": 2400},
+          {"id": "performed_by", "title": "Residual RPN", "width_dxa": 1800},
+          {"id": "checked_by", "title": "Acceptable (Y/N)", "width_dxa": 3180}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "For each High and Medium risk identified, list the mitigation action (engineering control, administrative control, procedural change, additional testing, training, monitoring), the action owner, due date, expected residual RPN after mitigation, and whether residual risk is acceptable."
+    },
+    {
+      "id": "risk_acceptance",
+      "title": "RISK ACCEPTANCE AND REVIEW",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the risk acceptance criteria and review process. State the RPN threshold for acceptance (e.g., all risks must be reduced to RPN < 50 or formally accepted by QA). Describe the review cadence (annually or upon process change), escalation process for unacceptable risks, and documentation for risk acceptance."
+    },
+    {
+      "id": "conclusions",
+      "title": "CONCLUSIONS AND RECOMMENDATIONS",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write conclusions and recommendations from the risk assessment for {process_type}. Summarize total risks identified, risks mitigated, residual risk level, and any recommendations for follow-up actions, process changes, or additional monitoring."
+    },
+    {
+      "id": "references",
+      "title": "REFERENCES",
+      "type": "references",
+      "required": true,
+      "llm_prompt": "Generate references for a quality risk assessment. Include: ICH Q9(R1), ICH Q10, FDA Guidance on Quality Risk Management, 21 CFR 211, and relevant company SOPs (quality risk management procedure, change control, CAPA)."
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "Quality",
+    "regulatory_framework": "ICH Q9(R1), ICH Q10, 21 CFR 211, EU GMP Annex 20"
+  }
+}

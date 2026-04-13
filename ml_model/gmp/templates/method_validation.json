@@ -1,0 +1,146 @@
+{
+  "id": "method_validation",
+  "name": "Analytical Method Validation Protocol",
+  "doc_type": "method_validation",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1440,
+    "right": 1080,
+    "bottom": 1080,
+    "left": 1080,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 6,
+    "column_widths": [650, 1200, 3800, 1800, 1200, 1430],
+    "total_width": 10080,
+    "row_height_dxa": 288,
+    "rows": 3,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "CONFIDENTIAL",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": true,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "approval_block",
+      "title": "PROTOCOL APPROVAL",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Method Owner / Analyst", "name": "", "date": ""},
+          {"role": "QC Manager", "name": "", "date": ""},
+          {"role": "QA Manager", "name": "", "date": ""},
+          {"role": "Subject Matter Expert", "name": "", "date": ""}
+        ]
+      }
+    },
+    {
+      "id": "purpose_scope",
+      "title": "PURPOSE AND SCOPE",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write Purpose and Scope for validating an analytical method for {product_name} ({process_type}). State the method's intended use (identity/assay/impurities/potency/dissolution), the matrix, target analyte, category of validation per ICH Q2(R2) and USP <1225>. {description}"
+    },
+    {
+      "id": "method_description",
+      "title": "METHOD DESCRIPTION",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the analytical method for {product_name}. Include: principle, instrument (HPLC/UPLC/GC/bioassay/ELISA/qPCR/flow cytometry), column/reagents, mobile phase, detection, sample preparation, system suitability criteria, calculation formula, and reference to the method SOP."
+    },
+    {
+      "id": "validation_parameters",
+      "title": "VALIDATION PARAMETERS AND ACCEPTANCE CRITERIA",
+      "type": "table",
+      "required": true,
+      "llm_prompt": "Generate a validation parameters table per ICH Q2(R2) appropriate for the method type. Columns: Parameter | Definition | Design | Acceptance Criteria.",
+      "default_data": {
+        "rows": [
+          {"label": "Specificity/Selectivity", "value": "Demonstrate resolution from impurities, placebo, degradants"},
+          {"label": "Linearity", "value": "5+ levels, r² >= 0.995, residual plot"},
+          {"label": "Range", "value": "Span of concentrations meeting specificity, linearity, accuracy, precision"},
+          {"label": "Accuracy", "value": "3 levels x 3 replicates, recovery 98-102% (assay)"},
+          {"label": "Precision (Repeatability)", "value": "6 replicates at 100%, RSD <= 2%"},
+          {"label": "Precision (Intermediate)", "value": "2 analysts x 2 days x 3 replicates"},
+          {"label": "LOD", "value": "Signal-to-noise 3:1 or calculated from calibration"},
+          {"label": "LOQ", "value": "Signal-to-noise 10:1 or calculated"},
+          {"label": "Robustness", "value": "Small deliberate method variations"},
+          {"label": "System Suitability", "value": "Defined each run"}
+        ]
+      }
+    },
+    {
+      "id": "experimental_design",
+      "title": "EXPERIMENTAL DESIGN AND PROCEDURE",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "Validation Experiment", "width_dxa": 4200},
+          {"id": "variable", "title": "Sample Preparation / Number", "width_dxa": 2700},
+          {"id": "result", "title": "Acceptance Criteria / Data to Record", "width_dxa": 3180}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate step-by-step experimental procedures for each validation parameter (specificity, linearity, accuracy, precision, LOD/LOQ, robustness, solution stability, filter validation). For each experiment describe: sample preparation, number of replicates, conditions tested, calculations, acceptance criteria."
+    },
+    {
+      "id": "materials_equipment",
+      "title": "MATERIALS AND EQUIPMENT",
+      "type": "equipment_list",
+      "required": true,
+      "llm_prompt": "List materials, reagents, reference standards, and equipment required to validate the method for {product_name}. Include grade (USP/HPLC/ACS), manufacturer, and qualification status (calibration, IQ/OQ/PQ)."
+    },
+    {
+      "id": "data_analysis",
+      "title": "DATA ANALYSIS AND STATISTICAL METHODS",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe data analysis approach for the method validation. Include: software used (Empower, Chromeleon, JMP, Minitab), statistical tests (F-test, t-test, ANOVA, regression), outlier handling (Grubbs), reporting format, rounding rules, and pass/fail decision criteria."
+    },
+    {
+      "id": "deviations",
+      "title": "DEVIATION HANDLING",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe how deviations during method validation will be handled. Reference the deviation SOP, root cause analysis expectations, CAPA process, and impact assessment on overall validation conclusions."
+    },
+    {
+      "id": "report_requirements",
+      "title": "VALIDATION REPORT REQUIREMENTS",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the validation report contents and approval requirements. Include: summary of results against acceptance criteria, raw data tables, chromatograms/spectra, statistical analysis, conclusion on fitness for purpose, approval signatures (analyst, QC, QA)."
+    },
+    {
+      "id": "references",
+      "title": "REFERENCES",
+      "type": "references",
+      "required": true,
+      "llm_prompt": "Generate references for an analytical method validation protocol. Include: ICH Q2(R2), USP <1225>, USP <1226> (verification), USP <1033> (biological assay validation), USP <1034> (analysis of biological assays), FDA Guidance on Analytical Procedures and Methods Validation, and relevant company SOPs."
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "Validation",
+    "regulatory_framework": "ICH Q2(R2), USP <1225>, USP <1033>, 21 CFR 211.194"
+  }
+}

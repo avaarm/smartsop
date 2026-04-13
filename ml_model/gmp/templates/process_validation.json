@@ -1,0 +1,164 @@
+{
+  "id": "process_validation",
+  "name": "Process Performance Qualification (PPQ) Protocol",
+  "doc_type": "process_validation",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1440,
+    "right": 1080,
+    "bottom": 1080,
+    "left": 1080,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 6,
+    "column_widths": [650, 1200, 3800, 1800, 1200, 1430],
+    "total_width": 10080,
+    "row_height_dxa": 288,
+    "rows": 3,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "CONFIDENTIAL - Process Validation",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": true,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "approval_block",
+      "title": "PROTOCOL APPROVAL",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Validation Lead", "name": "", "date": ""},
+          {"role": "Manufacturing Manager", "name": "", "date": ""},
+          {"role": "QC Manager", "name": "", "date": ""},
+          {"role": "QA Manager", "name": "", "date": ""},
+          {"role": "Engineering", "name": "", "date": ""},
+          {"role": "Regulatory Affairs", "name": "", "date": ""}
+        ]
+      }
+    },
+    {
+      "id": "purpose_scope",
+      "title": "PURPOSE AND SCOPE",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write Purpose and Scope for a Process Performance Qualification (PPQ) on {process_type} for {product_name}. This is Stage 2 of the FDA Lifecycle Approach to Process Validation. State the manufacturing process, facility, product strength(s), number of PPQ batches (typically 3 consecutive), and that this protocol demonstrates the commercial process is capable of consistently delivering quality product. {description}"
+    },
+    {
+      "id": "process_description",
+      "title": "PROCESS DESCRIPTION",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the manufacturing process for {product_name}. Summarize each unit operation, equipment, materials, batch size, cycle time, and any critical process parameters (CPPs) and critical quality attributes (CQAs) established during Stage 1 (process design)."
+    },
+    {
+      "id": "prerequisites",
+      "title": "PREREQUISITES",
+      "type": "checklist",
+      "required": true,
+      "default_data": {
+        "items": [
+          {"text": "Facility qualified (commissioned, cleaned, HVAC validated)", "checked": false},
+          {"text": "Utilities qualified (water, steam, compressed gases)", "checked": false},
+          {"text": "Equipment IQ/OQ/PQ complete", "checked": false},
+          {"text": "Analytical methods validated per ICH Q2(R2)", "checked": false},
+          {"text": "Cleaning validation complete for shared equipment", "checked": false},
+          {"text": "Personnel trained and qualified on procedures", "checked": false},
+          {"text": "Raw materials qualified (vendor, spec, COA)", "checked": false},
+          {"text": "Batch records approved and in effect", "checked": false},
+          {"text": "Environmental monitoring program in place", "checked": false},
+          {"text": "Risk assessment (ICH Q9) complete and residual risks acceptable", "checked": false}
+        ]
+      }
+    },
+    {
+      "id": "critical_parameters",
+      "title": "CRITICAL PROCESS PARAMETERS AND CRITICAL QUALITY ATTRIBUTES",
+      "type": "table",
+      "required": true,
+      "llm_prompt": "Generate a table of Critical Process Parameters (CPPs) and Critical Quality Attributes (CQAs) for {product_name}. Columns: Parameter / Attribute | Type (CPP/CQA) | Target | Range | Justification | Measurement Frequency.",
+      "default_data": {
+        "rows": [
+          {"label": "CPP - Temperature", "value": "Target / Range / Method / Frequency"},
+          {"label": "CPP - Time", "value": "Target / Range / Method / Frequency"},
+          {"label": "CPP - pH", "value": "Target / Range / Method / Frequency"},
+          {"label": "CQA - Potency", "value": "Target / Range / Method / Frequency"},
+          {"label": "CQA - Purity", "value": "Target / Range / Method / Frequency"},
+          {"label": "CQA - Sterility", "value": "Target / Range / Method / Frequency"}
+        ]
+      }
+    },
+    {
+      "id": "sampling_plan",
+      "title": "SAMPLING AND TESTING PLAN",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "Process Step / Sampling Point", "width_dxa": 3800},
+          {"id": "variable", "title": "Sample Type / Quantity", "width_dxa": 2600},
+          {"id": "result", "title": "Tests / Acceptance", "width_dxa": 3680}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate a sampling and testing plan for PPQ of {product_name}. Sample at each critical process step including raw material, in-process (multiple points), bulk, final product, and environment/utility. Include enhanced sampling appropriate for PPQ (higher than routine). For each sample list: number of samples, location, test methods, acceptance criteria."
+    },
+    {
+      "id": "acceptance_criteria",
+      "title": "ACCEPTANCE CRITERIA",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "State the overall acceptance criteria for PPQ success. Include: (1) all CPPs maintained within proven acceptable range across all 3 batches, (2) all CQAs meet release specifications with appropriate statistical confidence, (3) intra-batch and inter-batch variability acceptable (e.g., RSD limits), (4) no unexplained deviations, (5) yield within target, (6) all in-process controls pass."
+    },
+    {
+      "id": "statistical_approach",
+      "title": "STATISTICAL APPROACH",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the statistical approach for PPQ data analysis. Include: descriptive statistics for each CPP and CQA, capability indices (Cp, Cpk) where applicable, confidence intervals, trend analysis across batches. Reference FDA Process Validation Guidance (2011) and ICH Q8/Q9/Q10."
+    },
+    {
+      "id": "deviation_handling",
+      "title": "DEVIATION AND EXCURSION HANDLING",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe how deviations and CPP/CQA excursions during PPQ will be handled. Reference the deviation SOP, impact assessment on PPQ acceptance, investigation requirements, CAPA, and QA decision authority."
+    },
+    {
+      "id": "continued_verification",
+      "title": "CONTINUED PROCESS VERIFICATION (STAGE 3)",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the Continued Process Verification (CPV) plan for Stage 3 of process validation. Include: ongoing monitoring of CPPs and CQAs, trending (SPC control charts), periodic product review, annual product review (APR), and criteria for revalidation."
+    },
+    {
+      "id": "references",
+      "title": "REFERENCES",
+      "type": "references",
+      "required": true,
+      "llm_prompt": "Generate references for a process validation protocol. Include: FDA Guidance for Industry Process Validation: General Principles and Practices (2011), EU GMP Annex 15, ICH Q7, Q8(R2), Q9, Q10, Q11, 21 CFR 211, PDA Technical Report 60, relevant company SOPs."
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "Validation",
+    "regulatory_framework": "FDA Process Validation Guidance 2011, EU GMP Annex 15, ICH Q8-Q11, 21 CFR 211"
+  }
+}

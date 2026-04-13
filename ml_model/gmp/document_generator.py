@@ -288,6 +288,8 @@ class GMPDocumentGenerator:
                 enriched_context["_reference_sops"] = acct_ctx["reference_sops"]
             if acct_ctx.get("terminology"):
                 enriched_context["_terminology"] = acct_ctx["terminology"]
+            if acct_ctx.get("protocol_knowledge"):
+                enriched_context["_protocol_knowledge"] = acct_ctx["protocol_knowledge"]
 
         result = self._generate_section_with_llm(section_def, enriched_context)
 
@@ -382,6 +384,30 @@ class GMPDocumentGenerator:
             if isinstance(sops, list) and sops:
                 lines = [f"- {s}" for s in sops[:15]]
                 parts.append("Reference these organization SOPs where applicable:\n" + "\n".join(lines))
+
+        # Inject extracted protocol knowledge
+        pk = context.get("_protocol_knowledge", {})
+        if pk.get("writing_style"):
+            for ws in pk["writing_style"]:
+                voice = ws.get("voice", "")
+                tense = ws.get("tense", "")
+                if voice or tense:
+                    parts.append(f"Writing style: use {voice} voice, {tense}.")
+                for pattern in ws.get("sentence_patterns", [])[:3]:
+                    parts.append(f"Sentence pattern: {pattern}")
+        if pk.get("terminology"):
+            for t in pk["terminology"]:
+                terms = t.get("terms", {})
+                if terms:
+                    lines = [f"- {k}: {v}" for k, v in list(terms.items())[:20]]
+                    parts.append("Extracted terminology:\n" + "\n".join(lines))
+        if pk.get("procedural_rules"):
+            for pr in pk["procedural_rules"]:
+                rules = pr.get("rules", [])
+                if rules:
+                    lines = [f"- {r}" for r in rules[:10]]
+                    parts.append("Follow these procedural conventions:\n" + "\n".join(lines))
+
         return "\n\n".join(parts)
 
     def get_ollama_status(self) -> dict:

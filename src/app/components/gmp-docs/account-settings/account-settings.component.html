@@ -71,6 +71,10 @@
       Training Data
       <span *ngIf="trainingStats" class="tab-badge">{{ trainingStats.total_examples }}</span>
     </button>
+    <button [class.active]="activeTab === 'protocols'" (click)="activeTab = 'protocols'; loadProtocols()">
+      Protocol Knowledge
+      <span *ngIf="protocolUploads.length" class="tab-badge">{{ protocolUploads.length }}</span>
+    </button>
     <button [class.active]="activeTab === 'export'" (click)="activeTab = 'export'">Export &amp; Fine-tune</button>
     <button [class.active]="activeTab === 'history'" (click)="activeTab = 'history'; loadDocuments()">
       Document History
@@ -134,6 +138,89 @@
           {{ saving ? 'Saving…' : 'Save Settings' }}
         </button>
       </div>
+    </div>
+  </section>
+
+  <!-- Protocol Knowledge Tab -->
+  <section *ngIf="activeAccount && activeTab === 'protocols'" class="tab-panel">
+    <!-- Upload zone -->
+    <div class="upload-zone">
+      <div class="upload-content">
+        <div class="upload-icon">+</div>
+        <div class="upload-text">
+          <strong>Upload a protocol document</strong>
+          <span class="hint">Upload existing .docx or .pdf protocols to extract structure, terminology, and style rules</span>
+        </div>
+        <label class="btn btn-primary btn-sm upload-btn">
+          {{ uploadingProtocol ? 'Uploading...' : 'Choose File' }}
+          <input type="file" accept=".docx,.pdf" (change)="onFileSelected($event)" hidden [disabled]="uploadingProtocol" />
+        </label>
+      </div>
+    </div>
+
+    <!-- Upload list -->
+    <div *ngIf="protocolsLoading" class="loading"><div class="spinner"></div> Loading...</div>
+
+    <div *ngIf="!protocolsLoading && protocolUploads.length === 0" class="empty-state">
+      No protocols uploaded yet. Upload your first document to start extracting knowledge.
+    </div>
+
+    <div class="protocol-list">
+      <div *ngFor="let upload of protocolUploads" class="protocol-card">
+        <div class="protocol-header">
+          <div class="protocol-file-icon">{{ upload.file_type === 'pdf' ? 'PDF' : 'DOC' }}</div>
+          <div class="protocol-info">
+            <div class="protocol-filename">{{ upload.filename }}</div>
+            <div class="protocol-meta">
+              <span class="badge" [ngClass]="'badge-status-' + upload.status">{{ getStatusLabel(upload.status) }}</span>
+              <span class="protocol-date">{{ formatDate(upload.created_at) }}</span>
+            </div>
+          </div>
+          <div class="protocol-actions">
+            <button *ngIf="upload.status === 'parsed' || upload.status === 'complete'"
+                    class="btn btn-primary btn-sm"
+                    (click)="analyzeUpload(upload)"
+                    [disabled]="analyzingProtocol[upload.id]">
+              {{ analyzingProtocol[upload.id] ? 'Analyzing...' : (upload.status === 'complete' ? 'Re-analyze' : 'Extract Knowledge') }}
+            </button>
+            <button class="btn btn-ghost btn-sm" (click)="deleteUpload(upload)">Delete</button>
+          </div>
+        </div>
+
+        <!-- Error message -->
+        <div *ngIf="upload.error_message" class="protocol-error">{{ upload.error_message }}</div>
+
+        <!-- Knowledge items -->
+        <div *ngIf="upload.knowledge && upload.knowledge.length > 0" class="knowledge-list">
+          <div *ngFor="let k of upload.knowledge" class="knowledge-card" [class.inactive]="!k.is_active">
+            <div class="knowledge-header" (click)="toggleKnowledgeExpand(k.id)">
+              <span class="knowledge-icon">{{ getCategoryIcon(k.category) }}</span>
+              <span class="knowledge-category">{{ getCategoryLabel(k.category) }}</span>
+              <span class="knowledge-summary">{{ k.summary }}</span>
+              <span *ngIf="k.confidence" class="knowledge-confidence">{{ (k.confidence * 100) | number:'1.0-0' }}%</span>
+              <label class="toggle" (click)="$event.stopPropagation()">
+                <input type="checkbox" [checked]="k.is_active" (change)="toggleKnowledgeActive(k)" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div *ngIf="expandedKnowledge[k.id]" class="knowledge-detail">
+              <pre class="knowledge-json">{{ k.knowledge_json | json }}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- How it works -->
+    <div class="info-box">
+      <strong>How it works</strong>
+      <ol>
+        <li>Upload an existing protocol (.docx or .pdf)</li>
+        <li>The system parses the document structure instantly</li>
+        <li>Click "Extract Knowledge" to run AI analysis (requires Ollama)</li>
+        <li>Extracted terminology, rules, and style are automatically applied to future document generation</li>
+      </ol>
+      <p class="hint">Toggle individual knowledge items on/off to control what gets injected into AI prompts.</p>
     </div>
   </section>
 

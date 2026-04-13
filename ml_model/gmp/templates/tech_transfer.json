@@ -1,0 +1,178 @@
+{
+  "id": "tech_transfer",
+  "name": "Technology Transfer Protocol",
+  "doc_type": "tech_transfer",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1440,
+    "right": 1080,
+    "bottom": 1080,
+    "left": 1080,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 6,
+    "column_widths": [650, 1200, 3800, 1800, 1200, 1430],
+    "total_width": 10080,
+    "row_height_dxa": 288,
+    "rows": 3,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "CONFIDENTIAL - Technology Transfer",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": true,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "approval_block",
+      "title": "PROTOCOL APPROVAL",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Sending Unit (SU) Project Lead", "name": "", "date": ""},
+          {"role": "Sending Unit QA", "name": "", "date": ""},
+          {"role": "Receiving Unit (RU) Project Lead", "name": "", "date": ""},
+          {"role": "Receiving Unit QA", "name": "", "date": ""},
+          {"role": "Technology Transfer Steering Committee", "name": "", "date": ""}
+        ]
+      }
+    },
+    {
+      "id": "purpose_scope",
+      "title": "PURPOSE AND SCOPE",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write Purpose and Scope for technology transfer of {process_type} for {product_name} from Sending Unit (SU) to Receiving Unit (RU). State the objective (successful, compliant transfer of process and analytical knowledge), identify both facilities, product, scale, and the rationale for transfer (e.g., capacity expansion, commercial launch, second source, CMO transfer). Reference ICH Q10, WHO Annex 7, and ISPE Tech Transfer Good Practice Guide. {description}"
+    },
+    {
+      "id": "team_structure",
+      "title": "TRANSFER TEAM AND GOVERNANCE",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "SU Project Lead", "value": ""},
+          {"label": "RU Project Lead", "value": ""},
+          {"label": "Process Development SME", "value": ""},
+          {"label": "Analytical Transfer Lead", "value": ""},
+          {"label": "Manufacturing SME (SU)", "value": ""},
+          {"label": "Manufacturing SME (RU)", "value": ""},
+          {"label": "QA (SU)", "value": ""},
+          {"label": "QA (RU)", "value": ""},
+          {"label": "Regulatory Lead", "value": ""},
+          {"label": "Steering Committee", "value": ""}
+        ]
+      }
+    },
+    {
+      "id": "phases",
+      "title": "TRANSFER PHASES",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the technology transfer phases: (1) Project Initiation and Planning - feasibility, gap analysis, risk assessment, plan; (2) Knowledge Transfer - documentation package, training, on-site visits; (3) Facility Preparation - equipment qualification, material sourcing, environmental monitoring; (4) Engineering Runs - 1-2 demonstration batches; (5) Process Performance Qualification (PPQ) - 3 consecutive commercial batches; (6) Analytical Transfer - method qualification at RU; (7) Post-Transfer - continued process verification, close-out report."
+    },
+    {
+      "id": "knowledge_package",
+      "title": "KNOWLEDGE TRANSFER PACKAGE",
+      "type": "checklist",
+      "required": true,
+      "default_data": {
+        "items": [
+          {"text": "Master batch record and process description", "checked": false},
+          {"text": "Process development reports and history", "checked": false},
+          {"text": "Critical Process Parameters and Critical Quality Attributes", "checked": false},
+          {"text": "Analytical methods (SOPs, validation reports)", "checked": false},
+          {"text": "Raw material specifications and COAs", "checked": false},
+          {"text": "Cleaning procedures", "checked": false},
+          {"text": "Equipment list with qualification status", "checked": false},
+          {"text": "Risk assessments (ICH Q9)", "checked": false},
+          {"text": "Regulatory filings and commitments", "checked": false},
+          {"text": "Stability data and retest/shelf-life", "checked": false},
+          {"text": "Training materials", "checked": false},
+          {"text": "Prior deviations, CAPAs, and lessons learned", "checked": false},
+          {"text": "Reference standards and working standards", "checked": false},
+          {"text": "Cell banks (for biologics)", "checked": false},
+          {"text": "Sample retains for side-by-side comparison", "checked": false}
+        ]
+      }
+    },
+    {
+      "id": "gap_assessment",
+      "title": "GAP ASSESSMENT",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the gap assessment between SU and RU. Compare: equipment (type, capacity, material, GMP qualification), facilities (cleanroom grade, HVAC, utilities), personnel (training, experience), systems (EBR, LIMS, quality system), materials (same vendors, grades, specifications), analytical capability. Document gaps, mitigation actions, and owners."
+    },
+    {
+      "id": "analytical_transfer",
+      "title": "ANALYTICAL METHOD TRANSFER",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "Transfer Activity", "width_dxa": 4200},
+          {"id": "variable", "title": "Method / Samples", "width_dxa": 2700},
+          {"id": "result", "title": "Acceptance Criteria", "width_dxa": 3180}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate analytical method transfer activities per USP <1224>. Include: side-by-side testing by SU and RU of common samples, comparison of accuracy (mean difference within limits), precision (variance ratio), and specificity. Include typical acceptance limits for assay (within 2%), impurities, and potency (within 80-125% for bioassay)."
+    },
+    {
+      "id": "engineering_runs",
+      "title": "ENGINEERING RUNS",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe engineering runs. Typically 1-2 non-GMP demonstration batches at RU using trained personnel to verify process feasibility, identify issues, and refine procedures before PPQ. Define success criteria (CPPs within range, CQAs comparable to SU, reasonable yield)."
+    },
+    {
+      "id": "ppq_criteria",
+      "title": "PROCESS PERFORMANCE QUALIFICATION (PPQ) AT RU",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the PPQ requirements at Receiving Unit per FDA Process Validation Guidance. 3 consecutive successful commercial batches meeting CPPs, CQAs, and release specifications with enhanced sampling. Reference the separate PPQ protocol to be authored for execution."
+    },
+    {
+      "id": "regulatory_strategy",
+      "title": "REGULATORY STRATEGY",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the regulatory strategy for the transfer. Assess whether the transfer constitutes a change requiring regulatory notification/approval (CBE-0, CBE-30, PAS per FDA; Type IA/IB/II per EMA). Address site registration, establishment inspection requirements, and filing timelines."
+    },
+    {
+      "id": "acceptance_closeout",
+      "title": "ACCEPTANCE CRITERIA AND CLOSE-OUT",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "State overall acceptance criteria for a successful technology transfer. Typically: successful PPQ completion, passing analytical method transfer, comparability of quality attributes between SU and RU, all training complete, all qualifications complete, regulatory notification complete. Describe the close-out report contents and signatories."
+    },
+    {
+      "id": "references",
+      "title": "REFERENCES",
+      "type": "references",
+      "required": true,
+      "llm_prompt": "Generate references for technology transfer. Include: ICH Q10 Annex 2, WHO TRS 961 Annex 7 Technology Transfer, ISPE Good Practice Guide Technology Transfer, USP <1224> Transfer of Analytical Procedures, FDA Process Validation Guidance 2011, 21 CFR 211, EU GMP Annex 15."
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "Quality",
+    "regulatory_framework": "ICH Q10 Annex 2, WHO TRS 961 Annex 7, USP <1224>, ISPE Tech Transfer Guide"
+  }
+}

@@ -9,7 +9,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from .database import db, Account, Document, TrainingExample
+from .database import db, Account, Document, TrainingExample, ProtocolKnowledge
 from .prompts import GMP_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -191,6 +191,19 @@ class DataCollector:
                 "completion_snippet": ex.completion[:500],
             })
 
+        # Merge active protocol knowledge
+        protocol_knowledge = {}
+        active_knowledge = ProtocolKnowledge.query.filter_by(
+            account_id=account_id, is_active=True
+        ).all()
+        for k in active_knowledge:
+            if k.category not in protocol_knowledge:
+                protocol_knowledge[k.category] = []
+            try:
+                protocol_knowledge[k.category].append(json.loads(k.knowledge_json))
+            except json.JSONDecodeError:
+                pass
+
         return {
             "facility_name": account.facility_name,
             "department": account.department,
@@ -198,4 +211,5 @@ class DataCollector:
             "style_notes": account.style_notes,
             "reference_sops": json.loads(account.reference_sops_json or "[]"),
             "few_shot_examples": few_shot_examples,
+            "protocol_knowledge": protocol_knowledge,
         }

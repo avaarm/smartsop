@@ -1,12 +1,17 @@
-"""Flask Blueprint for account management, training data, and data export."""
+"""Flask Blueprint for account management, training data, protocol upload, and data export."""
 
 import json
 import logging
-from flask import Blueprint, request, jsonify, send_file
+import os
+from pathlib import Path
+from flask import Blueprint, request, jsonify, send_file, current_app
 
-from .database import db, Account, Document, TrainingExample
+from .database import db, Account, Document, TrainingExample, ProtocolUpload, ProtocolKnowledge
 from .data_collector import DataCollector
 from .training_export import TrainingExporter
+from .protocol_parser import ProtocolParser
+from .protocol_analyzer import ProtocolAnalyzer
+from .ollama_service import OllamaService
 
 logger = logging.getLogger(__name__)
 
@@ -229,3 +234,198 @@ def export_full(account_id):
         download_name=result["filename"],
         mimetype="application/json",
     )
+
+
+# ── Protocol Upload & Knowledge Extraction ──
+
+UPLOAD_DIR = Path(__file__).parent.parent.parent / "generated_docs" / "uploads"
+ALLOWED_EXTENSIONS = {"docx", "pdf"}
+MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
+
+parser = ProtocolParser()
+
+
+def _get_upload_dir(account_id: int) -> Path:
+    d = UPLOAD_DIR / str(account_id)
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+@account_bp.route("/<int:account_id>/protocols/upload", methods=["POST"])
+def upload_protocol(account_id):
+    """Upload a .docx or .pdf protocol and parse its structure."""
+    Account.query.get_or_404(account_id)
+
+    if "file" not in request.files:
+        return jsonify({"success": False, "error": "No file provided"}), 400
+
+    file = request.files["file"]
+    if not file.filename:
+        return jsonify({"success": False, "error": "Empty filename"}), 400
+
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+    if ext not in ALLOWED_EXTENSIONS:
+        return jsonify({"success": False, "error": f"File type .{ext} not supported. Use .docx or .pdf"}), 400
+
+    # Save file
+    upload_dir = _get_upload_dir(account_id)
+    safe_name = "".join(c if c.isalnum() or c in "-_." else "_" for c in file.filename)
+    file_path = upload_dir / safe_name
+    file.save(str(file_path))
+
+    # Check size
+    file_size = file_path.stat().st_size
+    if file_size > MAX_FILE_SIZE:
+        file_path.unlink()
+        return jsonify({"success": False, "error": "File too large (max 20 MB)"}), 400
+
+    # Create DB record
+    upload = ProtocolUpload(
+        account_id=account_id,
+        filename=file.filename,
+        file_type=ext,
+        file_path=str(file_path),
+        status="uploaded",
+    )
+    db.session.add(upload)
+    db.session.commit()
+
+    # Parse immediately (fast, no LLM)
+    try:
+        parsed = parser.parse(str(file_path), ext)
+        upload.raw_text = parsed.get("text", "")[:100000]  # Cap at 100k chars
+        upload.structure_json = json.dumps(parsed.get("sections", []))
+        upload.formatting_json = json.dumps(parsed.get("formatting", {}))
+        upload.status = "parsed"
+        db.session.commit()
+    except Exception as e:
+        upload.status = "error"
+        upload.error_message = str(e)
+        db.session.commit()
+        logger.error(f"Parse failed for {file.filename}: {e}")
+        return jsonify({"success": False, "error": f"Parse failed: {str(e)}"}), 500
+
+    return jsonify({
+        "success": True,
+        "upload": upload.to_dict(),
+        "metadata": parsed.get("metadata", {}),
+    }), 201
+
+
+@account_bp.route("/<int:account_id>/protocols/<int:upload_id>/analyze", methods=["POST"])
+def analyze_protocol(account_id, upload_id):
+    """Trigger LLM analysis on a parsed protocol to extract knowledge."""
+    upload = ProtocolUpload.query.get_or_404(upload_id)
+    if upload.account_id != account_id:
+        return jsonify({"success": False, "error": "Upload not found"}), 404
+    if upload.status not in ("parsed", "complete"):
+        return jsonify({"success": False, "error": f"Upload status is '{upload.status}', must be 'parsed'"}), 400
+
+    ollama_url = current_app.config.get("OLLAMA_HOST", "http://localhost:11434")
+    ollama = OllamaService(base_url=ollama_url)
+    analyzer = ProtocolAnalyzer(ollama)
+
+    upload.status = "analyzing"
+    db.session.commit()
+
+    try:
+        parsed_data = {
+            "text": upload.raw_text,
+            "sections": json.loads(upload.structure_json or "[]"),
+            "formatting": json.loads(upload.formatting_json or "{}"),
+        }
+
+        # Clear previous knowledge from this upload
+        ProtocolKnowledge.query.filter_by(upload_id=upload_id).delete()
+        db.session.commit()
+
+        results = analyzer.analyze(parsed_data)
+
+        for item in results:
+            knowledge = ProtocolKnowledge(
+                account_id=account_id,
+                upload_id=upload_id,
+                category=item["category"],
+                knowledge_json=item["knowledge_json"],
+                summary=item["summary"],
+                confidence=item.get("confidence"),
+                is_active=True,
+            )
+            db.session.add(knowledge)
+
+        upload.status = "complete"
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "upload": upload.to_dict(),
+        })
+
+    except Exception as e:
+        upload.status = "error"
+        upload.error_message = str(e)
+        db.session.commit()
+        logger.error(f"Analysis failed for upload {upload_id}: {e}")
+        return jsonify({"success": False, "error": f"Analysis failed: {str(e)}"}), 500
+
+
+@account_bp.route("/<int:account_id>/protocols", methods=["GET"])
+def list_protocols(account_id):
+    """List all protocol uploads for an account."""
+    uploads = ProtocolUpload.query.filter_by(account_id=account_id).order_by(
+        ProtocolUpload.created_at.desc()
+    ).all()
+    return jsonify({"success": True, "uploads": [u.to_dict() for u in uploads]})
+
+
+@account_bp.route("/<int:account_id>/protocols/<int:upload_id>", methods=["GET"])
+def get_protocol(account_id, upload_id):
+    """Get a single protocol upload with its knowledge."""
+    upload = ProtocolUpload.query.get_or_404(upload_id)
+    if upload.account_id != account_id:
+        return jsonify({"success": False, "error": "Not found"}), 404
+    return jsonify({"success": True, "upload": upload.to_dict()})
+
+
+@account_bp.route("/<int:account_id>/protocols/knowledge", methods=["GET"])
+def list_protocol_knowledge(account_id):
+    """Get all active knowledge for an account, merged across uploads."""
+    items = ProtocolKnowledge.query.filter_by(
+        account_id=account_id, is_active=True
+    ).all()
+    return jsonify({"success": True, "knowledge": [k.to_dict() for k in items]})
+
+
+@account_bp.route("/<int:account_id>/protocols/knowledge/<int:knowledge_id>", methods=["PUT"])
+def update_knowledge(account_id, knowledge_id):
+    """Toggle active state or edit knowledge content."""
+    knowledge = ProtocolKnowledge.query.get_or_404(knowledge_id)
+    if knowledge.account_id != account_id:
+        return jsonify({"success": False, "error": "Not found"}), 404
+
+    data = request.get_json()
+    if "is_active" in data:
+        knowledge.is_active = data["is_active"]
+    if "knowledge_json" in data:
+        knowledge.knowledge_json = data["knowledge_json"]
+    if "summary" in data:
+        knowledge.summary = data["summary"]
+
+    db.session.commit()
+    return jsonify({"success": True, "knowledge": knowledge.to_dict()})
+
+
+@account_bp.route("/<int:account_id>/protocols/<int:upload_id>", methods=["DELETE"])
+def delete_protocol(account_id, upload_id):
+    """Delete a protocol upload and its knowledge."""
+    upload = ProtocolUpload.query.get_or_404(upload_id)
+    if upload.account_id != account_id:
+        return jsonify({"success": False, "error": "Not found"}), 404
+
+    # Remove file
+    if upload.file_path and os.path.exists(upload.file_path):
+        os.unlink(upload.file_path)
+
+    db.session.delete(upload)
+    db.session.commit()
+    return jsonify({"success": True})

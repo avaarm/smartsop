@@ -91,26 +91,58 @@ export class DocumentBuilderComponent implements OnInit {
     });
   }
 
-  // Group templates into the record categories the user wants:
-  // Records (batch records, reports, forms, validations, qualifications) and
-  // Procedures (SOPs + deviation/change forms). The card UI renders one
-  // group per category heading.
-  private readonly categoryOrder: { key: string; label: string; description: string }[] = [
-    { key: 'batch_record',  label: 'Batch Records',   description: 'Executed GMP manufacturing records' },
-    { key: 'validation',    label: 'Validations',     description: 'IQ / OQ / PQ protocols and reports' },
-    { key: 'qualification', label: 'Qualifications',  description: 'Equipment and facility qualification' },
-    { key: 'form',          label: 'Forms',           description: 'Deviation, change control, and quality forms' },
-    { key: 'report',        label: 'Reports',         description: 'Investigations, annual reviews, and summaries' },
-    { key: 'sop',           label: 'Procedures (SOP)', description: 'Standard operating procedures' },
+  // Group templates into high-level categories that span the full lifecycle
+  // of a cell therapy / biotech product: Manufacturing (GMP), Clinical,
+  // Regulatory / IND, CMC, Quality, and Validation. Each top-level group
+  // shows the user which doc_types roll up under it.
+  private readonly groupOrder: { key: string; label: string; description: string; docTypes: string[] }[] = [
+    {
+      key: 'manufacturing',
+      label: 'Manufacturing (GMP)',
+      description: 'Batch records, SOPs, deviations, change control - the day-to-day production record',
+      docTypes: ['batch_record', 'sop', 'form', 'report', 'qualification'],
+    },
+    {
+      key: 'clinical',
+      label: 'Clinical Trial',
+      description: 'Protocols, brochures, consent, and CRFs for FDA-compliant clinical investigation',
+      docTypes: ['clinical_protocol', 'investigator_brochure', 'informed_consent', 'crf'],
+    },
+    {
+      key: 'regulatory',
+      label: 'Regulatory / IND',
+      description: 'IND application forms and regulatory correspondence per 21 CFR 312',
+      docTypes: ['ind_form', 'ind_cover_letter'],
+    },
+    {
+      key: 'cmc',
+      label: 'CMC (Module 3)',
+      description: 'Drug substance and drug product quality documentation per ICH CTD',
+      docTypes: ['cmc_drug_substance', 'cmc_drug_product'],
+    },
+    {
+      key: 'quality',
+      label: 'Quality Systems',
+      description: 'Risk assessments, quality agreements, and tech transfer per ICH Q9 / Q10',
+      docTypes: ['risk_assessment', 'quality_agreement', 'tech_transfer'],
+    },
+    {
+      key: 'validation',
+      label: 'Validation',
+      description: 'Process, cleaning, method, and stability validation protocols',
+      docTypes: ['validation', 'process_validation', 'cleaning_validation', 'method_validation', 'stability_protocol'],
+    },
   ];
 
   get templateCategories(): { key: string; label: string; description: string; templates: GMPTemplate[] }[] {
-    return this.categoryOrder
-      .map(cat => ({
-        ...cat,
-        templates: this.templates.filter(t => t.doc_type === cat.key),
+    return this.groupOrder
+      .map(grp => ({
+        key: grp.key,
+        label: grp.label,
+        description: grp.description,
+        templates: this.templates.filter(t => grp.docTypes.includes(t.doc_type)),
       }))
-      .filter(cat => cat.templates.length > 0);
+      .filter(grp => grp.templates.length > 0);
   }
 
   checkOllamaStatus(): void {

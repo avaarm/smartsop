@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 
 class DocumentType(str, Enum):
+    # Manufacturing / GMP
     BATCH_RECORD = "batch_record"
     VALIDATION = "validation"
     QUALIFICATION = "qualification"
@@ -16,6 +17,25 @@ class DocumentType(str, Enum):
     DEVIATION_REPORT = "deviation_report"
     CAPA = "capa"
     CHANGE_CONTROL = "change_control"
+    # Clinical
+    CLINICAL_PROTOCOL = "clinical_protocol"
+    INVESTIGATOR_BROCHURE = "investigator_brochure"
+    INFORMED_CONSENT = "informed_consent"
+    CRF = "crf"
+    # Regulatory / IND
+    IND_FORM = "ind_form"
+    IND_COVER_LETTER = "ind_cover_letter"
+    # CMC
+    CMC_DRUG_SUBSTANCE = "cmc_drug_substance"
+    CMC_DRUG_PRODUCT = "cmc_drug_product"
+    # Quality / Validation
+    RISK_ASSESSMENT = "risk_assessment"
+    METHOD_VALIDATION = "method_validation"
+    STABILITY_PROTOCOL = "stability_protocol"
+    PROCESS_VALIDATION = "process_validation"
+    CLEANING_VALIDATION = "cleaning_validation"
+    QUALITY_AGREEMENT = "quality_agreement"
+    TECH_TRANSFER = "tech_transfer"
 
 
 class Orientation(str, Enum):

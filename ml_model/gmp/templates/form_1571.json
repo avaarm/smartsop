@@ -1,0 +1,202 @@
+{
+  "id": "form_1571",
+  "name": "FDA Form 1571 - IND Application",
+  "doc_type": "ind_form",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1080,
+    "right": 1080,
+    "bottom": 1080,
+    "left": 1080,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 3,
+    "column_widths": [3000, 4080, 3000],
+    "total_width": 10080,
+    "row_height_dxa": 288,
+    "rows": 2,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "FDA Form 1571 - Investigational New Drug Application (IND)",
+    "organization": "",
+    "font_size_half_pt": 14,
+    "bold": false,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "sponsor_info",
+      "title": "1. NAME OF SPONSOR",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "Sponsor Name", "value": ""},
+          {"label": "Address", "value": ""},
+          {"label": "Telephone Number", "value": ""},
+          {"label": "Email Address", "value": ""}
+        ]
+      }
+    },
+    {
+      "id": "date_of_submission",
+      "title": "2. DATE OF SUBMISSION",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "Submission Date", "value": ""},
+          {"label": "Time Zone", "value": ""}
+        ]
+      }
+    },
+    {
+      "id": "drug_product",
+      "title": "3. NAME(S) OF DRUG (Include all available names)",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "Established/Generic Name", "value": ""},
+          {"label": "Proprietary/Brand Name", "value": ""},
+          {"label": "Code Name", "value": ""},
+          {"label": "Chemical Name or Description", "value": ""}
+        ]
+      }
+    },
+    {
+      "id": "ind_number",
+      "title": "4. IND NUMBER (If previously assigned)",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "IND Number", "value": ""}
+        ]
+      }
+    },
+    {
+      "id": "indication",
+      "title": "5. INDICATION(S)",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "List the indication(s) covered by this IND submission for {product_name}. Be specific about disease, stage, prior therapy requirements, and any population restrictions."
+    },
+    {
+      "id": "phase_of_investigation",
+      "title": "6. PHASE(S) OF CLINICAL INVESTIGATION TO BE CONDUCTED",
+      "type": "checklist",
+      "required": true,
+      "default_data": {
+        "items": [
+          {"text": "Phase 1", "checked": false},
+          {"text": "Phase 2", "checked": false},
+          {"text": "Phase 3", "checked": false},
+          {"text": "Other (specify)", "checked": false}
+        ]
+      }
+    },
+    {
+      "id": "serial_number",
+      "title": "7. SERIAL NUMBER",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "Serial Number", "value": "0000"},
+          {"label": "Note", "value": "Serial number 0000 is reserved for original IND submission"}
+        ]
+      }
+    },
+    {
+      "id": "contents_of_application",
+      "title": "8. THIS SUBMISSION CONTAINS THE FOLLOWING",
+      "type": "checklist",
+      "required": true,
+      "default_data": {
+        "items": [
+          {"text": "Initial Investigational New Drug Application (IND)", "checked": false},
+          {"text": "Response to Clinical Hold", "checked": false},
+          {"text": "General Correspondence", "checked": false},
+          {"text": "Protocol Amendment(s): New Protocol", "checked": false},
+          {"text": "Protocol Amendment(s): Change in Protocol", "checked": false},
+          {"text": "Protocol Amendment(s): New Investigator", "checked": false},
+          {"text": "Information Amendment(s): Chemistry/Microbiology", "checked": false},
+          {"text": "Information Amendment(s): Pharmacology/Toxicology", "checked": false},
+          {"text": "Information Amendment(s): Clinical", "checked": false},
+          {"text": "IND Safety Report(s): Initial Written Report", "checked": false},
+          {"text": "IND Safety Report(s): Follow-up to a Written Report", "checked": false},
+          {"text": "IND Annual Report", "checked": false},
+          {"text": "Request for Reinstatement of IND", "checked": false},
+          {"text": "Request for Inactive Status", "checked": false},
+          {"text": "Request for Withdrawal", "checked": false},
+          {"text": "Meeting Request", "checked": false},
+          {"text": "Meeting Background Information", "checked": false},
+          {"text": "Other (Specify)", "checked": false}
+        ]
+      }
+    },
+    {
+      "id": "justification",
+      "title": "9. JUSTIFICATION FOR SUBMISSION (If applicable)",
+      "type": "free_text",
+      "required": false,
+      "llm_prompt": "Write a brief justification for this IND submission for {product_name}. Summarize the rationale for clinical investigation, unmet medical need, preclinical support for first-in-human study, and fit within any applicable expedited programs (Breakthrough, Fast Track, RMAT, Orphan)."
+    },
+    {
+      "id": "table_of_contents",
+      "title": "10. LIST OF DOCUMENTS SUBMITTED (eCTD Table of Contents)",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Generate the eCTD Table of Contents for an initial IND submission for {product_name}. Organize by Module: Module 1 (Administrative - cover letter, Form 1571, Form 1572, financial disclosure, environmental assessment, Letters of Authorization), Module 2 (Common Technical Document summaries), Module 3 (Quality - drug substance 3.2.S, drug product 3.2.P), Module 4 (Nonclinical Study Reports), Module 5 (Clinical Study Reports and protocol)."
+    },
+    {
+      "id": "commitments",
+      "title": "11. SPONSOR COMMITMENTS (Required for Initial IND)",
+      "type": "checklist",
+      "required": true,
+      "default_data": {
+        "items": [
+          {"text": "A Phase 1 study will not begin until 30 days after FDA receives the IND unless FDA authorizes earlier", "checked": false},
+          {"text": "An IRB will review and approve each study in the IND before study initiation", "checked": false},
+          {"text": "I agree to conduct investigation in accordance with all applicable regulatory requirements", "checked": false},
+          {"text": "I agree to notify FDA of any serious unexpected adverse reactions per 21 CFR 312.32", "checked": false},
+          {"text": "I agree to submit annual reports per 21 CFR 312.33", "checked": false},
+          {"text": "I understand failure to comply may result in termination of the investigation", "checked": false}
+        ]
+      }
+    },
+    {
+      "id": "signatures",
+      "title": "12. NAME AND TITLE OF PERSON RESPONSIBLE FOR MONITORING",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Monitor Name and Title", "name": "", "date": ""},
+          {"role": "Medical Officer Responsible for Review (Name and Title)", "name": "", "date": ""},
+          {"role": "Sponsor Signature", "name": "", "date": ""}
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "Regulatory",
+    "regulatory_framework": "21 CFR 312.23, FDA Form 1571 (OMB 0910-0014)",
+    "note": "This template mirrors the information required on FDA Form 1571. Sponsors must submit the actual FDA form as part of the IND application."
+  }
+}

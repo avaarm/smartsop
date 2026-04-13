@@ -1,0 +1,152 @@
+{
+  "id": "stability_protocol",
+  "name": "Stability Study Protocol",
+  "doc_type": "stability_protocol",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1440,
+    "right": 1080,
+    "bottom": 1080,
+    "left": 1080,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 6,
+    "column_widths": [650, 1200, 3800, 1800, 1200, 1430],
+    "total_width": 10080,
+    "row_height_dxa": 288,
+    "rows": 3,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "CONFIDENTIAL - Stability Program",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": true,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "approval_block",
+      "title": "PROTOCOL APPROVAL",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Stability Coordinator", "name": "", "date": ""},
+          {"role": "QC Manager", "name": "", "date": ""},
+          {"role": "QA Manager", "name": "", "date": ""},
+          {"role": "Development / CMC", "name": "", "date": ""}
+        ]
+      }
+    },
+    {
+      "id": "purpose_scope",
+      "title": "PURPOSE AND SCOPE",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write Purpose and Scope for a stability study on {product_name}. State objectives (establish shelf-life/retest period, support storage conditions, support labeling, detect degradation products), the dosage form, packaging, and number of batches. Distinguish primary (registration) from supportive stability. Reference ICH Q1A(R2) or Q5C. {description}"
+    },
+    {
+      "id": "study_design",
+      "title": "STUDY DESIGN",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the study design for {product_name} stability. Include: number of batches (typically 3 for registration), batch representativeness (pilot or commercial scale), container closure, orientation (upright/inverted), bracketing/matrixing if applicable (ICH Q1D), placebo if applicable."
+    },
+    {
+      "id": "storage_conditions",
+      "title": "STORAGE CONDITIONS",
+      "type": "table",
+      "required": true,
+      "llm_prompt": "Generate the storage conditions table per ICH Q1A(R2). Columns: Condition | Temperature | Relative Humidity | Purpose | Duration. Include long-term, intermediate (if needed), accelerated, photostability (Q1B), and any cell-therapy-specific ultra-low conditions (-80°C, LN2 vapor phase, -150°C).",
+      "default_data": {
+        "rows": [
+          {"label": "Long-term", "value": "25°C / 60% RH - 12/24/36 months"},
+          {"label": "Intermediate", "value": "30°C / 65% RH - 12 months"},
+          {"label": "Accelerated", "value": "40°C / 75% RH - 6 months"},
+          {"label": "Refrigerated", "value": "5°C ± 3°C - per storage recommendation"},
+          {"label": "Frozen", "value": "-20°C or lower - per storage recommendation"},
+          {"label": "Photostability (ICH Q1B)", "value": "1.2M lux-hr visible + 200 W·hr/m² UV"},
+          {"label": "Shipping simulation", "value": "Per anticipated shipping conditions"}
+        ]
+      }
+    },
+    {
+      "id": "test_intervals",
+      "title": "TESTING INTERVALS",
+      "type": "table",
+      "required": true,
+      "llm_prompt": "Generate the testing intervals table. Columns: Condition | T=0 | 1mo | 3mo | 6mo | 9mo | 12mo | 18mo | 24mo | 36mo. Mark cells with X for testing time points per ICH Q1A(R2) and reduced schedules for accelerated conditions.",
+      "default_data": {
+        "rows": [
+          {"label": "Long-term", "value": "0, 3, 6, 9, 12, 18, 24, 36 months"},
+          {"label": "Intermediate", "value": "0, 6, 9, 12 months"},
+          {"label": "Accelerated", "value": "0, 3, 6 months"}
+        ]
+      }
+    },
+    {
+      "id": "test_parameters",
+      "title": "TEST PARAMETERS AND ACCEPTANCE CRITERIA",
+      "type": "table",
+      "required": true,
+      "llm_prompt": "Generate the stability test parameters table for {product_name}. Columns: Test | Method (SOP/USP) | Acceptance Criteria | Stability Indicating (Y/N). Include: Appearance, Assay/Potency, Related Substances/Impurities, pH, Dissolution (solid dosage), Water Content, Particulate Matter, Microbial/Sterility, Container Closure Integrity, and product-specific attributes.",
+      "default_data": {
+        "rows": [
+          {"label": "Appearance", "value": "Visual / meets release spec"},
+          {"label": "Assay", "value": "HPLC / 95-105% of label"},
+          {"label": "Impurities", "value": "HPLC / report per ICH Q3B(R2)"},
+          {"label": "Potency (bio)", "value": "Bioassay / within spec"},
+          {"label": "pH", "value": "USP <791> / within spec"},
+          {"label": "Sterility", "value": "USP <71> / no growth"},
+          {"label": "Container Integrity", "value": "Per USP <1207> method"}
+        ]
+      }
+    },
+    {
+      "id": "sample_management",
+      "title": "SAMPLE MANAGEMENT",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe sample management for the stability program. Include: sample quantity calculation, labeling, inventory tracking, chamber assignment, chamber monitoring (temperature/humidity continuous monitoring with alarms), chamber excursion handling, sample retrieval and testing workflow."
+    },
+    {
+      "id": "data_analysis",
+      "title": "DATA ANALYSIS AND SHELF-LIFE DETERMINATION",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe data analysis and shelf-life determination. Reference ICH Q1E: statistical analysis of quantitative data (ANCOVA with poolability testing), extrapolation rules, graphical evaluation, shelf-life proposal as lower 95% confidence bound where assay intersects specification. Describe how significant change is determined (e.g., 5% assay loss, specification failure, pH shift)."
+    },
+    {
+      "id": "out_of_spec",
+      "title": "HANDLING OF OUT-OF-SPECIFICATION RESULTS",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe how OOS and OOT results in stability will be handled. Reference the OOS SOP, root cause investigation approach, potential retesting, impact on shelf-life, notification to QA and regulatory, and CAPA."
+    },
+    {
+      "id": "references",
+      "title": "REFERENCES",
+      "type": "references",
+      "required": true,
+      "llm_prompt": "Generate references for a stability protocol. Include: ICH Q1A(R2), Q1B, Q1C, Q1D, Q1E, Q5C (biologics), Q3B(R2) impurities, USP <1150>, 21 CFR 211.166, 21 CFR 211.170, FDA stability guidance, and relevant company SOPs."
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "Validation",
+    "regulatory_framework": "ICH Q1A(R2), ICH Q1B-E, ICH Q5C, 21 CFR 211.166, 21 CFR 211.170"
+  }
+}

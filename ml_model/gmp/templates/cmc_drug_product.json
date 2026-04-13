@@ -1,0 +1,151 @@
+{
+  "id": "cmc_drug_product",
+  "name": "CMC Module 3.2.P - Drug Product",
+  "doc_type": "cmc_drug_product",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1440,
+    "right": 1080,
+    "bottom": 1080,
+    "left": 1080,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 6,
+    "column_widths": [650, 1200, 3800, 1800, 1200, 1430],
+    "total_width": 10080,
+    "row_height_dxa": 288,
+    "rows": 3,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "eCTD Module 3.2.P - Drug Product",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": true,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "p1_description_composition",
+      "title": "3.2.P.1 DESCRIPTION AND COMPOSITION OF THE DRUG PRODUCT",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write Section 3.2.P.1 for {product_name}. Include: description of dosage form (e.g., solution for infusion, frozen cell suspension, lyophilized powder for reconstitution), container/closure, composition table showing each component (drug substance + excipients) with quantity per unit and function per component, reference standards for excipients (USP/NF, Ph.Eur., JP), description of accompanying diluent/reconstitution solution if applicable. {description}"
+    },
+    {
+      "id": "p1_composition_table",
+      "title": "3.2.P.1 Composition Table",
+      "type": "table",
+      "required": true,
+      "llm_prompt": "Generate a quantitative composition table for drug product {product_name}. Columns: Component | Quality Standard (USP/NF/Ph.Eur./in-house) | Function | Amount per Unit | Amount per Batch. Rows for drug substance and each excipient.",
+      "default_data": {
+        "rows": [
+          {"label": "Drug Substance", "value": "Concentration / Amount per dose"},
+          {"label": "Excipient 1", "value": "Amount + Function"},
+          {"label": "Excipient 2", "value": "Amount + Function"},
+          {"label": "Buffer", "value": "Amount + Function"}
+        ]
+      }
+    },
+    {
+      "id": "p2_development",
+      "title": "3.2.P.2 PHARMACEUTICAL DEVELOPMENT",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write Section 3.2.P.2 Pharmaceutical Development for {product_name} per ICH Q8(R2). Include subsections: 3.2.P.2.1 Components of the Drug Product (drug substance compatibility, excipient selection rationale); 3.2.P.2.2 Drug Product (formulation development, overages, physicochemical/biological properties); 3.2.P.2.3 Manufacturing Process Development (process selection rationale, critical process parameters, scale-up); 3.2.P.2.4 Container Closure System (compatibility studies, selection rationale); 3.2.P.2.5 Microbiological Attributes (sterility, preservative efficacy if applicable); 3.2.P.2.6 Compatibility (diluents, infusion sets, in-use stability)."
+    },
+    {
+      "id": "p3_manufacture",
+      "title": "3.2.P.3 MANUFACTURE",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write Section 3.2.P.3 Manufacture for drug product {product_name}. Include: 3.2.P.3.1 Manufacturer(s) (name, address, role including contract manufacturers); 3.2.P.3.2 Batch Formula (quantity per batch of each component); 3.2.P.3.3 Description of Manufacturing Process and Process Controls (narrative, flow diagram, equipment, environmental conditions, hold times, yields); 3.2.P.3.4 Controls of Critical Steps and Intermediates; 3.2.P.3.5 Process Validation/Evaluation (appropriate to clinical phase; typically limited for Phase 1)."
+    },
+    {
+      "id": "p3_process_flow",
+      "title": "3.2.P.3.3 Drug Product Manufacturing Process",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "Process Step", "width_dxa": 4200},
+          {"id": "variable", "title": "Critical Process Parameter", "width_dxa": 2700},
+          {"id": "result", "title": "In-Process Control / Acceptance", "width_dxa": 3180}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate the drug product manufacturing process for {product_name}. List each unit operation: compounding/formulation, sterile filtration, aseptic fill, inspection, capping, labeling, packaging. Include CPPs (temperature, time, filter integrity, fill volume) and IPCs (bioburden, endotoxin, fill weight, container integrity, visual inspection)."
+    },
+    {
+      "id": "p4_excipient_control",
+      "title": "3.2.P.4 CONTROL OF EXCIPIENTS",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write Section 3.2.P.4 Control of Excipients for {product_name}. Include: 3.2.P.4.1 Specifications (compendial references or in-house); 3.2.P.4.2 Analytical Procedures (compendial verification or validated methods); 3.2.P.4.3 Validation; 3.2.P.4.4 Justification of Specifications; 3.2.P.4.5 Excipients of Human or Animal Origin (TSE/BSE status, viral safety); 3.2.P.4.6 Novel Excipients (if any)."
+    },
+    {
+      "id": "p5_drug_product_controls",
+      "title": "3.2.P.5 CONTROL OF DRUG PRODUCT",
+      "type": "table",
+      "required": true,
+      "llm_prompt": "Generate drug product specification for {product_name}. Columns: Test | Method | Acceptance Criteria. Include: Identity, Appearance, pH, Osmolality, Particulate Matter (USP <788>), Content/Strength, Potency, Purity, Impurities, Extractable Volume, Sterility (USP <71>), Endotoxin (USP <85>), Container Closure Integrity, Mycoplasma (if applicable), Viability and cell count (cell therapy).",
+      "default_data": {
+        "rows": [
+          {"label": "Appearance", "value": "Visual inspection"},
+          {"label": "pH", "value": "Potentiometry, spec range"},
+          {"label": "Potency", "value": "Validated bioassay"},
+          {"label": "Sterility", "value": "USP <71>"},
+          {"label": "Endotoxin", "value": "LAL USP <85>"},
+          {"label": "Particulate Matter", "value": "USP <788>"},
+          {"label": "Fill Volume", "value": "Gravimetric"}
+        ]
+      }
+    },
+    {
+      "id": "p6_reference_standards",
+      "title": "3.2.P.6 REFERENCE STANDARDS OR MATERIALS",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe drug product reference standards and materials for {product_name}. Reference Section 3.2.S.5 if drug substance reference standards are used for DP testing."
+    },
+    {
+      "id": "p7_container_closure",
+      "title": "3.2.P.7 CONTAINER CLOSURE SYSTEM",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the drug product container closure system for {product_name}. Include: primary container (vial, syringe, bag, cryobag) with material of construction and manufacturer, closure (stopper, plunger) with material, secondary packaging, component specifications, suitability for intended use (protection, compatibility, safety, performance), USP/Ph.Eur. container compliance, extractables and leachables strategy per USP <1663>/<1664>."
+    },
+    {
+      "id": "p8_stability",
+      "title": "3.2.P.8 STABILITY",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write Section 3.2.P.8 Stability for drug product {product_name}. Include: 3.2.P.8.1 Stability Summary and Conclusions (proposed shelf life, storage conditions, in-use stability after reconstitution/thaw); 3.2.P.8.2 Post-approval Stability Protocol and Commitment; 3.2.P.8.3 Stability Data (long-term, accelerated, stressed conditions, freeze/thaw, photostability per ICH Q1B, shipping simulation)."
+    },
+    {
+      "id": "references",
+      "title": "REFERENCES",
+      "type": "references",
+      "required": true,
+      "llm_prompt": "Generate references for the CMC drug product module. Include ICH Q1A(R2), Q1B, Q1D, Q1E, Q3B(R2), Q5C, Q6A, Q6B, Q8(R2), Q9, Q10, Q11, 21 CFR 211, 21 CFR 610, 21 CFR 1271, USP/NF, Ph.Eur., FDA guidance documents for sterile drug products and cell therapy manufacturing."
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "CMC",
+    "regulatory_framework": "ICH M4Q CTD, ICH Q1A-E, ICH Q6A/B, ICH Q8(R2), ICH Q9, ICH Q10, ICH Q11, 21 CFR 211, 21 CFR 610"
+  }
+}

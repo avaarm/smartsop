@@ -1,0 +1,193 @@
+{
+  "id": "clinical_protocol",
+  "name": "Clinical Trial Protocol (Phase 1)",
+  "doc_type": "clinical_protocol",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1440,
+    "right": 1080,
+    "bottom": 1080,
+    "left": 1080,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 6,
+    "column_widths": [650, 1200, 3800, 1800, 1200, 1430],
+    "total_width": 10080,
+    "row_height_dxa": 288,
+    "rows": 3,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "CONFIDENTIAL - Sponsor Proprietary",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": true,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "protocol_summary",
+      "title": "PROTOCOL SUMMARY",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write a protocol summary for a Phase 1 clinical trial of {product_name} for {process_type}. Include: study title, IND number (placeholder), sponsor, protocol number, version, phase, indication, and a 200-word synopsis covering objectives, design, population, treatment, duration, and primary endpoints. Follow ICH E6(R3) GCP and 21 CFR 312.23(a)(6) structure. {description}"
+    },
+    {
+      "id": "approval_block",
+      "title": "PROTOCOL APPROVAL",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Sponsor Medical Director", "name": "", "date": ""},
+          {"role": "Principal Investigator", "name": "", "date": ""},
+          {"role": "Regulatory Affairs", "name": "", "date": ""},
+          {"role": "Biostatistics", "name": "", "date": ""},
+          {"role": "Pharmacovigilance", "name": "", "date": ""}
+        ]
+      }
+    },
+    {
+      "id": "background_rationale",
+      "title": "BACKGROUND AND SCIENTIFIC RATIONALE",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the Background and Scientific Rationale section for a Phase 1 clinical trial of {product_name}. Cover: (1) disease background and unmet need, (2) mechanism of action, (3) preclinical pharmacology/efficacy, (4) preclinical safety/toxicology, (5) rationale for first-in-human dose, (6) risk/benefit assessment. Reference the Investigator Brochure. Cite relevant literature. {description}"
+    },
+    {
+      "id": "objectives_endpoints",
+      "title": "STUDY OBJECTIVES AND ENDPOINTS",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Define primary, secondary, and exploratory objectives and their corresponding endpoints for a Phase 1 trial of {product_name}. Primary should focus on safety/tolerability and MTD/RP2D. Secondary should include PK, preliminary efficacy, immunogenicity. Format as a table: Objective | Endpoint | Analysis Method."
+    },
+    {
+      "id": "study_design",
+      "title": "STUDY DESIGN",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the overall study design for a Phase 1 trial of {product_name}. Include: design type (e.g., 3+3 dose escalation, accelerated titration, BOIN, mTPI-2), number of dose levels, cohort size, DLT window, dose escalation rules, stopping criteria, expansion cohorts if applicable. Include a schematic description. {description}"
+    },
+    {
+      "id": "study_population",
+      "title": "STUDY POPULATION AND ELIGIBILITY",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the eligibility criteria for a Phase 1 trial of {product_name}. Include: (1) target population description, (2) inclusion criteria (age, diagnosis, prior therapy, performance status, organ function labs with thresholds, contraception), (3) exclusion criteria (comorbidities, prior therapies, active infections, autoimmune disease, concurrent malignancies). Minimum 12 inclusion and 15 exclusion criteria. {description}"
+    },
+    {
+      "id": "investigational_product",
+      "title": "INVESTIGATIONAL PRODUCT",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the investigational product {product_name}. Include: formulation, dosage form, strength, route of administration, packaging/labeling per 21 CFR 312.6, storage and handling, stability, preparation instructions, accountability procedures, blinding/randomization if applicable."
+    },
+    {
+      "id": "treatment_plan",
+      "title": "TREATMENT PLAN AND DOSE MODIFICATIONS",
+      "type": "step_procedure",
+      "required": true,
+      "step_config": {
+        "columns": [
+          {"id": "instruction", "title": "Treatment Step / Visit", "width_dxa": 4800},
+          {"id": "variable", "title": "Timing", "width_dxa": 2400},
+          {"id": "result", "title": "Dose / Assessment", "width_dxa": 2880}
+        ],
+        "header_fill": "BFBFBF",
+        "label_fill": "F2F2F2"
+      },
+      "llm_prompt": "Generate the treatment plan and dose modification rules for {product_name}. Include: pre-treatment preparation, dosing schedule, dose modification criteria (hematologic, non-hematologic toxicities), dose delay rules, discontinuation criteria, management of infusion reactions, management of CRS/ICANS if cell therapy."
+    },
+    {
+      "id": "schedule_of_assessments",
+      "title": "SCHEDULE OF ASSESSMENTS",
+      "type": "table",
+      "required": true,
+      "llm_prompt": "Create a Schedule of Assessments (SOA) table for a Phase 1 trial of {product_name}. Columns: Assessment | Screening | Day 1 | Week 1 | Week 2 | Week 4 | End of Treatment | Follow-up. Rows: Informed consent, demographics, medical history, physical exam, vital signs, ECOG, labs (CBC, CMP, coagulation), ECG, imaging, PK sampling, biomarkers, AE/SAE assessment, concomitant meds review.",
+      "default_data": {
+        "rows": [
+          {"label": "Informed Consent", "value": "Prior to any procedure"},
+          {"label": "Medical History", "value": "Screening"},
+          {"label": "Physical Examination", "value": "Each visit"},
+          {"label": "Vital Signs", "value": "Each visit"},
+          {"label": "ECOG Performance Status", "value": "Each visit"},
+          {"label": "Hematology Labs", "value": "Each visit"},
+          {"label": "Chemistry Labs", "value": "Each visit"},
+          {"label": "12-lead ECG", "value": "Screening, D1, EOT"},
+          {"label": "Pharmacokinetics", "value": "Per PK schedule"},
+          {"label": "Adverse Events", "value": "Continuous"}
+        ]
+      }
+    },
+    {
+      "id": "safety_monitoring",
+      "title": "SAFETY ASSESSMENTS AND REPORTING",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the Safety Assessments and Reporting section. Include: definitions of AE, SAE, SUSAR per ICH E2A; NCI CTCAE v5.0 grading; SAE reporting timelines (24hr to sponsor, 7/15 day IND safety reports per 21 CFR 312.32); Data and Safety Monitoring Board (DSMB) composition and charter summary; stopping rules; pregnancy reporting; independent safety review cadence."
+    },
+    {
+      "id": "statistical_analysis",
+      "title": "STATISTICAL ANALYSIS PLAN (SUMMARY)",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write a Statistical Analysis Plan summary for a Phase 1 trial. Include: sample size justification (e.g., 3+3 design enrolls 3-18 subjects per dose level), analysis populations (Safety, DLT Evaluable, PK, ITT), descriptive statistics, handling of missing data, interim analyses, definitions of MTD/RP2D/DLT."
+    },
+    {
+      "id": "ethics_consent",
+      "title": "ETHICS AND INFORMED CONSENT",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the Ethics and Informed Consent section. Reference ICH E6(R3), Declaration of Helsinki, 21 CFR 50, 21 CFR 56, 45 CFR 46. Describe IRB/IEC review and approval process, informed consent process, subject confidentiality (HIPAA), data protection, withdrawal procedures, vulnerable populations."
+    },
+    {
+      "id": "data_management",
+      "title": "DATA MANAGEMENT AND QUALITY ASSURANCE",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe data management and quality assurance procedures. Include: electronic CRF (eCRF) system (21 CFR Part 11 compliant), source documents, monitoring plan (risk-based per ICH E6 R3), audits, query management, database lock procedures."
+    },
+    {
+      "id": "references",
+      "title": "REFERENCES",
+      "type": "references",
+      "required": true,
+      "llm_prompt": "Generate a references list for a Phase 1 clinical trial protocol on {product_name}. Include ICH E6(R3), ICH E2A, ICH E9, 21 CFR 312, 21 CFR 50, 21 CFR 56, CTCAE v5.0, Declaration of Helsinki, and relevant scientific literature."
+    },
+    {
+      "id": "attachments",
+      "title": "APPENDICES",
+      "type": "attachments",
+      "required": false,
+      "default_data": {
+        "attachments": [
+          {"id": "A", "title": "Investigator's Brochure"},
+          {"id": "B", "title": "Informed Consent Form Template"},
+          {"id": "C", "title": "Case Report Forms"},
+          {"id": "D", "title": "Pharmacy Manual"},
+          {"id": "E", "title": "Laboratory Manual"},
+          {"id": "F", "title": "DSMB Charter"},
+          {"id": "G", "title": "NCI CTCAE v5.0"},
+          {"id": "H", "title": "Schedule of Assessments (detailed)"}
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "Clinical",
+    "regulatory_framework": "21 CFR 312, ICH E6(R3) GCP, ICH E2A, ICH E9, Declaration of Helsinki"
+  }
+}

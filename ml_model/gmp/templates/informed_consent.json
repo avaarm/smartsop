@@ -1,0 +1,148 @@
+{
+  "id": "informed_consent",
+  "name": "Informed Consent Form (ICF)",
+  "doc_type": "informed_consent",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1440,
+    "right": 1440,
+    "bottom": 1440,
+    "left": 1440,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 24
+  },
+  "header_config": {
+    "columns": 3,
+    "column_widths": [3000, 3360, 3000],
+    "total_width": 9360,
+    "row_height_dxa": 288,
+    "rows": 2,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "IRB Approval Required - Do Not Alter",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": false,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "study_title_block",
+      "title": "STUDY INFORMATION",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "Study Title", "value": ""},
+          {"label": "Protocol Number", "value": ""},
+          {"label": "Sponsor", "value": ""},
+          {"label": "Principal Investigator", "value": ""},
+          {"label": "Site / Institution", "value": ""},
+          {"label": "24-Hour Contact", "value": ""},
+          {"label": "IRB Approval Date", "value": ""}
+        ]
+      }
+    },
+    {
+      "id": "introduction",
+      "title": "INTRODUCTION",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the Introduction section of an Informed Consent Form for a clinical trial of {product_name}. Use 8th-grade reading level plain language. State that the subject is being asked to participate in a research study, that participation is voluntary, and that they should read carefully and ask questions. Include the total estimated number of participants."
+    },
+    {
+      "id": "purpose",
+      "title": "WHY IS THIS STUDY BEING DONE?",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the Purpose section of an ICF for {product_name} in plain language (8th grade reading level). Explain in simple terms: (1) the disease or condition being studied, (2) what the researchers are trying to learn, (3) what the study drug is and whether it is experimental, (4) how many people will participate, (5) expected duration of participation. Avoid technical jargon; define any necessary medical terms."
+    },
+    {
+      "id": "study_procedures",
+      "title": "WHAT WILL HAPPEN IF I TAKE PART?",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the study procedures in plain language for an ICF of {product_name}. Cover: (1) screening procedures, (2) randomization/assignment if applicable, (3) drug administration (how, how often, how long), (4) visits required and approximate time each takes, (5) tests and measurements (blood draws with approximate volumes, imaging, biopsies, questionnaires), (6) long-term follow-up. Organize chronologically by visit."
+    },
+    {
+      "id": "risks",
+      "title": "WHAT ARE THE RISKS OF BEING IN THE STUDY?",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe risks of participation for an ICF of {product_name}. Include: (1) known side effects grouped by frequency (common/occasional/rare) and severity, (2) procedure risks (blood draws, IVs, biopsies, imaging radiation exposure), (3) unknown risks (especially for first-in-human investigational products), (4) risks to pregnancy and contraception requirements, (5) psychological/social risks, (6) loss of confidentiality risks. Use plain language with examples. For cell therapies include CRS, neurotoxicity, immune reactions, tumorigenicity."
+    },
+    {
+      "id": "benefits",
+      "title": "ARE THERE BENEFITS TO TAKING PART?",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe potential benefits honestly for an ICF of {product_name}. State that there may be no direct benefit, describe any possible personal benefit cautiously without overstating, and describe benefits to society and future patients from the knowledge gained."
+    },
+    {
+      "id": "alternatives",
+      "title": "WHAT OTHER CHOICES DO I HAVE?",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe alternative treatments and options to study participation for an ICF of {product_name} in the {process_type} population. Include: standard of care treatments, other clinical trials, palliative/supportive care, and the option not to receive treatment. Emphasize that the subject can discuss these with their doctor."
+    },
+    {
+      "id": "confidentiality",
+      "title": "HOW WILL MY INFORMATION BE KEPT PRIVATE?",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the Confidentiality section for an ICF, compliant with HIPAA (45 CFR 164) and 21 CFR 50.25. Describe: who will have access to records (sponsor, FDA, IRB, monitors, auditors), how data will be coded/de-identified, how long records will be kept, use in future research, publication practices, and the subject's right to access their own records."
+    },
+    {
+      "id": "costs_payments",
+      "title": "COSTS, PAYMENTS, AND COMPENSATION FOR INJURY",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write Costs and Payments section for an ICF. Address: (1) which costs are covered by the sponsor vs subject/insurance, (2) any payment/reimbursement to the subject for participation, (3) compensation for research-related injury (following institutional policy and 21 CFR 50.25), (4) no cost of study drug, (5) clarification that participation does not affect insurance."
+    },
+    {
+      "id": "voluntary_participation",
+      "title": "CAN I WITHDRAW FROM THE STUDY?",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the Voluntary Participation and Withdrawal section. State that participation is voluntary, the subject can withdraw at any time without penalty or loss of benefits, there are circumstances the investigator may withdraw the subject, and that withdrawal from the intervention does not necessarily end follow-up safety assessment."
+    },
+    {
+      "id": "contact_info",
+      "title": "WHO CAN I CONTACT IF I HAVE QUESTIONS?",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the Contact Information section with placeholders for: (1) PI name and phone for medical questions and emergencies (24hr), (2) research coordinator name and phone for study questions, (3) IRB contact information for questions about rights as a research subject, (4) HIPAA Privacy Officer. Include instructions to keep this page accessible."
+    },
+    {
+      "id": "signatures",
+      "title": "SIGNATURES",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Subject (Print Name and Signature)", "name": "", "date": ""},
+          {"role": "Legally Authorized Representative (if applicable)", "name": "", "date": ""},
+          {"role": "Witness (if required)", "name": "", "date": ""},
+          {"role": "Person Obtaining Consent", "name": "", "date": ""}
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "Clinical",
+    "regulatory_framework": "21 CFR 50.25, 45 CFR 46, ICH E6(R3), HIPAA 45 CFR 164",
+    "reading_level": "8th grade"
+  }
+}

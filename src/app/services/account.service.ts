@@ -67,6 +67,31 @@ export interface TrainingStats {
   documents_generated: number;
 }
 
+export interface ProtocolUpload {
+  id: number;
+  account_id: number;
+  filename: string;
+  file_type: string;
+  status: string;
+  error_message: string | null;
+  structure_json: string;
+  formatting_json: string;
+  created_at: string;
+  knowledge: ProtocolKnowledge[];
+}
+
+export interface ProtocolKnowledge {
+  id: number;
+  account_id: number;
+  upload_id: number;
+  category: string;
+  knowledge_json: string;
+  summary: string;
+  confidence: number | null;
+  is_active: boolean;
+  created_at: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AccountService {
   private baseUrl = '/api/accounts';
@@ -184,6 +209,52 @@ export class AccountService {
     Observable<{ success: boolean; model_name: string; instructions: string; filename: string }> {
     return this.http.get<any>(
       `${this.baseUrl}/${accountId}/export/modelfile?base_model=${baseModel}`
+    ).pipe(timeout(10000), catchError(this.handleError));
+  }
+
+  // ── Protocol Upload & Knowledge ──
+
+  uploadProtocol(accountId: number, file: File):
+    Observable<{ success: boolean; upload: ProtocolUpload; metadata: any }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<{ success: boolean; upload: ProtocolUpload; metadata: any }>(
+      `${this.baseUrl}/${accountId}/protocols/upload`, formData
+    ).pipe(timeout(30000), catchError(this.handleError));
+  }
+
+  listProtocols(accountId: number):
+    Observable<{ success: boolean; uploads: ProtocolUpload[] }> {
+    return this.http.get<{ success: boolean; uploads: ProtocolUpload[] }>(
+      `${this.baseUrl}/${accountId}/protocols`
+    ).pipe(timeout(10000), catchError(this.handleError));
+  }
+
+  analyzeProtocol(accountId: number, uploadId: number):
+    Observable<{ success: boolean; upload: ProtocolUpload }> {
+    return this.http.post<{ success: boolean; upload: ProtocolUpload }>(
+      `${this.baseUrl}/${accountId}/protocols/${uploadId}/analyze`, {}
+    ).pipe(timeout(300000), catchError(this.handleError));
+  }
+
+  listProtocolKnowledge(accountId: number):
+    Observable<{ success: boolean; knowledge: ProtocolKnowledge[] }> {
+    return this.http.get<{ success: boolean; knowledge: ProtocolKnowledge[] }>(
+      `${this.baseUrl}/${accountId}/protocols/knowledge`
+    ).pipe(timeout(10000), catchError(this.handleError));
+  }
+
+  updateKnowledge(accountId: number, knowledgeId: number, data: { is_active?: boolean }):
+    Observable<{ success: boolean; knowledge: ProtocolKnowledge }> {
+    return this.http.put<{ success: boolean; knowledge: ProtocolKnowledge }>(
+      `${this.baseUrl}/${accountId}/protocols/knowledge/${knowledgeId}`, data
+    ).pipe(timeout(10000), catchError(this.handleError));
+  }
+
+  deleteProtocol(accountId: number, uploadId: number):
+    Observable<{ success: boolean }> {
+    return this.http.delete<{ success: boolean }>(
+      `${this.baseUrl}/${accountId}/protocols/${uploadId}`
     ).pipe(timeout(10000), catchError(this.handleError));
   }
 

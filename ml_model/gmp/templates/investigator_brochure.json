@@ -1,0 +1,145 @@
+{
+  "id": "investigator_brochure",
+  "name": "Investigator's Brochure (IB)",
+  "doc_type": "investigator_brochure",
+  "orientation": "portrait",
+  "page_size": {
+    "width_dxa": 12240,
+    "height_dxa": 15840
+  },
+  "margins": {
+    "top": 1440,
+    "right": 1080,
+    "bottom": 1080,
+    "left": 1080,
+    "header": 720,
+    "footer": 720,
+    "gutter": 0
+  },
+  "default_font": {
+    "name": "Calibri",
+    "size_half_pt": 22
+  },
+  "header_config": {
+    "columns": 6,
+    "column_widths": [650, 1200, 3800, 1800, 1200, 1430],
+    "total_width": 10080,
+    "row_height_dxa": 288,
+    "rows": 3,
+    "cells": []
+  },
+  "footer_config": {
+    "text": "CONFIDENTIAL - For Investigator Use Only",
+    "organization": "",
+    "font_size_half_pt": 16,
+    "bold": true,
+    "border_top": true,
+    "alignment": "center"
+  },
+  "sections": [
+    {
+      "id": "approval_block",
+      "title": "DOCUMENT APPROVAL",
+      "type": "approval_block",
+      "required": true,
+      "default_data": {
+        "approvers": [
+          {"role": "Medical Director", "name": "", "date": ""},
+          {"role": "Head of Regulatory Affairs", "name": "", "date": ""},
+          {"role": "Head of Clinical Development", "name": "", "date": ""},
+          {"role": "Pharmacovigilance", "name": "", "date": ""}
+        ]
+      }
+    },
+    {
+      "id": "summary",
+      "title": "SUMMARY",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the Summary section of an Investigator's Brochure for {product_name}. Concise overview (300-500 words) covering: physical/chemical/pharmaceutical properties, mechanism of action, preclinical pharmacology and toxicology, PK/ADME, clinical experience to date, safety summary, and implications for clinical investigators. Follow ICH E6(R3) Section 7."
+    },
+    {
+      "id": "introduction",
+      "title": "INTRODUCTION",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write the Introduction for an IB of {product_name}. Include: sponsor, indication under investigation, developmental phase, historical context, rationale for development, general approach to safe use."
+    },
+    {
+      "id": "physical_chemical_pharmaceutical",
+      "title": "PHYSICAL, CHEMICAL, AND PHARMACEUTICAL PROPERTIES AND FORMULATION",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe the physical, chemical, and pharmaceutical properties of {product_name}. Include: chemical name, structural formula if applicable (for cell therapy: cell type, source, modification), biological characteristics (potency, purity, identity), formulation composition, storage conditions, stability, excipients, packaging and presentation. {description}"
+    },
+    {
+      "id": "nonclinical_studies",
+      "title": "NONCLINICAL STUDIES",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Summarize nonclinical studies for {product_name}. Include subsections: (1) Nonclinical Pharmacology - primary and secondary pharmacodynamics, safety pharmacology; (2) Pharmacokinetics and Product Metabolism in Animals - absorption, distribution, metabolism, excretion, biodistribution for cell/gene therapy; (3) Toxicology - single dose, repeat dose, genotoxicity, carcinogenicity, reproductive tox, tumorigenicity for cell therapy, local tolerance. Include summary tables by study."
+    },
+    {
+      "id": "effects_in_humans",
+      "title": "EFFECTS IN HUMANS",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Describe effects in humans for {product_name} if prior clinical data exist. Include: pharmacokinetics and metabolism in humans, safety and efficacy from prior trials, marketing experience. If first-in-human, state so and reference nonclinical justification for first dose."
+    },
+    {
+      "id": "pk_summary",
+      "title": "SUMMARY OF PHARMACOKINETICS",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write a summary of pharmacokinetics for {product_name}. Cover: absorption, distribution, metabolism, excretion (ADME), protein binding, half-life, dose proportionality, special populations. For cell therapy: persistence, biodistribution, trafficking, expansion kinetics."
+    },
+    {
+      "id": "safety_efficacy",
+      "title": "SUMMARY OF SAFETY AND EFFICACY",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Summarize safety and efficacy data known for {product_name}. Include: most common adverse reactions, serious adverse reactions, special warnings (e.g., CRS, ICANS for cell therapies), dose-response relationships, drug interactions, efficacy signals, biomarkers."
+    },
+    {
+      "id": "marketing_experience",
+      "title": "MARKETING EXPERIENCE",
+      "type": "free_text",
+      "required": false,
+      "llm_prompt": "If {product_name} has marketing experience, describe countries of approval, indications, formulations available, and any post-marketing safety findings. If not marketed, state 'Not applicable - {product_name} is an investigational agent.'"
+    },
+    {
+      "id": "guidance_for_investigator",
+      "title": "GUIDANCE FOR THE INVESTIGATOR",
+      "type": "free_text",
+      "required": true,
+      "llm_prompt": "Write Guidance for the Investigator section for {product_name}. Include: (1) clinical pharmacology considerations, (2) recommended monitoring (labs, vitals, imaging), (3) management of adverse events with specific focus on dose-limiting toxicities, (4) emergency procedures, (5) overdose management, (6) drug interactions, (7) use in special populations (pediatric, elderly, hepatic/renal impairment, pregnancy), (8) contraindications and precautions."
+    },
+    {
+      "id": "references",
+      "title": "REFERENCES",
+      "type": "references",
+      "required": true,
+      "llm_prompt": "Generate a references list for an Investigator's Brochure of {product_name}. Include nonclinical study reports, published literature, regulatory guidances (ICH E6(R3), ICH M3(R2), ICH S6(R1), ICH S9 for oncology, FDA cell therapy guidances)."
+    },
+    {
+      "id": "revision_history",
+      "title": "Revision History",
+      "type": "table",
+      "required": true,
+      "default_data": {
+        "rows": [
+          {"label": "Edition", "value": "1.0"},
+          {"label": "Effective Date", "value": ""},
+          {"label": "Previous Edition", "value": "N/A"},
+          {"label": "Changes", "value": "Initial edition"},
+          {"label": "Next Review Date", "value": ""}
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "category": "Clinical",
+    "regulatory_framework": "ICH E6(R3) Section 7, 21 CFR 312.23(a)(5), 21 CFR 312.55"
+  }
+}

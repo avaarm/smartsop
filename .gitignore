@@ -70,3 +70,13 @@ ENV/
 /collected_data/
 /training_exports/
 *.db
+
+# Electron / Desktop build artifacts
+/release/
+/dist-backend/
+/build/
+/.venv-build/
+electron/build-resources/icon.icns
+electron/build-resources/icon.ico
+electron/build-resources/icon.png
+*.spec
