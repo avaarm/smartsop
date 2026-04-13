@@ -73,14 +73,26 @@ def health():
 
 # ── SPA fallback: serve index.html for any non-API route ───────────
 if SERVE_STATIC:
-    @app.route('/', defaults={'path': ''})
-    @app.route('/<path:path>')
-    def serve_spa(path):
-        # If the path matches a real file (JS, CSS, assets), serve it
+    @app.errorhandler(404)
+    def spa_fallback(e):
+        """Catch 404s and serve the Angular SPA for non-API routes."""
+        from flask import request as req
+        path = req.path.lstrip('/')
+
+        # Never intercept API or health routes — let them 404 normally
+        if path.startswith('api/') or path == 'health':
+            return jsonify({"error": "Not found"}), 404
+
+        # If the path matches a real static file (JS, CSS, assets), serve it
         full = os.path.join(STATIC_DIR, path)
         if path and os.path.isfile(full):
             return send_from_directory(STATIC_DIR, path)
+
         # Otherwise serve index.html (Angular SPA routing)
+        return send_from_directory(STATIC_DIR, 'index.html')
+
+    @app.route('/')
+    def serve_root():
         return send_from_directory(STATIC_DIR, 'index.html')
 
 
