@@ -1,0 +1,47 @@
+name: Deploy Landing Page
+
+# Deploys website/ to GitHub Pages on every push to main (or when the
+# website content changes on the active claude/* branch). Also runnable
+# manually from the Actions tab.
+
+on:
+  push:
+    branches:
+      - main
+      - claude/gallant-williamson
+    paths:
+      - 'website/**'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deploy at a time; cancel stale runs if a newer one arrives.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload website/ as Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: website
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
