@@ -62,13 +62,20 @@ pyinstaller \
   --collect-submodules "ml_model.gmp" \
   "$ENTRY"
 
-# Flatten: electron-builder expects files directly under dist-backend/
+# Flatten: electron-builder expects files directly under dist-backend/.
+# PyInstaller --onedir produces dist-backend/smartsop-backend/{smartsop-backend, _internal/...}
+# The inner binary has the same name as its parent directory, so we must
+# rename it first before moving to avoid the collision.
 if [ -d "$DIST_DIR/$BINARY_NAME" ]; then
   echo "[3/4] Flattening output directory..."
-  # PyInstaller --onedir puts everything in dist-backend/smartsop-backend/
-  # Move contents up one level
-  mv "$DIST_DIR/$BINARY_NAME"/* "$DIST_DIR/"
-  rmdir "$DIST_DIR/$BINARY_NAME" 2>/dev/null || true
+  INNER="$DIST_DIR/$BINARY_NAME"
+  # Rename inner binary to a temp name
+  mv "$INNER/$BINARY_NAME" "$DIST_DIR/.${BINARY_NAME}.bin"
+  # Move remaining contents (e.g. _internal/) up
+  mv "$INNER"/* "$DIST_DIR/" 2>/dev/null || true
+  rmdir "$INNER"
+  # Put the binary back with its original name
+  mv "$DIST_DIR/.${BINARY_NAME}.bin" "$DIST_DIR/$BINARY_NAME"
 fi
 
 # ── Step 4: Verify ──
