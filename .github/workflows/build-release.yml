@@ -1,0 +1,149 @@
+name: Build Desktop Installers
+
+# Builds SmartSOP installers for macOS, Linux, and Windows on native runners,
+# then uploads the artifacts to the GitHub Release matching the tag.
+#
+# Trigger: push a tag like `v1.0.1` (or run manually with a tag input).
+# If the release doesn't exist yet it will be created automatically.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag to upload to (e.g. v1.0.1). Creates the release if missing.'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            label: macOS (x64 + arm64)
+            ebuilder_flags: '--mac --x64 --arm64'
+          - os: ubuntu-latest
+            label: Linux (x64)
+            ebuilder_flags: '--linux'
+          - os: windows-latest
+            label: Windows (x64)
+            ebuilder_flags: '--win'
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python build deps
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-gmp.txt pyinstaller
+
+      - name: Install Node deps
+        run: npm ci
+
+      - name: Build Angular frontend
+        run: npm run build
+
+      - name: Build Flask backend (PyInstaller)
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf build dist-backend
+          # PyInstaller data path separator: ';' on Windows, ':' elsewhere
+          if [ "$RUNNER_OS" = "Windows" ]; then SEP=';'; else SEP=':'; fi
+          pyinstaller \
+            --noconfirm --onedir \
+            --name smartsop-backend \
+            --distpath dist-backend \
+            --add-data "ml_model/gmp/templates${SEP}ml_model/gmp/templates" \
+            --add-data "ml_model/gmp${SEP}ml_model/gmp" \
+            --hidden-import flask \
+            --hidden-import flask_cors \
+            --hidden-import flask_sqlalchemy \
+            --hidden-import sqlalchemy \
+            --hidden-import pydantic \
+            --hidden-import docx \
+            --hidden-import lxml \
+            --hidden-import lxml.etree \
+            --hidden-import bs4 \
+            --hidden-import openpyxl \
+            --hidden-import reportlab \
+            --hidden-import PyPDF2 \
+            --collect-submodules ml_model.gmp \
+            gmp_server.py
+
+          # Flatten dist-backend/smartsop-backend/{binary,_internal} → dist-backend/
+          # Inner binary shares the dir name, so move via temp filename first.
+          cd dist-backend
+          if [ -d smartsop-backend ]; then
+            INNER=smartsop-backend
+            if [ -f "$INNER/smartsop-backend.exe" ]; then BIN=smartsop-backend.exe; else BIN=smartsop-backend; fi
+            mv "$INNER/$BIN" ".smartsop-backend.bin"
+            mv "$INNER"/* . 2>/dev/null || true
+            rmdir "$INNER"
+            mv ".smartsop-backend.bin" "$BIN"
+          fi
+          ls -la
+
+      - name: Package installers (electron-builder)
+        shell: bash
+        env:
+          # Skip macOS code signing — unsigned Gatekeeper-warned build for v1.x.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder ${{ matrix.ebuilder_flags }} --publish=never
+
+      - name: Upload artifacts to workflow run
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.os }}
+          if-no-files-found: warn
+          path: |
+            release/*.dmg
+            release/*.exe
+            release/*.AppImage
+            release/*.deb
+
+      - name: Upload to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          echo "Target release tag: $TAG"
+          # Create the release if it doesn't exist yet
+          if ! gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Release $TAG does not exist — creating it"
+            gh release create "$TAG" \
+              --repo "${{ github.repository }}" \
+              --title "SmartSOP $TAG" \
+              --notes "Automated build from $TAG"
+          fi
+          shopt -s nullglob
+          for f in release/*.dmg release/*.exe release/*.AppImage release/*.deb; do
+            echo "Uploading $f"
+            gh release upload "$TAG" "$f" --repo "${{ github.repository }}" --clobber
+          done

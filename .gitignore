@@ -76,7 +76,5 @@ ENV/
 /dist-backend/
 /build/
 /.venv-build/
-electron/build-resources/icon.icns
-electron/build-resources/icon.ico
-electron/build-resources/icon.png
+# (icon files committed — needed by CI build matrix)
 *.spec
