@@ -26,12 +26,11 @@ extraResources:
 mac:
   category: public.app-category.productivity
   icon: electron/build-resources/icon.icns
+  # Only build DMGs — parallel DMG + zip builds on CI runners cause
+  # hdiutil mount/detach races. Zip archives are only needed for auto-
+  # updater support which we don't use yet.
   target:
     - target: dmg
-      arch:
-        - x64
-        - arm64
-    - target: zip
       arch:
         - x64
         - arm64
