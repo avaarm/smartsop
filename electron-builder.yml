@@ -42,6 +42,9 @@ mac:
 
 dmg:
   title: SmartSOP
+  # Explicitly disable the background image — dmg-builder otherwise tries to
+  # stat a missing background.tiff in CI runners and fails.
+  background: null
   contents:
     - x: 130
       y: 220
