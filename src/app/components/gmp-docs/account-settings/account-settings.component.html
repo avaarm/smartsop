@@ -71,10 +71,6 @@
       Training Data
       <span *ngIf="trainingStats" class="tab-badge">{{ trainingStats.total_examples }}</span>
     </button>
-    <button [class.active]="activeTab === 'protocols'" (click)="activeTab = 'protocols'; loadProtocols()">
-      Protocol Knowledge
-      <span *ngIf="protocolUploads.length" class="tab-badge">{{ protocolUploads.length }}</span>
-    </button>
     <button [class.active]="activeTab === 'export'" (click)="activeTab = 'export'">Export &amp; Fine-tune</button>
     <button [class.active]="activeTab === 'history'" (click)="activeTab = 'history'; loadDocuments()">
       Document History
@@ -141,8 +137,9 @@
     </div>
   </section>
 
-  <!-- Protocol Knowledge Tab -->
-  <section *ngIf="activeAccount && activeTab === 'protocols'" class="tab-panel">
+  <!-- Protocol Knowledge Tab — deprecated, content moved to dedicated /protocols page.
+       Keeping the template block commented/hidden so the rest of the file still renders. -->
+  <section *ngIf="false" class="tab-panel">
     <!-- Upload zone -->
     <div class="upload-zone">
       <div class="upload-content">

@@ -1,0 +1,251 @@
+<div class="page" [class.dragging]="isDragging">
+
+  <!-- Drag overlay (covers page when dragging) -->
+  <div *ngIf="isDragging && activeAccount" class="drag-overlay">
+    <div class="drag-overlay-inner">
+      <div class="drag-icon">↓</div>
+      <div class="drag-title">Drop files here to teach SmartSOP your format</div>
+      <div class="drag-sub">.docx and .pdf — upload as many as you like</div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="hero">
+    <div class="hero-copy">
+      <h1>Teach SmartSOP your documents</h1>
+      <p class="lede">
+        Upload your existing batch records, SOPs, deviation reports, validation
+        protocols — any GMP document you use today. SmartSOP parses their
+        structure, formatting, terminology, and style, then uses that knowledge
+        to generate <strong>new documents that match your exact format</strong>.
+      </p>
+    </div>
+  </header>
+
+  <!-- Toasts -->
+  <div *ngIf="successMessage" class="toast toast-success">{{ successMessage }}</div>
+  <div *ngIf="errorMessage" class="toast toast-error">{{ errorMessage }}</div>
+
+  <!-- Loading accounts -->
+  <div *ngIf="accountsLoading" class="loading"><div class="spinner"></div> Loading workspace…</div>
+
+  <!-- No account: inline create form -->
+  <section *ngIf="!accountsLoading && showCreateForm && !activeAccount" class="create-card">
+    <h3>Create your workspace</h3>
+    <p class="create-sub">One workspace per facility or department. All uploaded documents, terminology, and extracted knowledge live here.</p>
+    <div class="create-form">
+      <div class="field">
+        <label>Organization name <span class="req">*</span></label>
+        <input type="text" [(ngModel)]="newAccountName" placeholder="e.g., Acme Biopharma — Cell Therapy Manufacturing" />
+      </div>
+      <div class="field">
+        <label>Facility name <span class="muted">(optional)</span></label>
+        <input type="text" [(ngModel)]="newFacilityName" placeholder="e.g., Building 3, Suite A" />
+      </div>
+      <button class="btn btn-primary" (click)="createAccount()" [disabled]="!newAccountName.trim() || creating">
+        {{ creating ? 'Creating…' : 'Create workspace' }}
+      </button>
+    </div>
+  </section>
+
+  <!-- Account picker (once accounts exist) -->
+  <section *ngIf="!accountsLoading && accounts.length > 0" class="workspace-bar">
+    <div class="ws-label">Workspace</div>
+    <select [ngModel]="activeAccount" (ngModelChange)="selectAccount($event)">
+      <option [ngValue]="null" disabled>-- Select a workspace --</option>
+      <option *ngFor="let a of accounts" [ngValue]="a">{{ a.name }}</option>
+    </select>
+    <button class="btn btn-ghost btn-sm" (click)="showCreateForm = true" *ngIf="!showCreateForm">+ New</button>
+  </section>
+
+  <!-- New-workspace inline form (when existing accounts) -->
+  <section *ngIf="showCreateForm && accounts.length > 0" class="create-card slim">
+    <div class="create-form row">
+      <input type="text" [(ngModel)]="newAccountName" placeholder="New workspace name" />
+      <button class="btn btn-primary btn-sm" (click)="createAccount()" [disabled]="!newAccountName.trim() || creating">
+        {{ creating ? 'Creating…' : 'Create' }}
+      </button>
+      <button class="btn btn-ghost btn-sm" (click)="showCreateForm = false">Cancel</button>
+    </div>
+  </section>
+
+  <!-- Main panel — only if an account is selected -->
+  <ng-container *ngIf="activeAccount">
+
+    <!-- Stats bar -->
+    <div class="stats-bar">
+      <div class="stat">
+        <div class="stat-value">{{ protocolUploads.length }}</div>
+        <div class="stat-label">Documents uploaded</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">{{ analyzedCount }}</div>
+        <div class="stat-label">Analyzed</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">{{ activeKnowledgeItems }}</div>
+        <div class="stat-label">
+          Active knowledge item<ng-container *ngIf="activeKnowledgeItems !== 1">s</ng-container>
+        </div>
+      </div>
+      <div class="stat stat-cta" *ngIf="needsAnalysisCount > 0">
+        <button class="btn btn-primary btn-sm" (click)="analyzeAll()">
+          Extract knowledge from {{ needsAnalysisCount }} pending
+        </button>
+      </div>
+    </div>
+
+    <!-- Drop zone -->
+    <label class="dropzone" [class.dropzone-empty]="protocolUploads.length === 0">
+      <input type="file" accept=".docx,.pdf" multiple (change)="onFilesSelected($event)" hidden />
+      <div class="dropzone-content">
+        <div class="dropzone-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+        </div>
+        <div class="dropzone-text">
+          <strong>Drop files here or click to upload</strong>
+          <span>.docx and .pdf — upload multiple at once</span>
+        </div>
+        <span class="dropzone-cta">Choose files</span>
+      </div>
+    </label>
+
+    <!-- Upload queue (progress indicators) -->
+    <div *ngIf="uploadQueue.length > 0" class="queue">
+      <div *ngFor="let q of uploadQueue" class="queue-item" [class.done]="q.progress === 'done'" [class.err]="q.progress === 'error'">
+        <div class="queue-name">{{ q.file.name }}</div>
+        <div class="queue-status">
+          <ng-container [ngSwitch]="q.progress">
+            <span *ngSwitchCase="'queued'">Queued</span>
+            <span *ngSwitchCase="'uploading'"><span class="mini-spin"></span> Uploading & parsing…</span>
+            <span *ngSwitchCase="'done'">✓ Uploaded</span>
+            <span *ngSwitchCase="'error'" class="err-text">✗ {{ q.error }}</span>
+          </ng-container>
+        </div>
+        <button *ngIf="q.progress === 'error' || q.progress === 'done'" class="queue-x" (click)="dismissQueued(q)">×</button>
+      </div>
+    </div>
+
+    <!-- Empty state (no uploads yet) -->
+    <div *ngIf="!protocolsLoading && protocolUploads.length === 0 && uploadQueue.length === 0" class="empty-state">
+      <div class="empty-illo">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+        </svg>
+      </div>
+      <h3>No documents yet</h3>
+      <p>Upload the kind of documents you want SmartSOP to generate — your real batch records, SOPs, deviation reports, etc. The more you upload, the more accurately SmartSOP matches your in-house style.</p>
+      <div class="empty-tips">
+        <div class="tip"><span class="tip-num">1</span> Upload 2–5 examples per document type</div>
+        <div class="tip"><span class="tip-num">2</span> Click "Extract knowledge" to analyze each one</div>
+        <div class="tip"><span class="tip-num">3</span> <a routerLink="/gmp">Generate new documents</a> in your learned format</div>
+      </div>
+    </div>
+
+    <!-- Uploads loading -->
+    <div *ngIf="protocolsLoading" class="loading"><div class="spinner"></div> Loading protocols…</div>
+
+    <!-- Uploaded documents list -->
+    <div class="uploads" *ngIf="!protocolsLoading && protocolUploads.length > 0">
+      <div *ngFor="let upload of protocolUploads" class="upload-card" [class.expanded]="expandedUpload[upload.id]">
+        <div class="upload-row">
+          <div class="file-chip" [class.pdf]="upload.file_type === 'pdf'">{{ upload.file_type === 'pdf' ? 'PDF' : 'DOC' }}</div>
+
+          <div class="file-info">
+            <div class="file-name" (click)="toggleUploadExpand(upload.id)">
+              {{ upload.filename }}
+            </div>
+            <div class="file-meta">
+              <!-- Document-type picker — auto-filled by the server, overridable here -->
+              <div class="doc-type-picker" [class.auto]="upload.doc_type_source === 'inferred'" (click)="$event.stopPropagation()">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" *ngIf="upload.doc_type_source === 'inferred' && upload.doc_type">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+                </svg>
+                <select
+                  [value]="upload.doc_type || ''"
+                  (change)="onDocTypeChange(upload, $any($event.target).value)"
+                  [disabled]="savingDocType[upload.id]"
+                  [title]="upload.doc_type_source === 'inferred' ? 'Auto-detected — click to change' : 'Document type'">
+                  <option value="">— Unknown / other —</option>
+                  <optgroup *ngFor="let group of templateGroups" [label]="group.category">
+                    <option *ngFor="let t of group.templates" [value]="t.id">{{ t.name }}</option>
+                  </optgroup>
+                </select>
+                <span *ngIf="savingDocType[upload.id]" class="mini-spin"></span>
+              </div>
+              <span class="meta-dot">·</span>
+              <span class="badge" [ngClass]="'st-' + upload.status">{{ getStatusLabel(upload.status) }}</span>
+              <span class="meta-dot">·</span>
+              <span>{{ formatDate(upload.created_at) }}</span>
+              <span *ngIf="upload.knowledge?.length" class="meta-dot">·</span>
+              <span *ngIf="upload.knowledge?.length">
+                {{ upload.knowledge.length }} knowledge item<ng-container *ngIf="upload.knowledge.length !== 1">s</ng-container>
+              </span>
+            </div>
+          </div>
+
+          <div class="file-actions">
+            <button *ngIf="upload.status === 'parsed' || upload.status === 'complete'"
+                    class="btn btn-primary btn-sm"
+                    (click)="analyzeUpload(upload)"
+                    [disabled]="analyzingProtocol[upload.id]">
+              <span *ngIf="analyzingProtocol[upload.id]" class="mini-spin"></span>
+              {{ analyzingProtocol[upload.id]
+                  ? 'Analyzing…'
+                  : (upload.status === 'complete' ? 'Re-extract' : 'Extract knowledge') }}
+            </button>
+            <button class="btn btn-ghost btn-sm icon-only" (click)="deleteUpload(upload)" title="Remove">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6" />
+                <path d="M10 11v6M14 11v6" />
+                <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="upload.error_message" class="file-error">{{ upload.error_message }}</div>
+
+        <!-- Expanded knowledge -->
+        <div *ngIf="expandedUpload[upload.id] && upload.knowledge?.length" class="knowledge-list">
+          <div *ngFor="let k of upload.knowledge" class="k-card" [class.inactive]="!k.is_active">
+            <div class="k-row" (click)="toggleKnowledgeExpand(k.id)">
+              <span class="k-icon">{{ getCategoryIcon(k.category) }}</span>
+              <span class="k-cat">{{ getCategoryLabel(k.category) }}</span>
+              <span class="k-summary">{{ k.summary }}</span>
+              <span *ngIf="k.confidence" class="k-conf">{{ (k.confidence * 100) | number:'1.0-0' }}%</span>
+              <label class="toggle" (click)="$event.stopPropagation()">
+                <input type="checkbox" [checked]="k.is_active" (change)="toggleKnowledgeActive(k)" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <pre *ngIf="expandedKnowledge[k.id]" class="k-json">{{ k.knowledge_json | json }}</pre>
+          </div>
+        </div>
+
+        <!-- CTA when no knowledge yet -->
+        <div *ngIf="expandedUpload[upload.id] && !upload.knowledge?.length && upload.status === 'parsed'" class="k-hint">
+          <p>No knowledge extracted yet. Click <strong>Extract knowledge</strong> to run AI analysis — this pulls out terminology, procedural rules, writing style, section structure, and formatting patterns.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA band -->
+    <div *ngIf="activeKnowledgeItems > 0" class="cta-band">
+      <div class="cta-copy">
+        <strong>You have {{ activeKnowledgeItems }} active knowledge item<ng-container *ngIf="activeKnowledgeItems !== 1">s</ng-container>.</strong>
+        <span>Generate a new document and SmartSOP will write it in your learned format.</span>
+      </div>
+      <a routerLink="/gmp" class="btn btn-primary">
+        Generate a document →
+      </a>
+    </div>
+
+  </ng-container>
+</div>

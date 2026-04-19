@@ -18,6 +18,43 @@ def init_db(app):
     db.init_app(app)
     with app.app_context():
         db.create_all()
+        _run_lightweight_migrations()
+
+
+def _run_lightweight_migrations():
+    """Idempotently add new nullable columns to existing SQLite databases.
+
+    `db.create_all()` only creates missing tables, not missing columns, so when
+    we add a nullable field to an existing model we need a tiny ALTER TABLE
+    pass for users upgrading from an older DB.
+    """
+    from sqlalchemy import text
+
+    # Map of table -> [(column_name, column_ddl)] that should exist.
+    wanted = {
+        "protocol_uploads": [
+            ("doc_type", "TEXT DEFAULT ''"),
+            ("doc_type_source", "TEXT DEFAULT 'inferred'"),
+        ],
+    }
+
+    engine = db.session.get_bind()
+    for table, cols in wanted.items():
+        try:
+            existing = {
+                row[1]
+                for row in db.session.execute(text(f"PRAGMA table_info({table})")).fetchall()
+            }
+        except Exception:
+            # Table may not exist yet (fresh DB) — create_all will handle it.
+            continue
+        for col, ddl in cols:
+            if col not in existing:
+                try:
+                    db.session.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {ddl}"))
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
 
 
 class Account(db.Model):
@@ -175,6 +212,13 @@ class ProtocolUpload(db.Model):
     raw_text = db.Column(db.Text, default="")
     structure_json = db.Column(db.Text, default="{}")
     formatting_json = db.Column(db.Text, default="{}")
+
+    # Document-type classification (matches a template ID in ml_model/gmp/templates/).
+    # `doc_type_source` is "inferred" when the server auto-detected it from filename
+    # or "user" when overridden via the UI.
+    doc_type = db.Column(db.String(100), default="")
+    doc_type_source = db.Column(db.String(20), default="inferred")
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     knowledge_items = db.relationship("ProtocolKnowledge", backref="upload", lazy="dynamic",
@@ -190,6 +234,8 @@ class ProtocolUpload(db.Model):
             "error_message": self.error_message,
             "structure_json": self.structure_json,
             "formatting_json": self.formatting_json,
+            "doc_type": self.doc_type or "",
+            "doc_type_source": self.doc_type_source or "inferred",
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "knowledge": [k.to_dict() for k in self.knowledge_items],
         }

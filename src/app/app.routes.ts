@@ -6,7 +6,14 @@ export const routes: Routes = [
     path: '',
     component: MainLayoutComponent,
     children: [
-      { path: '', redirectTo: 'gmp', pathMatch: 'full' },
+      // Protocol Knowledge is the primary landing experience
+      { path: '', redirectTo: 'protocols', pathMatch: 'full' },
+      {
+        path: 'protocols',
+        loadComponent: () =>
+          import('./components/gmp-docs/protocols/protocols.component')
+            .then(m => m.ProtocolsComponent),
+      },
       {
         path: 'gmp',
         loadComponent: () =>

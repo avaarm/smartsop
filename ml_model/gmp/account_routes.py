@@ -12,6 +12,7 @@ from .training_export import TrainingExporter
 from .protocol_parser import ProtocolParser
 from .protocol_analyzer import ProtocolAnalyzer
 from .ollama_service import OllamaService
+from .doc_type_inference import infer_doc_type
 
 logger = logging.getLogger(__name__)
 
@@ -296,6 +297,11 @@ def upload_protocol(account_id):
         upload.raw_text = parsed.get("text", "")[:100000]  # Cap at 100k chars
         upload.structure_json = json.dumps(parsed.get("sections", []))
         upload.formatting_json = json.dumps(parsed.get("formatting", {}))
+        # Cheap heuristic classification — user can override in the UI.
+        inferred_type, confidence = infer_doc_type(file.filename, upload.raw_text)
+        if inferred_type:
+            upload.doc_type = inferred_type
+            upload.doc_type_source = "inferred"
         upload.status = "parsed"
         db.session.commit()
     except Exception as e:
@@ -384,6 +390,27 @@ def get_protocol(account_id, upload_id):
     upload = ProtocolUpload.query.get_or_404(upload_id)
     if upload.account_id != account_id:
         return jsonify({"success": False, "error": "Not found"}), 404
+    return jsonify({"success": True, "upload": upload.to_dict()})
+
+
+@account_bp.route("/<int:account_id>/protocols/<int:upload_id>", methods=["PATCH"])
+def update_protocol(account_id, upload_id):
+    """Update mutable fields on an upload — currently just ``doc_type``.
+
+    Body: ``{"doc_type": "batch_record"}`` (empty string clears it).
+    Any user-supplied change is stamped as ``doc_type_source="user"`` so the
+    UI can distinguish between auto-detected and manually-set values.
+    """
+    upload = ProtocolUpload.query.get_or_404(upload_id)
+    if upload.account_id != account_id:
+        return jsonify({"success": False, "error": "Not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    if "doc_type" in data:
+        upload.doc_type = (data.get("doc_type") or "").strip()
+        upload.doc_type_source = "user"
+        db.session.commit()
+
     return jsonify({"success": True, "upload": upload.to_dict()})
 
 

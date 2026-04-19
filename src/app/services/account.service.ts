@@ -76,6 +76,10 @@ export interface ProtocolUpload {
   error_message: string | null;
   structure_json: string;
   formatting_json: string;
+  /** Template ID (matches backend templates in ml_model/gmp/templates/). Empty = unknown. */
+  doc_type: string;
+  /** Where the doc_type came from: 'inferred' (auto-detected) or 'user' (manually chosen). */
+  doc_type_source: 'inferred' | 'user';
   created_at: string;
   knowledge: ProtocolKnowledge[];
 }
@@ -255,6 +259,14 @@ export class AccountService {
     Observable<{ success: boolean }> {
     return this.http.delete<{ success: boolean }>(
       `${this.baseUrl}/${accountId}/protocols/${uploadId}`
+    ).pipe(timeout(10000), catchError(this.handleError));
+  }
+
+  /** Update mutable fields on an upload (currently just doc_type). */
+  updateProtocol(accountId: number, uploadId: number, data: { doc_type?: string }):
+    Observable<{ success: boolean; upload: ProtocolUpload }> {
+    return this.http.patch<{ success: boolean; upload: ProtocolUpload }>(
+      `${this.baseUrl}/${accountId}/protocols/${uploadId}`, data
     ).pipe(timeout(10000), catchError(this.handleError));
   }
 
