@@ -18,10 +18,33 @@ from .word_engine import GMPWordEngine
 from .ollama_service import OllamaService
 from .paper_scraper import PaperScraper, Paper, PaperMethods
 from .data_collector import DataCollector
+from .style_consolidation import consolidate_style, consolidate_style_for_doc_type
+from .database import ProtocolUpload
 
 logger = logging.getLogger(__name__)
 
 GENERATED_DOCS_DIR = Path(__file__).parent.parent.parent / "generated_docs"
+
+
+def _style_summary(style: Optional[dict]) -> Optional[dict]:
+    """Shrink a consolidated style dict down to the bits a UI needs — kept
+    outside the class so route handlers can reuse it for previews."""
+    if not style:
+        return None
+    body = style.get("body_font") or {}
+    page = style.get("page") or {}
+    shading = style.get("shading_roles") or {}
+    return {
+        "sample_size": style.get("sample_size", 0),
+        "orientation": page.get("orientation"),
+        "body_font_name": body.get("name"),
+        "body_font_size_pt": body.get("size_pt"),
+        "section_header_shading": shading.get("section_header"),
+        "label_cell_shading": shading.get("label_cell"),
+        "terminology_count": len(style.get("terminology") or {}),
+        "rules_count": len(style.get("procedural_rules") or []),
+        "table_templates_count": len(style.get("table_templates") or []),
+    }
 
 
 class GMPDocumentGenerator:
@@ -186,6 +209,12 @@ class GMPDocumentGenerator:
         # Pre-filled section data from user
         user_sections = user_input.get("sections", {})
 
+        # Consolidated account style — consensus across every active
+        # ProtocolKnowledge item, filtered to this doc_type so a batch
+        # record generation uses batch-record uploads, etc.
+        account_id = user_input.get("account_id")
+        account_style = self._build_account_style(account_id, doc_type)
+
         # Whether to auto-fill missing sections via LLM (opt-in, off by default)
         # During Generate, we do NOT call LLM implicitly because it takes 10-50s
         # per section and can cause browser timeouts. Users should explicitly
@@ -217,8 +246,9 @@ class GMPDocumentGenerator:
                 "has_content": bool(section_data),
             })
 
-        # Generate DOCX
-        docx_bytes = self.word_engine.generate(template, data)
+        # Generate DOCX, applying the consolidated account style so the
+        # output matches the user's learned format (page, fonts, shading).
+        docx_bytes = self.word_engine.generate(template, data, account_style=account_style)
 
         # Save to disk
         safe_title = "".join(
@@ -240,10 +270,13 @@ class GMPDocumentGenerator:
             "download_url": f"/api/download/{filename}",
             "preview_sections": preview_sections,
             "content_data": data,
+            # Echo back the applied style so the UI can surface e.g.
+            # "Generated using style learned from 4 uploaded documents."
+            "applied_style": _style_summary(account_style),
         }
 
         # Record document in database if account is provided
-        account_id = user_input.get("account_id")
+        # (account_id was already resolved above for style consolidation)
         if account_id:
             doc_record = self.data_collector.record_document(
                 account_id=account_id,
@@ -367,6 +400,45 @@ class GMPDocumentGenerator:
         except Exception as e:
             logger.error(f"LLM generation failed for {section_def.id}: {e}")
             return {}
+
+    def _build_account_style(self, account_id: Optional[int], doc_type: str) -> Optional[dict]:
+        """Build the consolidated style spec for this generation call.
+
+        Returns a dict (from ``style_consolidation``) when the account has
+        uploaded docs with active knowledge — favouring uploads of the
+        matching ``doc_type`` — or ``None`` when there's nothing to apply.
+        ``None`` is explicit so the word engine falls through to defaults.
+        """
+        if not account_id:
+            return None
+
+        try:
+            uploads = ProtocolUpload.query.filter_by(account_id=account_id).all()
+        except Exception as e:
+            logger.warning("Could not load uploads for account %s: %s", account_id, e)
+            return None
+
+        upload_dicts = [u.to_dict() for u in uploads]
+        if not upload_dicts:
+            return None
+
+        try:
+            acct_ctx = self.data_collector.get_account_context(account_id)
+        except Exception:
+            acct_ctx = {}
+
+        style = consolidate_style_for_doc_type(
+            upload_dicts,
+            doc_type=doc_type,
+            account_terms=acct_ctx.get("terminology") or None,
+            account_style_notes=acct_ctx.get("style_notes") or None,
+        )
+
+        # If we have no real signal (0 uploads matched and 0 active knowledge),
+        # return None so the word engine uses its defaults.
+        if not style.get("body_font") and not style.get("page") and not style.get("shading_roles"):
+            return None
+        return style
 
     @staticmethod
     def _build_account_supplement(context: dict) -> str:

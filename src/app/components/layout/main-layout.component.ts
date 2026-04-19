@@ -1,11 +1,12 @@
 import { Component } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { LlmProviderChipComponent } from '../system/llm-provider-chip.component';
 
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, LlmProviderChipComponent],
   template: `
     <div class="layout">
       <aside class="sidebar">
@@ -57,7 +58,7 @@ import { CommonModule } from '@angular/common';
         </nav>
 
         <div class="sidebar-footer">
-          <div class="footer-text">Powered by Llama 3</div>
+          <app-llm-provider-chip></app-llm-provider-chip>
         </div>
       </aside>
 

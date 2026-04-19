@@ -84,6 +84,28 @@ export interface ProtocolUpload {
   knowledge: ProtocolKnowledge[];
 }
 
+/** Small summary of the consolidated account style for banner-style UI. */
+export interface EffectiveStyleSummary {
+  upload_count: number;
+  analyzed_upload_count: number;
+  has_learned_style: boolean;
+  orientation: string | null;
+  body_font_name: string | null;
+  body_font_size_pt: number | null;
+  section_header_shading: string | null;
+  label_cell_shading: string | null;
+  terminology_count: number;
+  rules_count: number;
+  table_templates_count: number;
+}
+
+export interface EffectiveStyleResponse {
+  success: boolean;
+  doc_type: string | null;
+  summary: EffectiveStyleSummary;
+  style: Record<string, unknown>;
+}
+
 export interface ProtocolKnowledge {
   id: number;
   account_id: number;
@@ -267,6 +289,19 @@ export class AccountService {
     Observable<{ success: boolean; upload: ProtocolUpload }> {
     return this.http.patch<{ success: boolean; upload: ProtocolUpload }>(
       `${this.baseUrl}/${accountId}/protocols/${uploadId}`, data
+    ).pipe(timeout(10000), catchError(this.handleError));
+  }
+
+  /**
+   * Preview the consolidated style SmartSOP will use when generating a
+   * document of the given type for this account. Returns both a small
+   * ``summary`` suitable for a banner and the full ``style`` spec.
+   */
+  getEffectiveStyle(accountId: number, docType?: string):
+    Observable<EffectiveStyleResponse> {
+    const qs = docType ? `?doc_type=${encodeURIComponent(docType)}` : '';
+    return this.http.get<EffectiveStyleResponse>(
+      `${this.baseUrl}/${accountId}/effective-style${qs}`
     ).pipe(timeout(10000), catchError(this.handleError));
   }
 

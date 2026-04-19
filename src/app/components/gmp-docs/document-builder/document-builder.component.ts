@@ -11,7 +11,11 @@ import {
   OllamaStatus,
   Paper,
 } from '../../../services/gmp-document.service';
-import { AccountService, Account } from '../../../services/account.service';
+import {
+  AccountService,
+  Account,
+  EffectiveStyleSummary,
+} from '../../../services/account.service';
 
 @Component({
   selector: 'app-document-builder',
@@ -68,13 +72,41 @@ export class DocumentBuilderComponent implements OnInit {
 
   activeAccount: Account | null = null;
 
+  /** Summary of the consolidated style for the currently-selected doc_type —
+   *  drives the "Using learned style from N docs" banner. */
+  effectiveStyle: EffectiveStyleSummary | null = null;
+  effectiveStyleLoading = false;
+
   constructor(private gmp: GMPDocumentService, private accountService: AccountService) {}
 
   ngOnInit(): void {
     this.loadTemplates();
     this.checkOllamaStatus();
-    this.accountService.activeAccount$.subscribe(a => this.activeAccount = a);
+    this.accountService.activeAccount$.subscribe(a => {
+      this.activeAccount = a;
+      this.refreshEffectiveStyle();
+    });
     this.accountService.loadSavedAccount();
+  }
+
+  /** Refetch the effective style whenever the (account, doc_type) pair
+   *  changes. Silent failures are fine — the banner just stays hidden. */
+  private refreshEffectiveStyle(): void {
+    this.effectiveStyle = null;
+    if (!this.activeAccount) return;
+    this.effectiveStyleLoading = true;
+    this.accountService
+      .getEffectiveStyle(this.activeAccount.id, this.selectedTemplateId || undefined)
+      .subscribe({
+        next: (res) => {
+          this.effectiveStyle = res.summary;
+          this.effectiveStyleLoading = false;
+        },
+        error: () => {
+          this.effectiveStyle = null;
+          this.effectiveStyleLoading = false;
+        },
+      });
   }
 
   loadTemplates(): void {
@@ -154,6 +186,7 @@ export class DocumentBuilderComponent implements OnInit {
 
   selectTemplate(id: string): void {
     this.selectedTemplateId = id;
+    this.refreshEffectiveStyle();
     this.loading = true;
     this.gmp.getTemplateSchema(id).subscribe({
       next: (res) => {

@@ -13,6 +13,7 @@ from .protocol_parser import ProtocolParser
 from .protocol_analyzer import ProtocolAnalyzer
 from .ollama_service import OllamaService
 from .doc_type_inference import infer_doc_type
+from .style_consolidation import consolidate_style_for_doc_type
 
 logger = logging.getLogger(__name__)
 
@@ -456,3 +457,73 @@ def delete_protocol(account_id, upload_id):
     db.session.delete(upload)
     db.session.commit()
     return jsonify({"success": True})
+
+
+@account_bp.route("/<int:account_id>/effective-style", methods=["GET"])
+def get_effective_style(account_id):
+    """Return the consolidated style SmartSOP will use when generating
+    documents of the given type for this account.
+
+    Query string:
+        doc_type: Optional template ID (e.g. ``batch_record``). When
+            omitted, merges across ALL uploads for the account.
+
+    The response includes a ``summary`` that's small enough to render as
+    a status banner ("Using style learned from 5 documents"), and the
+    full ``style`` spec for callers that want the details.
+    """
+    from .database import Account
+
+    account = Account.query.get_or_404(account_id)
+    doc_type = (request.args.get("doc_type") or "").strip()
+
+    uploads = ProtocolUpload.query.filter_by(account_id=account_id).all()
+    upload_dicts = [u.to_dict() for u in uploads]
+
+    terminology = {}
+    try:
+        terminology = json.loads(account.terminology_json or "{}")
+    except json.JSONDecodeError:
+        pass
+
+    style = consolidate_style_for_doc_type(
+        upload_dicts,
+        doc_type=doc_type,
+        account_terms=terminology or None,
+        account_style_notes=account.style_notes or None,
+    )
+
+    # Count contributing uploads for the banner
+    if doc_type:
+        matching = [u for u in upload_dicts if u.get("doc_type") == doc_type]
+        contributing = matching or upload_dicts
+    else:
+        contributing = upload_dicts
+
+    analyzed = [
+        u for u in contributing
+        if any((k or {}).get("is_active", True) for k in (u.get("knowledge") or []))
+    ]
+
+    body = style.get("body_font") or {}
+    page = style.get("page") or {}
+    shading = style.get("shading_roles") or {}
+
+    return jsonify({
+        "success": True,
+        "doc_type": doc_type or None,
+        "summary": {
+            "upload_count": len(contributing),
+            "analyzed_upload_count": len(analyzed),
+            "has_learned_style": bool(body or page or shading),
+            "orientation": page.get("orientation"),
+            "body_font_name": body.get("name"),
+            "body_font_size_pt": body.get("size_pt"),
+            "section_header_shading": shading.get("section_header"),
+            "label_cell_shading": shading.get("label_cell"),
+            "terminology_count": len(style.get("terminology") or {}),
+            "rules_count": len(style.get("procedural_rules") or []),
+            "table_templates_count": len(style.get("table_templates") or []),
+        },
+        "style": style,
+    })

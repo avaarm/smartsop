@@ -71,6 +71,70 @@ def health():
     return jsonify({"status": "ok"})
 
 
+@app.route('/api/system/status')
+def system_status():
+    """Report LLM provider availability so the frontend onboarding wizard
+    can tell the user whether Ollama is reachable, which cloud fallback
+    (if any) is configured, and the active model."""
+    from ml_model.gmp.ollama_service import OllamaService
+    from ml_model.gmp.llm_provider import load_config, CONFIG_PATH
+
+    svc = OllamaService(base_url=app.config.get("OLLAMA_HOST", OLLAMA_HOST))
+    ollama_ok = svc.check_health()
+    fallback = svc.fallback
+    fallback_info = None
+    if fallback is not None:
+        fallback_info = {
+            "name": fallback.name,
+            "model": fallback.model,
+            "healthy": fallback.check_health(),
+            "has_api_key": bool(getattr(fallback, "api_key", "")),
+        }
+
+    # Expose non-secret config so the wizard can pre-fill which provider
+    # is currently selected and whether each API key is already set.
+    cfg = load_config()
+    return jsonify({
+        "success": True,
+        "ollama": {
+            "reachable": ollama_ok,
+            "base_url": svc.base_url,
+            "model": svc.model,
+        },
+        "fallback": fallback_info,
+        "active_provider": svc.active_provider_name,
+        "config": {
+            "provider": cfg.get("provider") or "",
+            "has_openai_key": bool(cfg.get("openai_api_key")),
+            "openai_model": cfg.get("openai_model") or "",
+            "has_anthropic_key": bool(cfg.get("anthropic_api_key")),
+            "anthropic_model": cfg.get("anthropic_model") or "",
+            "config_path": str(CONFIG_PATH),
+        },
+    })
+
+
+@app.route('/api/system/llm-config', methods=['POST'])
+def update_llm_config():
+    """Persist the user's LLM preference (provider + API keys) to
+    ``~/.smartsop/llm.json``. The frontend wizard POSTs here."""
+    from flask import request
+    from ml_model.gmp.llm_provider import save_config, load_config
+
+    payload = request.get_json(silent=True) or {}
+    save_config(payload)
+    # Echo the effective config (env + file layered), never the keys.
+    cfg = load_config()
+    safe = {
+        "provider": cfg.get("provider", ""),
+        "has_openai_key": bool(cfg.get("openai_api_key")),
+        "openai_model": cfg.get("openai_model", ""),
+        "has_anthropic_key": bool(cfg.get("anthropic_api_key")),
+        "anthropic_model": cfg.get("anthropic_model", ""),
+    }
+    return jsonify({"success": True, "config": safe})
+
+
 # ── SPA fallback: serve index.html for any non-API route ───────────
 if SERVE_STATIC:
     @app.errorhandler(404)

@@ -27,7 +27,16 @@ from . import ooxml_helpers as ox
 
 logger = logging.getLogger(__name__)
 
-# Formatting constants matching Fred Hutch example
+def _looks_like_hex(val) -> bool:
+    """Return True if ``val`` is a 6-char RGB hex string (no leading #)."""
+    if not isinstance(val, str):
+        return False
+    v = val.lstrip("#").strip()
+    return len(v) == 6 and all(c in "0123456789abcdefABCDEF" for c in v)
+
+
+# Formatting defaults — used when no account_style override is supplied.
+# Values match the Fred Hutch Cell Processing Facility example.
 TABLE_WIDTH = 14580
 HEADER_FILL = "BFBFBF"
 LABEL_FILL = "F2F2F2"
@@ -38,22 +47,49 @@ FOOTER_SIZE = Pt(8)
 
 
 class GMPWordEngine:
-    """Generates GMP-compliant Word documents from template + data."""
+    """Generates GMP-compliant Word documents from template + data.
+
+    Style customisation:
+        Call ``generate(template, data, account_style=…)`` with a dict
+        produced by ``style_consolidation.consolidate_style`` to override
+        the defaults — fonts, shading colors, page size, margins — to
+        match a specific customer's uploaded documents.
+
+        When ``account_style`` is missing or a particular key is null,
+        the Fred-Hutch defaults above apply.
+    """
 
     def __init__(self):
         self.doc = None
+        # These get re-bound by ``_apply_account_style`` on every call;
+        # module constants are the fallback.
+        self._default_font = DEFAULT_FONT
+        self._body_size = BODY_SIZE
+        self._header_fill = HEADER_FILL
+        self._label_fill = LABEL_FILL
+        self._account_page = None  # dict from consolidated style (may be None)
 
-    def generate(self, template: DocumentTemplate, data: dict) -> bytes:
+    def generate(
+        self,
+        template: DocumentTemplate,
+        data: dict,
+        account_style: Optional[dict] = None,
+    ) -> bytes:
         """Generate a complete DOCX document.
 
         Args:
             template: Document template with formatting rules and sections
             data: Dict with section data to populate the template
+            account_style: Optional consolidated style dict from
+                ``style_consolidation.consolidate_style``. When present,
+                overrides the default font, body size, header/label
+                shading, and page setup.
 
         Returns:
             DOCX file as bytes
         """
         self.doc = Document()
+        self._apply_account_style(account_style)
         self._setup_styles()
         self._setup_page(template)
         self._build_header(template, data)
@@ -70,22 +106,76 @@ class GMPWordEngine:
         buffer.seek(0)
         return buffer.getvalue()
 
+    def _apply_account_style(self, account_style: Optional[dict]):
+        """Set instance attributes from a consolidated account style.
+
+        Falls back to module-level defaults for any key that's null or
+        missing from ``account_style``.
+        """
+        self._default_font = DEFAULT_FONT
+        self._body_size = BODY_SIZE
+        self._header_fill = HEADER_FILL
+        self._label_fill = LABEL_FILL
+        self._account_page = None
+
+        if not isinstance(account_style, dict):
+            return
+
+        body_font = account_style.get("body_font") or {}
+        if body_font.get("name"):
+            self._default_font = body_font["name"]
+        if body_font.get("size_pt"):
+            try:
+                self._body_size = Pt(float(body_font["size_pt"]))
+            except (TypeError, ValueError):
+                pass
+
+        shading = account_style.get("shading_roles") or {}
+        if _looks_like_hex(shading.get("section_header")):
+            self._header_fill = shading["section_header"].upper()
+        if _looks_like_hex(shading.get("label_cell")):
+            self._label_fill = shading["label_cell"].upper()
+
+        page = account_style.get("page") or {}
+        if page:
+            self._account_page = page
+
     def _setup_styles(self):
-        """Configure default document styles."""
+        """Configure default document styles from the (possibly overridden)
+        body-font attributes."""
         style = self.doc.styles["Normal"]
-        style.font.name = DEFAULT_FONT
-        style.font.size = BODY_SIZE
+        style.font.name = self._default_font
+        style.font.size = self._body_size
         style.paragraph_format.space_before = Twips(0)
         style.paragraph_format.space_after = Twips(0)
 
     def _setup_page(self, template: DocumentTemplate):
-        """Set page orientation, size, and margins."""
+        """Set page orientation, size, and margins.
+
+        When a consolidated ``_account_page`` is present, it wins over the
+        template's defaults — the user's uploaded documents dictate layout.
+        """
         section = self.doc.sections[0]
 
-        # Set landscape orientation
-        if template.orientation.value == "landscape":
+        page = self._account_page or {}
+        orientation = page.get("orientation") or template.orientation.value
+        size_inches = page.get("size_inches")
+        margins_inches = page.get("margins_inches") or {}
+
+        if orientation == "landscape":
             ox.set_page_landscape(section)
-        else:
+
+        # If the learned style declares explicit page dimensions, apply
+        # them (in DXA — 1 inch = 1440 DXA).
+        if size_inches and len(size_inches) == 2:
+            sectPr = section._sectPr
+            pgSz = sectPr.find(qn("w:pgSz"))
+            if pgSz is None:
+                pgSz = OxmlElement("w:pgSz")
+                sectPr.append(pgSz)
+            pgSz.set(qn("w:w"), str(int(size_inches[0] * 1440)))
+            pgSz.set(qn("w:h"), str(int(size_inches[1] * 1440)))
+        elif orientation != "landscape":
             sectPr = section._sectPr
             pgSz = sectPr.find(qn("w:pgSz"))
             if pgSz is None:
@@ -94,11 +184,21 @@ class GMPWordEngine:
             pgSz.set(qn("w:w"), str(template.page_size.width_dxa))
             pgSz.set(qn("w:h"), str(template.page_size.height_dxa))
 
-        # Set margins
+        # Margins — prefer learned values when set, fall back per-side.
         m = template.margins
+
+        def _dxa(inches):
+            try:
+                return int(float(inches) * 1440)
+            except (TypeError, ValueError):
+                return None
+
         ox.set_page_margins(
             section,
-            top=m.top, right=m.right, bottom=m.bottom, left=m.left,
+            top=_dxa(margins_inches.get("top")) or m.top,
+            right=_dxa(margins_inches.get("right")) or m.right,
+            bottom=_dxa(margins_inches.get("bottom")) or m.bottom,
+            left=_dxa(margins_inches.get("left")) or m.left,
             header=m.header, footer=m.footer, gutter=m.gutter,
         )
 
@@ -144,18 +244,18 @@ class GMPWordEngine:
         title_run = title_p.add_run(doc_title)
         title_run.bold = True
         title_run.font.size = Pt(12)
-        title_run.font.name = DEFAULT_FONT
+        title_run.font.name = self._default_font
 
         # Page number cell
         page_cell = table.cell(0, 3)
         ox.set_cell_vertical_align(page_cell, "center")
         page_p = page_cell.paragraphs[0]
         page_run = page_p.add_run("Page ")
-        page_run.font.size = BODY_SIZE
-        page_run.font.name = DEFAULT_FONT
+        page_run.font.size = self._body_size
+        page_run.font.name = self._default_font
         ox.add_page_number_field(page_p)
         of_run = page_p.add_run(" of ")
-        of_run.font.size = BODY_SIZE
+        of_run.font.size = self._body_size
         ox.add_num_pages_field(page_p)
 
         # Doc number label
@@ -163,16 +263,16 @@ class GMPWordEngine:
         ox.set_cell_vertical_align(dn_label_cell, "center")
         dn_label_p = dn_label_cell.paragraphs[0]
         dn_label_run = dn_label_p.add_run("Document No:")
-        dn_label_run.font.size = BODY_SIZE
-        dn_label_run.font.name = DEFAULT_FONT
+        dn_label_run.font.size = self._body_size
+        dn_label_run.font.name = self._default_font
 
         # Doc number value
         dn_val_cell = table.cell(0, 5)
         ox.set_cell_vertical_align(dn_val_cell, "center")
         dn_val_p = dn_val_cell.paragraphs[0]
         dn_val_run = dn_val_p.add_run(doc_number)
-        dn_val_run.font.size = BODY_SIZE
-        dn_val_run.font.name = DEFAULT_FONT
+        dn_val_run.font.size = self._body_size
+        dn_val_run.font.name = self._default_font
 
         # Row 1: (logo cont) | (title cont) | Production ID | Eff Date label | Eff Date val
         for r in [1, 2]:
@@ -186,40 +286,40 @@ class GMPWordEngine:
         ox.set_cell_vertical_align(pid_cell, "center")
         pid_p = pid_cell.paragraphs[0]
         pid_run = pid_p.add_run("Production ID:")
-        pid_run.font.size = BODY_SIZE
+        pid_run.font.size = self._body_size
 
         # Effective Date label
         ed_label_cell = table.cell(1, 4)
         ox.set_cell_vertical_align(ed_label_cell, "center")
         ed_p = ed_label_cell.paragraphs[0]
         ed_run = ed_p.add_run("Effective Date:")
-        ed_run.font.size = BODY_SIZE
+        ed_run.font.size = self._body_size
 
         # Effective Date value
         ed_val_cell = table.cell(1, 5)
         ox.set_cell_vertical_align(ed_val_cell, "center")
         ed_val_p = ed_val_cell.paragraphs[0]
         ed_val_run = ed_val_p.add_run(effective_date)
-        ed_val_run.font.size = BODY_SIZE
+        ed_val_run.font.size = self._body_size
 
         # Row 2: Lot Number | Revision label | Revision value
         lot_cell = table.cell(2, 3)
         ox.set_cell_vertical_align(lot_cell, "center")
         lot_p = lot_cell.paragraphs[0]
         lot_run = lot_p.add_run("Lot Number:")
-        lot_run.font.size = BODY_SIZE
+        lot_run.font.size = self._body_size
 
         rev_label_cell = table.cell(2, 4)
         ox.set_cell_vertical_align(rev_label_cell, "center")
         rev_p = rev_label_cell.paragraphs[0]
         rev_run = rev_p.add_run("Revision No:")
-        rev_run.font.size = BODY_SIZE
+        rev_run.font.size = self._body_size
 
         rev_val_cell = table.cell(2, 5)
         ox.set_cell_vertical_align(rev_val_cell, "center")
         rev_val_p = rev_val_cell.paragraphs[0]
         rev_val_run = rev_val_p.add_run(revision)
-        rev_val_run.font.size = BODY_SIZE
+        rev_val_run.font.size = self._body_size
 
         # Set row heights
         for row in table.rows:
@@ -257,7 +357,7 @@ class GMPWordEngine:
         run = p.add_run(text)
         run.bold = ftr_cfg.bold
         run.font.size = Pt(ftr_cfg.font_size_half_pt / 2)
-        run.font.name = DEFAULT_FONT
+        run.font.name = self._default_font
 
     def _build_section(self, section_def: SectionDefinition, section_data: dict,
                        all_data: dict):
@@ -304,7 +404,7 @@ class GMPWordEngine:
         # Merge all columns
         for i in range(1, col_count):
             header_cell = header_cell.merge(table.cell(0, i))
-        ox.set_cell_shading(header_cell, HEADER_FILL)
+        ox.set_cell_shading(header_cell, self._header_fill)
         ox.set_cell_vertical_align(header_cell, "center")
 
         p = header_cell.paragraphs[0]
@@ -312,7 +412,7 @@ class GMPWordEngine:
         run = p.add_run(f"  {title}")
         run.bold = True
         run.font.size = SECTION_HEADER_SIZE
-        run.font.name = DEFAULT_FONT
+        run.font.name = self._default_font
 
         return table
 
@@ -332,8 +432,14 @@ class GMPWordEngine:
 
     def _add_label_value_row(self, table, label: str, value: str = "",
                              label_cols: int = 1, value_cols: int = 1,
-                             label_fill: str = LABEL_FILL):
-        """Add a label-value row to a table."""
+                             label_fill: Optional[str] = None):
+        """Add a label-value row to a table.
+
+        ``label_fill`` defaults to the instance's current label shading
+        (which may have been overridden by an account style).
+        """
+        if label_fill is None:
+            label_fill = self._label_fill
         row = table.add_row()
 
         label_cell = row.cells[0]
@@ -345,8 +451,8 @@ class GMPWordEngine:
         p = label_cell.paragraphs[0]
         ox.set_paragraph_spacing(p, before=60, after=60)
         run = p.add_run(label)
-        run.font.size = BODY_SIZE
-        run.font.name = DEFAULT_FONT
+        run.font.size = self._body_size
+        run.font.name = self._default_font
 
         value_cell = row.cells[label_cols]
         if value_cols > 1:
@@ -357,8 +463,8 @@ class GMPWordEngine:
         ox.set_paragraph_spacing(p, before=60, after=60)
         if value:
             run = p.add_run(value)
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
         return row
 
@@ -380,13 +486,13 @@ class GMPWordEngine:
             row = table.add_row()
             # Role label (col 0)
             role_cell = row.cells[0]
-            ox.set_cell_shading(role_cell, LABEL_FILL)
+            ox.set_cell_shading(role_cell, self._label_fill)
             ox.set_cell_vertical_align(role_cell, "center")
             p = role_cell.paragraphs[0]
             ox.set_paragraph_spacing(p, before=60, after=60)
             run = p.add_run(approver["role"] + ":")
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
             # Name (cols 1-2)
             name_cell = row.cells[1]
@@ -396,18 +502,18 @@ class GMPWordEngine:
             ox.set_paragraph_spacing(p, before=60, after=60)
             if approver.get("name"):
                 run = p.add_run(approver["name"])
-                run.font.size = BODY_SIZE
-                run.font.name = DEFAULT_FONT
+                run.font.size = self._body_size
+                run.font.name = self._default_font
 
             # Date label (col 3)
             date_label_cell = row.cells[3]
-            ox.set_cell_shading(date_label_cell, LABEL_FILL)
+            ox.set_cell_shading(date_label_cell, self._label_fill)
             ox.set_cell_vertical_align(date_label_cell, "center")
             p = date_label_cell.paragraphs[0]
             ox.set_paragraph_spacing(p, before=60, after=60)
             run = p.add_run("Date:")
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
             # Date value (col 4)
             date_cell = row.cells[4]
@@ -416,21 +522,21 @@ class GMPWordEngine:
             ox.set_paragraph_spacing(p, before=60, after=60)
             if approver.get("date"):
                 run = p.add_run(approver["date"])
-                run.font.size = BODY_SIZE
-                run.font.name = DEFAULT_FONT
+                run.font.size = self._body_size
+                run.font.name = self._default_font
 
         # Batch Record Issuance section
         issue_row = table.add_row()
         issue_cell = issue_row.cells[0]
         for i in range(1, 8):
             issue_cell = issue_cell.merge(issue_row.cells[i])
-        ox.set_cell_shading(issue_cell, HEADER_FILL)
+        ox.set_cell_shading(issue_cell, self._header_fill)
         p = issue_cell.paragraphs[0]
         ox.set_paragraph_spacing(p, before=60, after=60)
         run = p.add_run("  Batch Record issued for processing:")
         run.bold = True
         run.font.size = SECTION_HEADER_SIZE
-        run.font.name = DEFAULT_FONT
+        run.font.name = self._default_font
 
         # Issuance details
         issuance_items = [
@@ -445,8 +551,8 @@ class GMPWordEngine:
             p = cell.paragraphs[0]
             ox.set_paragraph_spacing(p, before=60, after=60)
             run = p.add_run(item)
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
         # Issued By Signature row
         row = table.add_row()
@@ -456,8 +562,8 @@ class GMPWordEngine:
         p = cell.paragraphs[0]
         ox.set_paragraph_spacing(p, before=60, after=60)
         run = p.add_run("Issued By Signature / Date:")
-        run.font.size = BODY_SIZE
-        run.font.name = DEFAULT_FONT
+        run.font.size = self._body_size
+        run.font.name = self._default_font
 
     def _build_references_table(self, section_def: SectionDefinition,
                                 section_data: dict, all_data: dict):
@@ -472,14 +578,14 @@ class GMPWordEngine:
             ["Document Number", "Title"], col_widths
         )):
             cell = row.cells[i]
-            ox.set_cell_shading(cell, LABEL_FILL)
+            ox.set_cell_shading(cell, self._label_fill)
             ox.set_cell_vertical_align(cell, "center")
             p = cell.paragraphs[0]
             ox.set_paragraph_spacing(p, before=60, after=60)
             run = p.add_run(header)
             run.bold = True
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
         # Reference rows
         references = section_data.get("references", [])
@@ -490,16 +596,16 @@ class GMPWordEngine:
             p = doc_cell.paragraphs[0]
             ox.set_paragraph_spacing(p, before=60, after=60)
             run = p.add_run(ref.get("doc_number", ""))
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
             title_cell = row.cells[1]
             ox.set_cell_vertical_align(title_cell, "center")
             p = title_cell.paragraphs[0]
             ox.set_paragraph_spacing(p, before=60, after=60)
             run = p.add_run(ref.get("title", ""))
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
     def _build_attachments_table(self, section_def: SectionDefinition,
                                  section_data: dict, all_data: dict):
@@ -513,14 +619,14 @@ class GMPWordEngine:
         headers = ["Document Number", "Title", "Qty."]
         for i, header in enumerate(headers):
             cell = row.cells[i]
-            ox.set_cell_shading(cell, LABEL_FILL)
+            ox.set_cell_shading(cell, self._label_fill)
             ox.set_cell_vertical_align(cell, "center")
             p = cell.paragraphs[0]
             ox.set_paragraph_spacing(p, before=60, after=60)
             run = p.add_run(header)
             run.bold = True
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
         attachments = section_data.get("attachments", [])
         for att in attachments:
@@ -532,8 +638,8 @@ class GMPWordEngine:
                 ox.set_paragraph_spacing(p, before=60, after=60)
                 val = str(att.get(key, ""))
                 run = p.add_run(val)
-                run.font.size = BODY_SIZE
-                run.font.name = DEFAULT_FONT
+                run.font.size = self._body_size
+                run.font.name = self._default_font
 
     def _build_general_instructions(self, section_def: SectionDefinition,
                                     section_data: dict, all_data: dict):
@@ -548,8 +654,8 @@ class GMPWordEngine:
             p = cell.paragraphs[0]
             ox.set_paragraph_spacing(p, before=60, after=60)
             run = p.add_run(instruction)
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
     def _build_equipment_list(self, section_def: SectionDefinition,
                               section_data: dict, all_data: dict):
@@ -562,25 +668,25 @@ class GMPWordEngine:
         row = table.add_row()
         cell = row.cells[0]
         cell = cell.merge(row.cells[1])
-        ox.set_cell_shading(cell, LABEL_FILL)
+        ox.set_cell_shading(cell, self._label_fill)
         p = cell.paragraphs[0]
         ox.set_paragraph_spacing(p, before=60, after=60)
         run = p.add_run("Equipment List:")
         run.bold = True
-        run.font.size = BODY_SIZE
-        run.font.name = DEFAULT_FONT
+        run.font.size = self._body_size
+        run.font.name = self._default_font
 
         # Equipment description header
         row = table.add_row()
         cell = row.cells[0]
         cell = cell.merge(row.cells[1])
-        ox.set_cell_shading(cell, LABEL_FILL)
+        ox.set_cell_shading(cell, self._label_fill)
         p = cell.paragraphs[0]
         ox.set_paragraph_spacing(p, before=60, after=60)
         run = p.add_run("Description")
         run.bold = True
-        run.font.size = BODY_SIZE
-        run.font.name = DEFAULT_FONT
+        run.font.size = self._body_size
+        run.font.name = self._default_font
 
         equipment = section_data.get("equipment", [])
         for equip in equipment:
@@ -591,8 +697,8 @@ class GMPWordEngine:
             ox.set_paragraph_spacing(p, before=60, after=60)
             desc = equip if isinstance(equip, str) else equip.get("description", "")
             run = p.add_run(desc)
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
     def _build_materials_list(self, section_def: SectionDefinition,
                               section_data: dict, all_data: dict):
@@ -606,14 +712,14 @@ class GMPWordEngine:
         headers = ["CPF Part No.", "Material Description", "Quantity Required"] * 2
         for i, header in enumerate(headers):
             cell = row.cells[i]
-            ox.set_cell_shading(cell, LABEL_FILL)
+            ox.set_cell_shading(cell, self._label_fill)
             ox.set_cell_vertical_align(cell, "center")
             p = cell.paragraphs[0]
             ox.set_paragraph_spacing(p, before=60, after=60)
             run = p.add_run(header)
             run.bold = True
             run.font.size = Pt(9)
-            run.font.name = DEFAULT_FONT
+            run.font.name = self._default_font
 
         materials = section_data.get("materials", [])
         # Split into two columns
@@ -633,7 +739,7 @@ class GMPWordEngine:
                     ox.set_paragraph_spacing(p, before=60, after=60)
                     run = p.add_run(str(mat.get(key, "")))
                     run.font.size = Pt(9)
-                    run.font.name = DEFAULT_FONT
+                    run.font.name = self._default_font
 
             # Right side
             if i < len(right_materials):
@@ -645,7 +751,7 @@ class GMPWordEngine:
                     ox.set_paragraph_spacing(p, before=60, after=60)
                     run = p.add_run(str(mat.get(key, "")))
                     run.font.size = Pt(9)
-                    run.font.name = DEFAULT_FONT
+                    run.font.name = self._default_font
 
     def _build_step_procedure(self, section_def: SectionDefinition,
                               section_data: dict, all_data: dict):
@@ -674,8 +780,8 @@ class GMPWordEngine:
             ox.set_paragraph_spacing(p, before=60, after=60)
             run = p.add_run(col_def.title)
             run.bold = True
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
         # Step rows
         steps = section_data.get("steps", [])
@@ -687,13 +793,13 @@ class GMPWordEngine:
         cell = review_row.cells[0]
         for i in range(1, col_count):
             cell = cell.merge(review_row.cells[i])
-        ox.set_cell_shading(cell, LABEL_FILL)
+        ox.set_cell_shading(cell, self._label_fill)
         p = cell.paragraphs[0]
         ox.set_paragraph_spacing(p, before=60, after=60)
         run = p.add_run("Section Review")
         run.bold = True
-        run.font.size = BODY_SIZE
-        run.font.name = DEFAULT_FONT
+        run.font.size = self._body_size
+        run.font.name = self._default_font
 
         # MFG and QA review rows
         for reviewer in ["MFG Review (Initials/Date):", "QA Review (Initials/Date):"]:
@@ -704,8 +810,8 @@ class GMPWordEngine:
             p = cell.paragraphs[0]
             ox.set_paragraph_spacing(p, before=60, after=60)
             run = p.add_run(reviewer)
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
     def _add_step_row(self, table, step: dict, col_count: int):
         """Add a single step row to a procedure table."""
@@ -723,14 +829,14 @@ class GMPWordEngine:
         if step_num:
             title_run = p.add_run(f"{step_num}  ")
             title_run.bold = True
-            title_run.font.size = BODY_SIZE
-            title_run.font.name = DEFAULT_FONT
+            title_run.font.size = self._body_size
+            title_run.font.name = self._default_font
 
         if step_title:
             title_run = p.add_run(step_title)
             title_run.bold = True
-            title_run.font.size = BODY_SIZE
-            title_run.font.name = DEFAULT_FONT
+            title_run.font.size = self._body_size
+            title_run.font.name = self._default_font
 
         # Sub-instructions
         instructions = step.get("instructions", [])
@@ -746,12 +852,12 @@ class GMPWordEngine:
             if is_bsc:
                 bsc_run = p.add_run("[BSC] ")
                 bsc_run.bold = True
-                bsc_run.font.size = BODY_SIZE
-                bsc_run.font.name = DEFAULT_FONT
+                bsc_run.font.size = self._body_size
+                bsc_run.font.name = self._default_font
 
             run = p.add_run(text)
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
             # Handle verification options
             if isinstance(instr, dict) and instr.get("type") == "verification":
@@ -760,8 +866,8 @@ class GMPWordEngine:
                     ox.set_paragraph_spacing(opt_p, before=20, after=20)
                     ox.add_checkbox(opt_p, checked=False)
                     run = opt_p.add_run(f" {option}")
-                    run.font.size = BODY_SIZE
-                    run.font.name = DEFAULT_FONT
+                    run.font.size = self._body_size
+                    run.font.name = self._default_font
 
         # Variable column
         if col_count > 1:
@@ -773,8 +879,8 @@ class GMPWordEngine:
                 ox.set_paragraph_spacing(p, before=40, after=40)
                 var_name = var if isinstance(var, str) else var.get("name", "")
                 run = p.add_run(var_name)
-                run.font.size = BODY_SIZE
-                run.font.name = DEFAULT_FONT
+                run.font.size = self._body_size
+                run.font.name = self._default_font
 
         # Result column (empty for filling in)
         if col_count > 2:
@@ -785,8 +891,8 @@ class GMPWordEngine:
                 p = result_cell.add_paragraph() if result_cell.paragraphs[0].text else result_cell.paragraphs[0]
                 ox.set_paragraph_spacing(p, before=40, after=40)
                 run = p.add_run(res.get("unit", "") if isinstance(res, dict) else str(res))
-                run.font.size = BODY_SIZE
-                run.font.name = DEFAULT_FONT
+                run.font.size = self._body_size
+                run.font.name = self._default_font
 
     def _build_checklist(self, section_def: SectionDefinition,
                          section_data: dict, all_data: dict):
@@ -803,16 +909,16 @@ class GMPWordEngine:
             ox.add_checkbox(p, checked=False)
             text = item if isinstance(item, str) else item.get("text", "")
             run = p.add_run(f"  {text}")
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
             # Add N/A option if applicable
             if isinstance(item, dict) and item.get("na_option"):
                 na_run = p.add_run(" (")
-                na_run.font.size = BODY_SIZE
+                na_run.font.size = self._body_size
                 ox.add_checkbox(p, checked=False)
                 na_run2 = p.add_run(" N/A)")
-                na_run2.font.size = BODY_SIZE
+                na_run2.font.size = self._body_size
 
     def _build_comments(self, section_def: SectionDefinition,
                         section_data: dict, all_data: dict):
@@ -826,14 +932,14 @@ class GMPWordEngine:
         for i, header in enumerate(["Step Reference", "Comments",
                                      "Recorded By (Initials/Date)"]):
             cell = row.cells[i]
-            ox.set_cell_shading(cell, LABEL_FILL)
+            ox.set_cell_shading(cell, self._label_fill)
             ox.set_cell_vertical_align(cell, "center")
             p = cell.paragraphs[0]
             ox.set_paragraph_spacing(p, before=60, after=60)
             run = p.add_run(header)
             run.bold = True
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
         # Empty rows with N/A checkboxes
         num_rows = section_data.get("num_rows", 4)
@@ -848,8 +954,8 @@ class GMPWordEngine:
                     ox.set_paragraph_spacing(p, before=60, after=60)
                     ox.add_checkbox(p, checked=False)
                     run = p.add_run(" N/A")
-                    run.font.size = BODY_SIZE
-                    run.font.name = DEFAULT_FONT
+                    run.font.size = self._body_size
+                    run.font.name = self._default_font
 
     def _build_review(self, section_def: SectionDefinition,
                       section_data: dict, all_data: dict):
@@ -862,13 +968,13 @@ class GMPWordEngine:
         if section_data.get("checklist_items"):
             row = table.add_row()
             cell = row.cells[0]
-            ox.set_cell_shading(cell, LABEL_FILL)
+            ox.set_cell_shading(cell, self._label_fill)
             p = cell.paragraphs[0]
             ox.set_paragraph_spacing(p, before=60, after=60)
             run = p.add_run("Review Checklist")
             run.bold = True
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
             for item in section_data["checklist_items"]:
                 row = table.add_row()
@@ -878,8 +984,8 @@ class GMPWordEngine:
                 ox.add_checkbox(p, checked=False)
                 text = item if isinstance(item, str) else item.get("text", "")
                 run = p.add_run(f"  {text}")
-                run.font.size = BODY_SIZE
-                run.font.name = DEFAULT_FONT
+                run.font.size = self._body_size
+                run.font.name = self._default_font
 
         # Reviewer comments
         row = table.add_row()
@@ -887,12 +993,12 @@ class GMPWordEngine:
         p = cell.paragraphs[0]
         ox.set_paragraph_spacing(p, before=60, after=60)
         run = p.add_run(f"{review_type.title()} Reviewer Comments:  ")
-        run.font.size = BODY_SIZE
-        run.font.name = DEFAULT_FONT
+        run.font.size = self._body_size
+        run.font.name = self._default_font
         ox.add_checkbox(p, checked=False)
         run2 = p.add_run("  N/A")
-        run2.font.size = BODY_SIZE
-        run2.font.name = DEFAULT_FONT
+        run2.font.size = self._body_size
+        run2.font.name = self._default_font
 
         # Signature line
         row = table.add_row()
@@ -901,8 +1007,8 @@ class GMPWordEngine:
         p = cell.paragraphs[0]
         ox.set_paragraph_spacing(p, before=60, after=60)
         run = p.add_run(f"{review_type.title()} Review Signature/Date: ")
-        run.font.size = BODY_SIZE
-        run.font.name = DEFAULT_FONT
+        run.font.size = self._body_size
+        run.font.name = self._default_font
 
     def _build_label_accountability(self, section_def: SectionDefinition,
                                     section_data: dict, all_data: dict):
@@ -917,14 +1023,14 @@ class GMPWordEngine:
                    "Performed By (Initials/Date)", "Verified By (Initials/Date)"]
         for i, header in enumerate(headers):
             cell = row.cells[i]
-            ox.set_cell_shading(cell, LABEL_FILL)
+            ox.set_cell_shading(cell, self._label_fill)
             ox.set_cell_vertical_align(cell, "center")
             p = cell.paragraphs[0]
             ox.set_paragraph_spacing(p, before=60, after=60)
             run = p.add_run(header)
             run.bold = True
             run.font.size = Pt(9)
-            run.font.name = DEFAULT_FONT
+            run.font.name = self._default_font
 
         # In-process labels row
         row = table.add_row()
@@ -933,13 +1039,13 @@ class GMPWordEngine:
         ox.set_paragraph_spacing(p, before=60, after=60)
         run = p.add_run("In-Process Labels")
         run.bold = True
-        run.font.size = BODY_SIZE
-        run.font.name = DEFAULT_FONT
+        run.font.size = self._body_size
+        run.font.name = self._default_font
         p2 = cell.add_paragraph()
         ox.set_paragraph_spacing(p2, before=40, after=40)
         run2 = p2.add_run("Deface and discard any unused in-process labels.")
-        run2.font.size = BODY_SIZE
-        run2.font.name = DEFAULT_FONT
+        run2.font.size = self._body_size
+        run2.font.name = self._default_font
 
         # Infusion labels row
         row = table.add_row()
@@ -948,16 +1054,16 @@ class GMPWordEngine:
         ox.set_paragraph_spacing(p, before=60, after=60)
         run = p.add_run("Infusion Labels")
         run.bold = True
-        run.font.size = BODY_SIZE
-        run.font.name = DEFAULT_FONT
+        run.font.size = self._body_size
+        run.font.name = self._default_font
         p2 = cell.add_paragraph()
         run2 = p2.add_run(
             "Do not discard remaining infusion labels. "
             "Deface unused Infusion Labels. "
             "Attach unused Infusion Labels to this record."
         )
-        run2.font.size = BODY_SIZE
-        run2.font.name = DEFAULT_FONT
+        run2.font.size = self._body_size
+        run2.font.name = self._default_font
 
         # Label count rows
         label_rows = [
@@ -972,16 +1078,16 @@ class GMPWordEngine:
             p = cell.paragraphs[0]
             ox.set_paragraph_spacing(p, before=60, after=60)
             run = p.add_run(text)
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
             # Variable column - "Labels"
             var_cell = row.cells[2]
             p = var_cell.paragraphs[0]
             ox.set_paragraph_spacing(p, before=60, after=60)
             run = p.add_run("Labels")
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
         # Accountability calculation row
         row = table.add_row()
@@ -989,8 +1095,8 @@ class GMPWordEngine:
         p = cell.paragraphs[0]
         ox.set_paragraph_spacing(p, before=60, after=60)
         run = p.add_run("Calculate: Label Accountability = Printed - Adhered - Used - Attached")
-        run.font.size = BODY_SIZE
-        run.font.name = DEFAULT_FONT
+        run.font.size = self._body_size
+        run.font.name = self._default_font
 
     def _build_generic_table(self, section_def: SectionDefinition,
                              section_data: dict, all_data: dict):
@@ -1008,14 +1114,14 @@ class GMPWordEngine:
         row = table.add_row()
         for i, col_def in enumerate(columns):
             cell = row.cells[i]
-            ox.set_cell_shading(cell, LABEL_FILL)
+            ox.set_cell_shading(cell, self._label_fill)
             ox.set_cell_vertical_align(cell, col_def.vertical_align)
             p = cell.paragraphs[0]
             ox.set_paragraph_spacing(p, before=60, after=60)
             run = p.add_run(col_def.title)
             run.bold = col_def.bold
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
         # Data rows
         rows_data = section_data.get("rows", [])
@@ -1030,8 +1136,8 @@ class GMPWordEngine:
                 ox.set_paragraph_spacing(p, before=60, after=60)
                 value = row_data.get(col_def.id, "")
                 run = p.add_run(str(value))
-                run.font.size = BODY_SIZE
-                run.font.name = DEFAULT_FONT
+                run.font.size = self._body_size
+                run.font.name = self._default_font
 
     def _build_free_text(self, section_def: SectionDefinition,
                          section_data: dict, all_data: dict):
@@ -1045,8 +1151,8 @@ class GMPWordEngine:
             p = cell.paragraphs[0]
             ox.set_paragraph_spacing(p, before=60, after=60)
             run = p.add_run(text)
-            run.font.size = BODY_SIZE
-            run.font.name = DEFAULT_FONT
+            run.font.size = self._body_size
+            run.font.name = self._default_font
 
     def _build_flowchart_section(self, section_def: SectionDefinition,
                                  section_data: dict, all_data: dict):
@@ -1059,7 +1165,7 @@ class GMPWordEngine:
             # Placeholder
             p = self.doc.add_paragraph()
             run = p.add_run(f"[Flowchart: {section_def.title}]")
-            run.font.size = BODY_SIZE
+            run.font.size = self._body_size
             run.font.color.rgb = RGBColor(0x99, 0x99, 0x99)
             return
 

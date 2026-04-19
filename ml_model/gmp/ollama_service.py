@@ -1,21 +1,47 @@
-"""Ollama LLM integration service for GMP document content generation."""
+"""Ollama LLM integration service for GMP document content generation.
+
+When Ollama isn't reachable and an OpenAI/Anthropic API key is
+configured via environment variables, generation transparently falls
+back to the cloud provider. See ``ml_model.gmp.llm_provider`` for the
+provider abstraction.
+"""
 
 import json
 import logging
 import requests
 from typing import Optional
 
+from .llm_provider import LLMProvider, build_fallback_provider
+
 logger = logging.getLogger(__name__)
 
 
 class OllamaService:
-    """Client for the Ollama local LLM API."""
+    """Client for the Ollama local LLM API with optional cloud fallback."""
 
     def __init__(self, base_url: str = "http://localhost:11434",
-                 model: str = "llama3"):
+                 model: str = "llama3",
+                 fallback: Optional[LLMProvider] = None):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout = 120  # seconds
+        # Auto-build a fallback provider from env vars unless one was
+        # passed in explicitly. Keeps the "local-first" default — the
+        # fallback is only *used* when Ollama is unreachable.
+        self.fallback: Optional[LLMProvider] = (
+            fallback if fallback is not None else build_fallback_provider()
+        )
+
+    @property
+    def active_provider_name(self) -> str:
+        """Return the name of the provider that would handle a request
+        right now — "ollama" when it's healthy, else the fallback's name,
+        or "none" when neither is available."""
+        if self.check_health():
+            return "ollama"
+        if self.fallback and self.fallback.check_health():
+            return self.fallback.name
+        return "none"
 
     def check_health(self) -> bool:
         """Check if Ollama is running and responsive."""
@@ -73,9 +99,24 @@ class OllamaService:
             resp.raise_for_status()
             return resp.json().get("response", "")
         except requests.ConnectionError:
+            # Ollama isn't running — try the configured cloud fallback
+            # before giving up. Users who configured an API key get a
+            # working experience without having to run Ollama at all.
+            if self.fallback is not None:
+                logger.info(
+                    "Ollama unreachable — falling back to %s", self.fallback.name
+                )
+                return self.fallback.generate(
+                    prompt,
+                    system_prompt=system_prompt,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    json_mode=json_mode,
+                )
             logger.error("Cannot connect to Ollama. Is it running? (ollama serve)")
             raise RuntimeError(
-                "Ollama is not running. Start it with: ollama serve"
+                "Ollama is not running. Start it with: ollama serve "
+                "— or configure OPENAI_API_KEY / ANTHROPIC_API_KEY to use a cloud provider."
             )
         except requests.Timeout:
             logger.error("Ollama request timed out")
