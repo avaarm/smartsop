@@ -118,59 +118,66 @@ Return a JSON object with:
 Identify which sections appear to be standard/mandatory vs optional."""
 
 
-FORMATTING_ANALYSIS_PROMPT = """You are extracting a **machine-readable formatting spec** from a GMP
-protocol. The spec will be fed back into a document generator to
-produce new documents that match this organization's exact format, so
-favour concrete numeric values over prose.
+FORMATTING_ANALYSIS_PROMPT = """You are assembling a **machine-readable formatting spec** for a GMP
+protocol so a generator can reproduce its exact look. Every numeric
+value has already been measured — your job is to assemble them, NOT
+to estimate.
 
-DETERMINISTIC DATA (already measured from the file — prefer these
-values over any guess):
+DETERMINISTIC DATA (authoritative — copy values verbatim):
 Page setup: {page}
-Per-role fonts (paragraph-style → font): {font_roles}
+Theme fonts (resolves +mj-lt / +mn-lt): {theme_fonts}
+Per-role fonts (paragraph-style → dominant run font): {font_roles}
+Per-role paragraph rhythm (spacing, indent, line-height, alignment): {paragraph_rhythm}
+Numbering definitions (bullets, decimal, lowerLetter, etc): {numbering}
 Global font histogram (top 10): {fonts}
-Shading palette (cell background colors used): {shading_palette}
-Header text: {headers}
-Footer text: {footers}
+Shading palette (cell background colors): {shading_palette}
+Page header text (default/first_page/even_page): {headers}
+Page footer text (default/first_page/even_page): {footers}
 Paragraph styles by frequency: {styles}
 Table summaries: {tables}
 
-Return ONLY a JSON object with this shape:
+EXAMPLE of a good output (do NOT copy these numbers — yours must
+come from DETERMINISTIC DATA):
 {{
-  "page": {{
-    "orientation": "landscape|portrait",
-    "size_inches": [width, height],
-    "margins_inches": {{"top": x, "right": x, "bottom": x, "left": x}}
-  }},
-  "body_font": {{"name": "Calibri", "size_pt": 11, "line_spacing": 1.0}},
+  "page": {{"orientation": "landscape", "size_inches": [11.0, 8.5],
+           "margins_inches": {{"top": 0.75, "right": 0.5, "bottom": 0.5, "left": 0.5}}}},
+  "body_font": {{"name": "Calibri", "size_pt": 11, "line_spacing": 1.15,
+                 "space_after_pt": 6}},
   "heading_fonts": [
-    {{"level": 1, "name": "Calibri", "size_pt": 14, "bold": true, "color_hex": "000000"}}
+    {{"level": 1, "name": "Calibri", "size_pt": 14, "bold": true,
+      "space_before_pt": 12, "space_after_pt": 6}}
   ],
-  "header_pattern": "short description of what appears in the page header (or null)",
-  "footer_pattern": "short description of what appears in the page footer (or null)",
-  "shading_roles": {{
-    "section_header": "BFBFBF",
-    "label_cell": "F2F2F2",
-    "alternating_rows": null
-  }},
+  "header_pattern": "Company logo left, document title center, page N of M right",
+  "footer_pattern": "Confidential | Controlled Document | {{date}}",
+  "shading_roles": {{"section_header": "BFBFBF", "label_cell": "F2F2F2",
+                     "alternating_rows": null}},
   "table_conventions": [
-    "Each convention as a concrete rule, e.g. 'Approval blocks use 3 columns of equal width with a BFBFBF header row'"
+    "Approval blocks are 3-col tables with a BFBFBF header row",
+    "Label/value rows use F2F2F2 in column 1 and white in column 2"
   ],
-  "list_style": {{
-    "bullets": "round|square|dash|none",
-    "numbering": "1./a)/i)/X.X",
-    "indent_inches": 0.25
-  }},
+  "list_style": {{"bullets": "round", "numbering": "X.X", "indent_inches": 0.25}},
   "observations": [
-    "Other patterns that can be stated as a rule"
+    "All tables use a fixed layout (table-layout: fixed) with DXA-specified column widths",
+    "Headings never use theme fonts directly — all runs specify Calibri explicitly"
   ]
 }}
 
-Rules:
-1. Copy numeric values (page size, margins, shading colors) directly
-   from DETERMINISTIC DATA. Do not round or invent.
-2. If a piece of data is missing, set the field to null — do NOT
-   hallucinate a default.
-3. Shading colors must be 6-char hex without the leading #."""
+STRICT RULES:
+1. ``page.orientation``, ``size_inches``, ``margins_inches`` must come
+   from the Page setup block. Convert DXA → inches by dividing by 1440.
+2. ``body_font`` must come from ``paragraph_rhythm["body"]`` +
+   ``font_roles["body"]``; fall back to theme_fonts.minor if body
+   says "Default".
+3. ``heading_fonts`` — produce one entry per ``font_roles`` key that
+   starts with "Heading". Use the matching paragraph_rhythm entry
+   for space_before/space_after.
+4. ``shading_roles.section_header`` is the most-used color in
+   shading_palette when paired with bold text; ``label_cell`` is the
+   second most-used or lighter variant (e.g. F2F2F2 next to BFBFBF).
+5. Shading hex must be 6-char **without** the leading #.
+6. Set a field to null when no deterministic evidence exists — never
+   guess.
+7. Output ONLY the JSON object, no prose before or after."""
 
 
 TABLE_TEMPLATES_PROMPT = """Extract **reusable table templates** from this protocol — tables
@@ -211,6 +218,22 @@ Rules:
    labels (e.g., "Equipment List", "Step Procedure")."""
 
 
+# Minimum keys each category's JSON output must include. If the LLM returns
+# something missing a required key we retry once with a strict correction
+# instruction; still-missing keys are logged but not fatal.
+_REQUIRED_KEYS: dict[str, set[str]] = {
+    "terminology": {"terms"},
+    "procedural_rules": {"rules"},
+    "writing_style": {"voice"},
+    "section_structure": {"numbering_scheme"},
+    "formatting": {"body_font", "page"},
+    "table_templates": {"templates"},
+}
+
+# Passes that must copy deterministic numbers verbatim — run at temp=0.
+_DETERMINISTIC_CATEGORIES: set[str] = {"formatting", "table_templates"}
+
+
 class ProtocolAnalyzer:
     """Runs LLM analysis passes on parsed protocol content to extract knowledge."""
 
@@ -247,6 +270,8 @@ class ProtocolAnalyzer:
         )
 
         # Build rich formatting context from the deterministic parse.
+        # Everything we pass in has already been measured from the file, so
+        # the LLM's job is to assemble it into the target spec, not guess.
         formatting_ctx = {
             "page": json.dumps(formatting.get("page", {})),
             "font_roles": json.dumps(formatting.get("font_roles", {})),
@@ -256,6 +281,9 @@ class ProtocolAnalyzer:
             "footers": json.dumps(formatting.get("footers", {})),
             "styles": json.dumps(formatting.get("styles", [])[:10]),
             "tables": json.dumps(formatting.get("tables", [])[:10]),
+            "paragraph_rhythm": json.dumps(formatting.get("paragraph_rhythm", {})),
+            "numbering": json.dumps(formatting.get("numbering", {})),
+            "theme_fonts": json.dumps(formatting.get("theme_fonts", {})),
         }
 
         # Compact table details for table-templates pass — drop individual
@@ -295,16 +323,17 @@ class ProtocolAnalyzer:
         for category, prompt_template, context in analyses:
             try:
                 prompt = prompt_template.format(**context)
-                knowledge = self.ollama.generate_json(prompt, temperature=0.2)
+                knowledge = self._generate_with_retry(category, prompt)
 
                 summary = self._summarize_knowledge(category, knowledge)
+                confidence = self._compute_confidence(category, knowledge, formatting)
                 results.append({
                     "category": category,
                     "knowledge_json": json.dumps(knowledge),
                     "summary": summary,
-                    "confidence": 0.8,  # Could be improved with self-assessment
+                    "confidence": confidence,
                 })
-                logger.info(f"Extracted {category} knowledge")
+                logger.info("Extracted %s (confidence=%.2f)", category, confidence)
             except Exception as e:
                 logger.error(f"Failed to extract {category}: {e}")
                 results.append({
@@ -315,6 +344,82 @@ class ProtocolAnalyzer:
                 })
 
         return results
+
+    def _generate_with_retry(self, category: str, prompt: str) -> dict:
+        """Generate JSON, validate against the category's required keys, and
+        retry once with a stricter correction if the first attempt is missing
+        required fields.
+
+        Deterministic passes (formatting, table_templates) run at
+        ``temperature=0.0`` so the LLM copies numeric values verbatim
+        instead of paraphrasing or rounding them.
+        """
+        temp = 0.0 if category in _DETERMINISTIC_CATEGORIES else 0.2
+        result = self.ollama.generate_json(prompt, temperature=temp)
+
+        missing = _REQUIRED_KEYS.get(category, set()) - set(result.keys())
+        if not missing:
+            return result
+
+        logger.info(
+            "%s output missing required keys %s — retrying with correction",
+            category, sorted(missing),
+        )
+        correction = (
+            prompt
+            + "\n\n---\nThe previous attempt was missing the required keys: "
+            + ", ".join(sorted(missing))
+            + ". Return a JSON object that includes EVERY required key. "
+            + "If you have no evidence for a key, set it to null or []."
+        )
+        try:
+            result2 = self.ollama.generate_json(correction, temperature=max(temp, 0.0))
+        except Exception as e:
+            logger.warning("Retry for %s failed: %s — returning partial result", category, e)
+            return result
+        # Prefer the retry only if it closed at least one gap
+        still_missing = _REQUIRED_KEYS.get(category, set()) - set(result2.keys())
+        if len(still_missing) < len(missing):
+            return result2
+        return result
+
+    def _compute_confidence(self, category: str, knowledge: dict, formatting: dict) -> float:
+        """Return a 0–1 confidence score reflecting how much deterministic
+        evidence backed the output (vs how much the LLM had to guess).
+
+        For structural passes (formatting, table_templates) we look at how
+        much concrete signal was available in the parse (page setup,
+        shading palette, detailed tables, etc.). For content passes we
+        return a modest baseline of 0.7 since the LLM drives the output.
+        """
+        if category == "formatting":
+            signals = [
+                bool(formatting.get("page")),
+                bool(formatting.get("font_roles")),
+                bool(formatting.get("shading_palette")),
+                bool(formatting.get("paragraph_rhythm")),
+                bool(formatting.get("theme_fonts")),
+                bool(formatting.get("numbering", {}).get("lists")),
+            ]
+            have = sum(signals)
+            # Require at least half of the signals + required keys present
+            required_present = _REQUIRED_KEYS.get(category, set()).issubset(knowledge.keys())
+            return round(0.5 + 0.08 * have + (0.1 if required_present else 0.0), 2)
+
+        if category == "table_templates":
+            templates = knowledge.get("templates", [])
+            detailed = formatting.get("tables_detailed", [])
+            if not detailed:
+                return 0.4  # we asked the LLM but had no real table data
+            ratio = min(1.0, len(templates) / max(1, len(detailed)))
+            return round(0.6 + 0.3 * ratio, 2)
+
+        if category in ("section_structure", "writing_style", "procedural_rules", "terminology"):
+            # LLM-driven — confidence is baseline, plus bonus if key is present.
+            required_present = _REQUIRED_KEYS.get(category, set()).issubset(knowledge.keys())
+            return 0.75 if required_present else 0.55
+
+        return 0.7
 
     def _get_sample_paragraphs(self, text: str, max_chars: int = 8000) -> str:
         """Get representative paragraphs for style analysis."""
