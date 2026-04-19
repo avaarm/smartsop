@@ -68,6 +68,8 @@ def generate_document():
             "filename": result["filename"],
             "download_url": result["download_url"],
             "preview_sections": result["preview_sections"],
+            "applied_style": result.get("applied_style"),
+            "style_applied": bool(result.get("applied_style")),
         })
     except FileNotFoundError as e:
         return jsonify({"success": False, "error": str(e)}), 404

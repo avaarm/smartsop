@@ -432,6 +432,19 @@
       </div>
 
       <div *ngIf="!generatedDocUrl" class="generate-action">
+        <!-- Apply-learned-style toggle (only shown when the active
+             account actually has learned something). -->
+        <label *ngIf="activeAccount && effectiveStyle?.has_learned_style"
+               class="style-toggle">
+          <input type="checkbox" [(ngModel)]="applyLearnedStyle" />
+          <span class="style-toggle-track"><span class="style-toggle-thumb"></span></span>
+          <span class="style-toggle-label">
+            Apply learned style from
+            <strong>{{ effectiveStyle?.analyzed_upload_count }}</strong>
+            uploaded document<ng-container *ngIf="(effectiveStyle?.analyzed_upload_count ?? 0) !== 1">s</ng-container>
+          </span>
+        </label>
+
         <button class="btn btn-primary btn-lg" (click)="generateDocument()" [disabled]="generating">
           <div *ngIf="generating" class="spinner spinner-sm"></div>
           <svg *ngIf="!generating" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -462,6 +475,64 @@
           </svg>
           Download
         </button>
+      </div>
+
+      <!-- Live preview of the generated DOCX + side-by-side compare -->
+      <div *ngIf="generatedDocUrl" class="doc-preview-block">
+        <div class="doc-preview-header">
+          <div class="dph-left">
+            <h3>Preview</h3>
+            <span *ngIf="generatedAppliedStyle" class="dph-badge">
+              Using learned style
+              <span *ngIf="generatedAppliedStyle.sample_size" class="dph-badge-count">
+                · {{ generatedAppliedStyle.sample_size }} docs
+              </span>
+            </span>
+            <span *ngIf="!generatedAppliedStyle && !applyLearnedStyle" class="dph-badge dph-badge-muted">
+              Template default
+            </span>
+          </div>
+          <div class="dph-right">
+            <button *ngIf="generatedAppliedStyle && !compareOpen"
+                    class="btn btn-ghost btn-sm"
+                    (click)="openCompare()"
+                    [disabled]="unstyledGenerating">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <rect x="3" y="4" width="7" height="16" rx="1"/>
+                <rect x="14" y="4" width="7" height="16" rx="1"/>
+              </svg>
+              {{ unstyledGenerating ? 'Building baseline…' : 'Compare with baseline' }}
+            </button>
+            <button *ngIf="compareOpen" class="btn btn-ghost btn-sm" (click)="closeCompare()">
+              Close comparison
+            </button>
+          </div>
+        </div>
+
+        <div class="doc-preview-grid" [class.is-compare]="compareOpen && unstyledDocUrl">
+          <!-- Learned-style (or template default if toggle was off) -->
+          <div class="doc-preview-pane">
+            <div class="dpp-label">
+              <span class="dpp-title">
+                <ng-container *ngIf="generatedAppliedStyle">Your learned style</ng-container>
+                <ng-container *ngIf="!generatedAppliedStyle">Template default</ng-container>
+              </span>
+              <span class="dpp-filename">{{ generatedFilename }}</span>
+            </div>
+            <app-docx-preview [url]="generatedDocUrl"
+                              [label]="generatedAppliedStyle ? 'learned style' : 'default'">
+            </app-docx-preview>
+          </div>
+
+          <!-- Baseline (only when comparing) -->
+          <div *ngIf="compareOpen && unstyledDocUrl" class="doc-preview-pane">
+            <div class="dpp-label">
+              <span class="dpp-title">Template default (baseline)</span>
+              <span class="dpp-filename">SmartSOP default formatting</span>
+            </div>
+            <app-docx-preview [url]="unstyledDocUrl" label="baseline"></app-docx-preview>
+          </div>
+        </div>
       </div>
 
       <div *ngIf="generatedPreview.length > 0" class="preview-sections-list">

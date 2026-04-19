@@ -212,8 +212,17 @@ class GMPDocumentGenerator:
         # Consolidated account style — consensus across every active
         # ProtocolKnowledge item, filtered to this doc_type so a batch
         # record generation uses batch-record uploads, etc.
+        #
+        # ``apply_style`` lets callers explicitly disable the learned
+        # style (e.g. the Document Builder's side-by-side compare view
+        # which needs one unstyled baseline to diff against). Default
+        # True to preserve the close-the-loop behaviour.
         account_id = user_input.get("account_id")
-        account_style = self._build_account_style(account_id, doc_type)
+        apply_style = user_input.get("apply_style", True)
+        account_style = (
+            self._build_account_style(account_id, doc_type)
+            if apply_style else None
+        )
 
         # Whether to auto-fill missing sections via LLM (opt-in, off by default)
         # During Generate, we do NOT call LLM implicitly because it takes 10-50s

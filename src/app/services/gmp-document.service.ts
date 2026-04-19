@@ -37,6 +37,23 @@ export interface GMPDocumentRequest {
   revision?: string;
   sections?: Record<string, any>;
   account_id?: number;
+  /** Whether to apply the consolidated learned style from uploaded
+   *  protocols. Default (undefined) → true on the backend. Set to
+   *  ``false`` for the side-by-side compare "unstyled" baseline. */
+  apply_style?: boolean;
+}
+
+/** Compact summary of the style that was applied, echoed by the backend. */
+export interface AppliedStyleSummary {
+  sample_size: number;
+  orientation: string | null;
+  body_font_name: string | null;
+  body_font_size_pt: number | null;
+  section_header_shading: string | null;
+  label_cell_shading: string | null;
+  terminology_count: number;
+  rules_count: number;
+  table_templates_count: number;
 }
 
 export interface GMPDocumentResponse {
@@ -45,6 +62,8 @@ export interface GMPDocumentResponse {
   filename?: string;
   download_url?: string;
   preview_sections?: PreviewSection[];
+  applied_style?: AppliedStyleSummary | null;
+  style_applied?: boolean;
   error?: string;
 }
 
