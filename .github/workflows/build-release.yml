@@ -86,7 +86,12 @@ jobs:
             --hidden-import openpyxl \
             --hidden-import reportlab \
             --hidden-import PyPDF2 \
+            --hidden-import pdfplumber \
+            --hidden-import pdfminer \
+            --hidden-import pdfminer.high_level \
+            --hidden-import pdfminer.layout \
             --collect-submodules ml_model.gmp \
+            --collect-submodules pdfminer \
             gmp_server.py
 
           # Flatten dist-backend/smartsop-backend/{binary,_internal} → dist-backend/

@@ -310,7 +310,8 @@ export class ProtocolsComponent implements OnInit {
       procedural_rules: 'Procedural Rules',
       writing_style: 'Writing Style',
       section_structure: 'Section Structure',
-      formatting: 'Formatting Patterns',
+      formatting: 'Formatting Spec',
+      table_templates: 'Table Templates',
     }[category] ?? category;
   }
 
@@ -321,6 +322,7 @@ export class ProtocolsComponent implements OnInit {
       writing_style: '~~',
       section_structure: '#',
       formatting: '{}',
+      table_templates: '▦',
     }[category] ?? '?';
   }
 

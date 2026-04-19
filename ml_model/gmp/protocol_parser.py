@@ -2,12 +2,20 @@
 
 Parses .docx and .pdf files without LLM calls. Produces a structured dict
 that the ProtocolAnalyzer can then feed to Ollama for knowledge extraction.
+
+For DOCX, the richer formatting details (page setup, per-role fonts,
+cell shading/borders/merges) are extracted by ``docx_structure`` and
+folded into the ``formatting`` result. For PDF, ``pdf_structure`` uses
+pdfplumber for real table detection and char-level font histograms.
 """
 
 import logging
 import re
 from pathlib import Path
 from typing import Optional
+
+from .docx_structure import extract_docx_structure
+from .pdf_structure import extract_pdf_structure
 
 logger = logging.getLogger(__name__)
 
@@ -110,20 +118,36 @@ class ProtocolParser:
             if style_name:
                 styles_seen[style_name]["count"] += 1
 
-        # Parse tables
-        for i, table in enumerate(doc.tables):
-            rows = len(table.rows)
-            cols = len(table.columns) if table.rows else 0
-            header_cells = []
-            if rows > 0:
-                header_cells = [cell.text.strip() for cell in table.rows[0].cells]
+        # Rich structural extraction (page setup, per-role fonts, tables with
+        # shading/borders/merges) — see ml_model/gmp/docx_structure.py
+        try:
+            rich = extract_docx_structure(file_path)
+        except Exception as e:
+            logger.warning("rich docx structure extraction failed: %s", e)
+            rich = {}
 
-            tables_info.append({
-                "index": i,
-                "rows": rows,
-                "columns": cols,
-                "header_row": header_cells,
-            })
+        rich_tables = rich.get("tables", [])
+        # Keep a compact table summary for the analyzer to fit in the prompt.
+        tables_info = [
+            {
+                "index": t["index"],
+                "rows": t["rows"],
+                "columns": t["cols"],
+                "col_widths_dxa": t.get("col_widths_dxa", []),
+                "has_header_row": t.get("has_header_row", False),
+                "header_row": [c.get("text", "") for c in (t["cells"][0] if t["cells"] else [])],
+                "unique_shadings": sorted({
+                    (c.get("shading") or "")
+                    for row in t["cells"] for c in row
+                    if c.get("shading")
+                }),
+                "max_grid_span": max(
+                    (c.get("grid_span", 1) for row in t["cells"] for c in row),
+                    default=1,
+                ),
+            }
+            for t in rich_tables
+        ]
 
         # Detect numbering scheme
         numbering_scheme = self._detect_numbering_scheme(sections)
@@ -136,6 +160,13 @@ class ProtocolParser:
                 "tables": tables_info,
                 "styles": sorted(styles_seen.values(), key=lambda s: -s["count"]),
                 "numbering_scheme": numbering_scheme,
+                # Rich fields (new):
+                "page": rich.get("page", {}),
+                "headers": rich.get("headers", {}),
+                "footers": rich.get("footers", {}),
+                "font_roles": rich.get("font_roles", {}),
+                "shading_palette": rich.get("shading_palette", []),
+                "tables_detailed": rich_tables,
             },
             "metadata": {
                 "paragraph_count": len(full_text_parts),
@@ -145,66 +176,76 @@ class ProtocolParser:
         }
 
     def _parse_pdf(self, file_path: str) -> dict:
-        from PyPDF2 import PdfReader
+        """Parse PDF with pdfplumber (chars + real tables) when available."""
+        rich = extract_pdf_structure(file_path)
+        full_text = rich.get("text", "")
 
-        reader = PdfReader(file_path)
-        full_text_parts = []
         sections = []
         current_section = None
+        full_text_parts = []
+        for line in full_text.split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+            full_text_parts.append(line)
 
-        for page_num, page in enumerate(reader.pages):
-            page_text = page.extract_text() or ""
-            for line in page_text.split("\n"):
-                line = line.strip()
-                if not line:
-                    continue
+            heading_match = re.match(r'^(\d+(?:\.\d+)*)\s+(.+)', line)
+            is_caps_heading = (
+                len(line) < 80 and line.isupper() and not line.endswith(".")
+            )
 
-                full_text_parts.append(line)
-
-                # Detect section headings via numbering pattern
-                heading_match = re.match(r'^(\d+(?:\.\d+)*)\s+(.+)', line)
-                # Also detect ALL-CAPS short lines as potential headings
-                is_caps_heading = (
-                    len(line) < 80 and line.isupper() and not line.endswith(".")
-                )
-
-                if heading_match:
-                    number = heading_match.group(1)
-                    title = heading_match.group(2)
-                    level = number.count('.') + 1
-                    current_section = {
-                        "number": number,
-                        "title": title,
-                        "level": level,
-                        "text": "",
-                    }
-                    sections.append(current_section)
-                elif is_caps_heading:
-                    current_section = {
-                        "number": "",
-                        "title": line.title(),
-                        "level": 1,
-                        "text": "",
-                    }
-                    sections.append(current_section)
-                elif current_section:
-                    current_section["text"] += line + "\n"
+            if heading_match:
+                number = heading_match.group(1)
+                title = heading_match.group(2)
+                level = number.count('.') + 1
+                current_section = {
+                    "number": number,
+                    "title": title,
+                    "level": level,
+                    "text": "",
+                }
+                sections.append(current_section)
+            elif is_caps_heading:
+                current_section = {
+                    "number": "",
+                    "title": line.title(),
+                    "level": 1,
+                    "text": "",
+                }
+                sections.append(current_section)
+            elif current_section:
+                current_section["text"] += line + "\n"
 
         numbering_scheme = self._detect_numbering_scheme(sections)
 
+        # Compact table summary (full table data lives in tables_detailed)
+        detailed_tables = rich.get("tables", [])
+        tables_info = [
+            {
+                "page": t.get("page"),
+                "rows": t.get("rows"),
+                "columns": t.get("cols"),
+                "header_row": t.get("header_row", []),
+            }
+            for t in detailed_tables
+        ]
+
         return {
-            "text": "\n".join(full_text_parts),
+            "text": full_text,
             "sections": sections,
             "formatting": {
-                "fonts": [],  # PDF text extraction doesn't preserve fonts reliably
-                "tables": [],
+                "fonts": rich.get("font_histogram", []),
+                "tables": tables_info,
                 "styles": [],
                 "numbering_scheme": numbering_scheme,
+                "page": rich.get("page", {}),
+                "tables_detailed": detailed_tables,
             },
             "metadata": {
-                "page_count": len(reader.pages),
+                "page_count": rich.get("page", {}).get("count", len(rich.get("pages", []))),
                 "paragraph_count": len(full_text_parts),
                 "section_count": len(sections),
+                "table_count": len(detailed_tables),
             },
         }
 

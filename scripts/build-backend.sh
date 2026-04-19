@@ -58,8 +58,13 @@ pyinstaller \
   --hidden-import "openpyxl" \
   --hidden-import "reportlab" \
   --hidden-import "PyPDF2" \
+  --hidden-import "pdfplumber" \
+  --hidden-import "pdfminer" \
+  --hidden-import "pdfminer.high_level" \
+  --hidden-import "pdfminer.layout" \
   --hidden-import "pandas" \
   --collect-submodules "ml_model.gmp" \
+  --collect-submodules "pdfminer" \
   "$ENTRY"
 
 # Flatten: electron-builder expects files directly under dist-backend/.

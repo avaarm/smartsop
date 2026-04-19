@@ -10,6 +10,7 @@ openpyxl
 pandas
 reportlab
 PyPDF2
+pdfplumber
 pydantic
 lxml
 gunicorn
