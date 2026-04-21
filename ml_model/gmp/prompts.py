@@ -9,172 +9,280 @@ GMP_SYSTEM_PROMPT = (
     "batch records, SOPs, deviation reports, CAPA forms, and change controls. "
     "Use technical language appropriate for cell therapy, biologics, and "
     "pharmaceutical manufacturing. Be specific, detailed, and follow "
-    "21 CFR Part 211 and EU GMP Annex guidelines."
+    "21 CFR Part 211 and EU GMP Annex guidelines.\n\n"
+    "HARD RULES FOR JSON OUTPUT:\n"
+    "1. Return a single JSON object and nothing else. No prose before or "
+    "   after. No ```json fences.\n"
+    "2. Follow the exact shape shown in the prompt's examples — same keys, "
+    "   same types, same nesting.\n"
+    "3. If you don't know a value, use a realistic placeholder (e.g. "
+    "   'TBD by supervisor', 'As Needed', '[to be assigned]'). Do NOT "
+    "   return null or empty strings for required fields.\n"
+    "4. Use passive voice and imperative verbs appropriate for GMP "
+    "   procedures ('The operator shall…', 'Verify that…', 'Record the…')."
 )
 
 
-PROCEDURE_STEPS_PROMPT = """Generate detailed manufacturing procedure steps for the following process:
+PROCEDURE_STEPS_PROMPT = """Generate 8–15 detailed manufacturing procedure steps.
 
 Product: {product_name}
 Process: {process_type}
 Description: {description}
 
-Generate steps in this exact JSON format:
+SCHEMA (return JSON matching this shape exactly):
 {{
   "steps": [
     {{
-      "number": "5.1",
-      "title": "Label and Equipment Staging",
+      "number": "<string like '5.1'>",
+      "title": "<short section title>",
       "instructions": [
         {{
-          "text": "Attach an in-process label.",
-          "type": "action",
-          "bsc": false
-        }},
-        {{
-          "text": "Does this label match Part No., Lot No., and Subject ID for this BR?",
-          "type": "verification",
-          "options": ["Yes - Proceed", "No - Notify supervisor"]
-        }},
-        {{
-          "text": "Record the room number and equipment ID number.",
-          "type": "record",
-          "variables": [
-            {{"name": "Room Number", "type": "text"}},
-            {{"name": "Process Date", "type": "date"}},
-            {{"name": "Start Time", "type": "time", "format": "HHMM"}}
-          ]
+          "text": "<one instruction, imperative voice>",
+          "type": "action" | "verification" | "record" | "calculation",
+          "bsc": <true if inside a Biosafety Cabinet>,
+          "options": ["Yes - ...", "No - ..."],         // only for type=verification
+          "variables": [                                  // only for type=record
+            {{"name": "<field>", "type": "text|number|date|time", "format": "HHMM"}}
+          ],
+          "formula": "<e.g. Step 5.2 / Step 5.1 * 100>"   // only for type=calculation
         }}
       ]
     }}
   ]
 }}
 
-Each step should include:
-- Clear, imperative instructions
-- Variables to record (measurements, IDs, times)
-- Verification checkpoints where needed
-- [BSC] prefix for operations inside biosafety cabinets
-- Calculations referencing other step numbers
-- Sample collection and tracking instructions where applicable
+INSTRUCTION TYPE GUIDE:
+  action        – the operator DOES something ("Attach label", "Open bag port")
+  verification  – a yes/no gate ("Does value fall within spec?") with options[]
+  record        – capture a measurement/ID/time — MUST include variables[]
+  calculation   – a computed value referencing other steps — MUST include formula
 
-Generate 8-15 detailed steps appropriate for this process."""
+TWO CONCRETE EXAMPLES:
+
+EXAMPLE 1 (CD8+ Enrichment — step 5.1 "Setup"):
+{{
+  "steps": [
+    {{
+      "number": "5.1", "title": "Setup and Equipment Staging",
+      "instructions": [
+        {{"text": "Don PPE per gowning SOP GN-012.", "type": "action", "bsc": false}},
+        {{"text": "[BSC] Wipe interior surfaces with 70% IPA, top-down.",
+          "type": "action", "bsc": true}},
+        {{"text": "Does the sample label match Part No., Lot No., and Subject ID for this BR?",
+          "type": "verification", "bsc": false,
+          "options": ["Yes - Proceed", "No - Notify supervisor"]}},
+        {{"text": "Record room number, equipment ID, and start time.",
+          "type": "record", "bsc": false,
+          "variables": [
+            {{"name": "Room Number", "type": "text"}},
+            {{"name": "Equipment ID", "type": "text"}},
+            {{"name": "Start Time", "type": "time", "format": "HHMM"}}
+          ]}}
+      ]
+    }}
+  ]
+}}
+
+EXAMPLE 2 (Viability calculation):
+{{
+  "steps": [
+    {{
+      "number": "7.3", "title": "Post-Thaw Viability",
+      "instructions": [
+        {{"text": "Remove 50 µL aliquot and mix 1:1 with trypan blue.",
+          "type": "action", "bsc": true}},
+        {{"text": "Count viable and non-viable cells on hemocytometer.",
+          "type": "record", "bsc": true,
+          "variables": [
+            {{"name": "Viable Count", "type": "number"}},
+            {{"name": "Non-viable Count", "type": "number"}}
+          ]}},
+        {{"text": "Calculate % viability.",
+          "type": "calculation", "bsc": false,
+          "formula": "Viable / (Viable + Non-viable) * 100"}}
+      ]
+    }}
+  ]
+}}
+
+REQUIREMENTS:
+- Include realistic BSC operations for any aseptic cell-handling process.
+- Include at least one verification and one record step.
+- Number sequentially (5.1, 5.2, 5.3 …) or by section (5.1, 5.2; 6.1, 6.2).
+- Each instruction.text should be a single imperative sentence (≤ 25 words)."""
 
 
-EQUIPMENT_LIST_PROMPT = """Generate an equipment list for the following manufacturing process:
+EQUIPMENT_LIST_PROMPT = """Generate the equipment and materials required.
 
 Product: {product_name}
 Process: {process_type}
 Description: {description}
 
-Return a JSON object with this format:
+SCHEMA:
 {{
   "equipment": [
     {{
-      "description": "Biosafety Cabinet",
-      "requires_id": true,
-      "requires_service_date": true
+      "description": "<equipment name>",
+      "requires_id": <true if the operator records a serial/ID>,
+      "requires_service_date": <true if last-service date must be recorded>
     }}
   ],
   "materials": [
     {{
-      "part_number": "B095-03",
-      "description": "Cells",
-      "quantity": "N/A"
-    }},
-    {{
-      "part_number": "F184-01",
-      "description": "X-Vivo 15 (40 mL Aliquots)",
-      "quantity": "1"
+      "part_number": "<org part number like 'B095-03'>",
+      "description": "<material name with concentration/size if applicable>",
+      "quantity": "<integer, 'As Needed', or 'N/A'>"
     }}
   ]
 }}
 
-Include all equipment and materials typically needed for this type of process.
-Use realistic CPF-style part numbers. Include quantities where known, 'As Needed' otherwise."""
+EXAMPLE (T-Cell enrichment from PBMC):
+{{
+  "equipment": [
+    {{"description": "Biosafety Cabinet (ISO 5, Class II Type A2)", "requires_id": true, "requires_service_date": true}},
+    {{"description": "CliniMACS Prodigy", "requires_id": true, "requires_service_date": true}},
+    {{"description": "Benchtop centrifuge (swing-bucket, refrigerated)", "requires_id": true, "requires_service_date": true}},
+    {{"description": "Cell counter with hemocytometer", "requires_id": true, "requires_service_date": false}},
+    {{"description": "TSCD (Total Sterile Connecting Device)", "requires_id": true, "requires_service_date": false}},
+    {{"description": "Liquid nitrogen Dewar", "requires_id": true, "requires_service_date": true}}
+  ],
+  "materials": [
+    {{"part_number": "B095-03", "description": "Leukapheresis product (source material)", "quantity": "1"}},
+    {{"part_number": "F184-01", "description": "X-Vivo 15 media (40 mL aliquots)", "quantity": "As Needed"}},
+    {{"part_number": "R221-00", "description": "CliniMACS CD8 Microbeads (7.5 mL)", "quantity": "1"}},
+    {{"part_number": "T091-05", "description": "CliniMACS PBS/EDTA buffer (100 mL)", "quantity": "2"}},
+    {{"part_number": "B412-02", "description": "CryoStor CS10 (100 mL)", "quantity": "As Needed"}},
+    {{"part_number": "L055-01", "description": "Trypan Blue 0.4%", "quantity": "As Needed"}}
+  ]
+}}
+
+REQUIREMENTS:
+- At least 4 equipment items and 4 materials for any aseptic cell process.
+- Use org-style part number prefixes: B- (biologics), F- (fluid), R- (reagent),
+  T- (tubing/connectors), C- (consumable), E- (equipment).
+- Quantity must be one of: a positive integer string, "As Needed", or "N/A"."""
 
 
-REFERENCES_PROMPT = """Generate a references list for the following GMP document:
+REFERENCES_PROMPT = """Generate 4–10 referenced SOPs and controlled documents.
 
 Document Type: {doc_type}
 Product: {product_name}
 Process: {process_type}
 Description: {description}
 
-Return a JSON object:
+SCHEMA:
 {{
   "references": [
-    {{
-      "doc_number": "EQ-002",
-      "title": "Operation and Maintenance of Biological Safety Cabinets"
-    }}
+    {{ "doc_number": "<GMP doc number>", "title": "<document title>" }}
   ]
 }}
 
-Include relevant SOPs, equipment manuals, and quality documents.
-Use standard GMP document numbering (EQ- for equipment, GN- for general,
-PR- for processing, QA- for quality, TM- for test methods)."""
+EXAMPLE (batch record for cell enrichment):
+{{
+  "references": [
+    {{"doc_number": "EQ-002", "title": "Operation and Maintenance of Biological Safety Cabinets"}},
+    {{"doc_number": "EQ-014", "title": "Operation of CliniMACS Prodigy"}},
+    {{"doc_number": "GN-005", "title": "Aseptic Technique for Cell Processing"}},
+    {{"doc_number": "GN-012", "title": "Gowning and PPE for Manufacturing Areas"}},
+    {{"doc_number": "PR-010", "title": "Cell Processing and Cryopreservation"}},
+    {{"doc_number": "QA-022", "title": "Deviation Reporting and Investigation"}},
+    {{"doc_number": "TM-008", "title": "Cell Count and Viability by Trypan Blue Exclusion"}}
+  ]
+}}
+
+NUMBERING CONVENTION (use these prefixes):
+  EQ-  equipment operation / maintenance
+  GN-  general / foundational SOPs
+  PR-  processing / manufacturing
+  QA-  quality assurance
+  TM-  test methods
+  FR-  forms"""
 
 
-ATTACHMENTS_PROMPT = """Generate an attachments list for the following batch record:
+ATTACHMENTS_PROMPT = """Generate 2–5 attachments referenced by this document.
 
 Product: {product_name}
 Process: {process_type}
 Description: {description}
 References: {references}
 
-Return a JSON object:
+SCHEMA:
 {{
   "attachments": [
-    {{
-      "doc_number": "Attachment 1",
-      "title": "Sample Plan",
-      "quantity": 1
-    }}
+    {{ "doc_number": "Attachment N", "title": "<name>", "quantity": <int> }}
   ]
 }}
 
-Include sample plans, test summary sheets, equipment checklists, and any
-forms referenced in the procedure steps."""
+EXAMPLE:
+{{
+  "attachments": [
+    {{"doc_number": "Attachment 1", "title": "Sample Plan", "quantity": 1}},
+    {{"doc_number": "Attachment 2", "title": "Test Summary Sheet", "quantity": 1}},
+    {{"doc_number": "Attachment 3", "title": "Equipment Qualification Checklist", "quantity": 1}},
+    {{"doc_number": "Attachment 4", "title": "Cryopreservation Label", "quantity": 4}}
+  ]
+}}"""
 
 
-GENERAL_INSTRUCTIONS_PROMPT = """Generate general instructions for a batch record:
+GENERAL_INSTRUCTIONS_PROMPT = """Generate 5–8 general instructions that apply to the whole batch record.
 
 Process: {process_type}
 Product: {product_name}
 
-Return a JSON object:
+SCHEMA:
 {{
   "instructions": [
-    "Instructions preceded by [BSC] include operations that take place inside the ISO 5 zone of biosafety cabinets to prevent microbial contamination.",
-    "Sanitize bag ports/penetrations with alcohol prior to connections.",
-    "Centrifugations require the use of a second container to balance the rotor."
+    "<one rule per item, complete sentence, 10–30 words>"
   ]
 }}
 
-Include 4-8 general instructions appropriate for this type of manufacturing process.
-Cover aseptic practices, labeling, equipment operation, and safety."""
+EXAMPLE (aseptic cell processing):
+{{
+  "instructions": [
+    "Instructions preceded by [BSC] describe operations performed inside an ISO 5 Biosafety Cabinet to maintain aseptic conditions.",
+    "Sanitize all bag ports, vial septa, and tubing penetrations with 70% IPA before making any sterile connection.",
+    "Centrifugations shall use a counter-balanced second container matching the test tube mass within 1 g.",
+    "Record every deviation from the procedure — no matter how minor — in the Deviations section on the back page.",
+    "All timed steps must be recorded using 24-hour format (HHMM). Tolerance is ±2 minutes unless otherwise specified."
+  ]
+}}
+
+REQUIREMENTS:
+- Cover aseptic technique, labeling, equipment, deviations, and timing at minimum.
+- Each instruction is a standalone rule; avoid pronouns like 'it', 'this'.
+- Use imperative voice ('Sanitize…', 'Record…', 'Verify…')."""
 
 
-REVIEW_CHECKLIST_PROMPT = """Generate a manufacturing review checklist for a batch record:
+REVIEW_CHECKLIST_PROMPT = """Generate a 6–10 item manufacturing review checklist.
 
 Process: {process_type}
 Product: {product_name}
 
-Return a JSON object:
+SCHEMA:
 {{
   "checklist_items": [
-    "Label and if applicable expiration date are correct",
-    "Equipment recorded",
-    "All processing steps completed",
-    "Calculations checked",
-    "Deviations identified and documented",
-    "Material consumption in Title 21 reviewed"
+    "<one reviewable item per line, 4–15 words, noun-phrase style>"
   ]
 }}
 
-Include 6-10 items covering labels, equipment, steps, calculations, deviations,
-and material tracking."""
+EXAMPLE:
+{{
+  "checklist_items": [
+    "Label and expiration date verified against Part No. and Lot No.",
+    "All equipment IDs, service dates, and calibration status recorded",
+    "Every processing step completed and signed by Manufacturing Technician",
+    "All calculations checked and signed by a second technician",
+    "Deviations identified, documented, and routed per QA-022",
+    "Material consumption reconciled against Title 21 inventory",
+    "Post-process sample pulled and labeled per Sample Plan",
+    "Document reviewed end-to-end and signed by QA"
+  ]
+}}
+
+REQUIREMENTS:
+- Cover at least: labels, equipment, steps, calculations, deviations, materials.
+- Each item is a single noun phrase describing something a reviewer checks,
+  not a procedure step."""
 
 
 DEVIATION_DESCRIPTION_PROMPT = """Generate a deviation report framework for:
@@ -340,9 +448,17 @@ Return a JSON object with this exact format:
   ]
 }}
 
-Types: "start", "action", "decision", "end"
-Decision nodes must have exactly 2 next entries with "Yes"/"No" labels.
-Generate 8-15 steps covering the full process with appropriate decision points."""
+NODE TYPES:
+  start     – exactly ONE start node in the graph
+  action    – a single operator action or process step
+  decision  – a Yes/No gate, MUST have exactly 2 next entries with "Yes"/"No" labels
+  end       – at least ONE end node; end nodes have "next": []
+
+RULES (must all hold):
+- Every "next.target_id" must reference a declared step id (no dangling edges).
+- Node ids are short strings, usually "1", "2", "3a", "3b"…
+- Decision labels must be short (1–3 words); use \\n in a label to force a wrap.
+- Generate 6–15 nodes total. Include at least one decision point."""
 
 
 # Map section types to their prompt templates

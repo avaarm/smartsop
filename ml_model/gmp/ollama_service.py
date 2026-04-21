@@ -181,29 +181,40 @@ class OllamaService:
                 f"starts with: {raw[:200]!r}"
             )
 
-    def generate_section_content(self, section_type: str, context: dict,
-                                 custom_prompt: Optional[str] = None) -> str:
-        """Generate content for a specific document section.
+    def generate_section_content(
+        self,
+        section_type: str,
+        context: dict,
+        custom_prompt: Optional[str] = None,
+        extra_system: Optional[str] = None,
+        temperature: float = 0.3,
+    ) -> dict:
+        """Generate content for a specific document section in JSON mode.
+
+        Uses ``generate_json`` so the provider enforces JSON output and
+        layers the strict GMP system prompt (``GMP_SYSTEM_PROMPT``) on
+        top of any account-specific supplement.
 
         Args:
-            section_type: Type of section (e.g. 'procedure_steps', 'equipment_list')
-            context: Dict with context info (product_name, process_type, etc.)
-            custom_prompt: Optional override for the section-specific prompt
+            section_type: Type key (``procedure_steps``, ``equipment_list``…)
+            context: Template variables (product_name, process_type, …)
+            custom_prompt: Optional override for the section prompt
+            extra_system: Account-specific prompt supplement (style notes,
+                terminology, few-shot examples) — appended to the base
+                system prompt.
+            temperature: Sampling temperature.
 
         Returns:
-            Generated content string
+            Parsed JSON dict.
         """
-        from .prompts import get_section_prompt
+        from .prompts import get_section_prompt, GMP_SYSTEM_PROMPT
 
-        system = (
-            "You are a GMP documentation specialist for pharmaceutical and "
-            "biotech manufacturing. Generate precise, regulatory-compliant "
-            "content for GMP documents. Use technical language appropriate for "
-            "cell therapy and biologics manufacturing. Be specific and detailed."
-        )
+        system = GMP_SYSTEM_PROMPT
+        if extra_system:
+            system = f"{system}\n\n---\n{extra_system}"
 
         prompt = custom_prompt or get_section_prompt(section_type, context)
-        return self.generate(prompt, system_prompt=system, temperature=0.3)
+        return self.generate_json(prompt, system_prompt=system, temperature=temperature)
 
     def generate_flowchart_steps(self, process_description: str) -> list[dict]:
         """Generate structured flowchart steps from a process description.

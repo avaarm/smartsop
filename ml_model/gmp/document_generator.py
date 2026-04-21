@@ -20,6 +20,7 @@ from .paper_scraper import PaperScraper, Paper, PaperMethods
 from .data_collector import DataCollector
 from .style_consolidation import consolidate_style, consolidate_style_for_doc_type
 from .database import ProtocolUpload
+from .section_validators import validate_section
 
 logger = logging.getLogger(__name__)
 
@@ -410,20 +411,55 @@ class GMPDocumentGenerator:
                     return {}
             return {}
 
+        # First attempt — JSON mode + strict GMP system prompt + any
+        # account-specific supplement (terminology, style notes, few-shot).
         try:
-            raw = self.ollama.generate_section_content(
-                prompt_type, clean_ctx, custom_prompt=None,
+            parsed = self.ollama.generate_section_content(
+                prompt_type, clean_ctx, extra_system=system_supplement or None,
             )
-            # Try to parse as JSON for structured sections
-            try:
-                parsed = json.loads(raw)
-                return parsed
-            except json.JSONDecodeError:
-                # Return as text if not JSON
-                return {"text": raw}
         except Exception as e:
-            logger.error(f"LLM generation failed for {section_def.id}: {e}")
+            logger.error("LLM generation failed for %s: %s", section_def.id, e)
             return {}
+
+        # Shape validation — if the LLM returned the wrong structure,
+        # retry once with the validator's specific error as a correction.
+        ok, err = validate_section(prompt_type, parsed)
+        if ok:
+            return parsed
+
+        logger.info(
+            "Section %s output invalid (%s) — retrying once with correction",
+            section_def.id, err,
+        )
+        correction = (
+            f"Your previous response was REJECTED by the validator: {err}\n\n"
+            f"Return a new JSON object that fixes this exact problem. "
+            f"Keep the same level of detail but make sure the shape matches "
+            f"the schema in the prompt. Do NOT apologise or explain — just "
+            f"return the corrected JSON."
+        )
+        try:
+            # Lower temperature for the retry — we want shape compliance,
+            # not creativity.
+            retry_system = (system_supplement or "") + "\n\n" + correction
+            parsed2 = self.ollama.generate_section_content(
+                prompt_type, clean_ctx,
+                extra_system=retry_system.strip(),
+                temperature=0.1,
+            )
+            ok2, err2 = validate_section(prompt_type, parsed2)
+            if ok2:
+                return parsed2
+            logger.warning(
+                "Section %s retry still invalid (%s) — returning first parse",
+                section_def.id, err2,
+            )
+        except Exception as e:
+            logger.warning("Retry failed for %s: %s", section_def.id, e)
+
+        # Graceful degradation: return whatever we got so the user can
+        # edit in the Review step rather than seeing an empty section.
+        return parsed if isinstance(parsed, dict) else {"text": str(parsed)}
 
     def _build_account_style(self, account_id: Optional[int], doc_type: str) -> Optional[dict]:
         """Build the consolidated style spec for this generation call.
