@@ -29,8 +29,27 @@
   <!-- Loading accounts -->
   <div *ngIf="accountsLoading" class="loading"><div class="spinner"></div> Loading workspace…</div>
 
-  <!-- No account: inline create form -->
+  <!-- No account: inline create form + demo shortcut -->
   <section *ngIf="!accountsLoading && showCreateForm && !activeAccount" class="create-card">
+    <!-- Try-the-demo fast path. Only show when no accounts exist at all —
+         once they've got a real workspace the demo is just noise. -->
+    <div *ngIf="accounts.length === 0" class="demo-offer">
+      <div class="demo-offer-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+      </div>
+      <div class="demo-offer-copy">
+        <strong>Want to see it work first?</strong>
+        <span>Load a demo workspace pre-populated with Fred Hutch cell-processing sample batch records — click through the full extract → learn → generate loop in 30 seconds.</span>
+      </div>
+      <button class="btn btn-ghost btn-sm"
+              (click)="seedDemo()"
+              [disabled]="seedingDemo">
+        {{ seedingDemo ? 'Loading demo…' : 'Try the demo' }}
+      </button>
+    </div>
+
     <h3>Create your workspace</h3>
     <p class="create-sub">One workspace per facility or department. All uploaded documents, terminology, and extracted knowledge live here.</p>
     <div class="create-form">

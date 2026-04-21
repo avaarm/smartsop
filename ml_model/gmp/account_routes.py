@@ -126,10 +126,21 @@ def list_training_examples(account_id):
 
 @account_bp.route("/<int:account_id>/training", methods=["POST"])
 def add_training_example(account_id):
-    """Manually add a training example (e.g. paste in a gold-standard section)."""
+    """Manually add a training example (e.g. paste in a gold-standard section).
+
+    Accepts optional ``source`` (``manual`` | ``user_edited``) and
+    ``quality_rating`` fields. ``user_edited`` is what the Document
+    Builder's "Save as template for future docs" button uses — the user
+    has approved the current section content as a gold-standard
+    exemplar that the next few-shot pass should draw from.
+    """
     data = request.get_json()
     if not data or not data.get("prompt") or not data.get("completion"):
         return jsonify({"success": False, "error": "prompt and completion are required"}), 400
+
+    source = data.get("source") or "manual"
+    if source not in ("manual", "user_edited"):
+        return jsonify({"success": False, "error": f"unsupported source '{source}'"}), 400
 
     example = collector.record_section_generation(
         account_id=account_id,
@@ -140,8 +151,18 @@ def add_training_example(account_id):
             "product_name": data.get("product_name", ""),
             "process_type": data.get("process_type", ""),
         },
-        source="manual",
+        source=source,
     )
+
+    if example and data.get("quality_rating") is not None:
+        try:
+            rating = int(data["quality_rating"])
+            collector.rate_example(example.id, rating)
+            # Reflect rating in the echoed example object.
+            example.quality_rating = max(1, min(5, rating))
+        except (TypeError, ValueError):
+            pass
+
     if example:
         return jsonify({"success": True, "example": example.to_dict()}), 201
     return jsonify({"success": False, "error": "Failed to save"}), 500
@@ -457,6 +478,108 @@ def delete_protocol(account_id, upload_id):
     db.session.delete(upload)
     db.session.commit()
     return jsonify({"success": True})
+
+
+@account_bp.route("/demo", methods=["POST"])
+def seed_demo_workspace():
+    """Create a demo workspace pre-populated with sample Fred-Hutch
+    cell-processing batch records.
+
+    Gives first-time users something concrete to click through so they
+    can see the full extract → learn → generate → compare loop without
+    needing their own documents on hand.
+
+    If a demo account already exists (slug ``demo-workspace``), returns
+    it as-is rather than duplicating. Idempotent.
+    """
+    import shutil
+    from .database import Account
+
+    SAMPLE_DIR = Path(__file__).parent / "sample_docs"
+    DEMO_SLUG = "demo-workspace"
+
+    # Return the existing demo account if we've already seeded it
+    existing = Account.query.filter_by(slug=DEMO_SLUG).first()
+    if existing:
+        return jsonify({
+            "success": True,
+            "account": existing.to_dict(),
+            "already_seeded": True,
+            "upload_count": ProtocolUpload.query.filter_by(
+                account_id=existing.id
+            ).count(),
+        })
+
+    if not SAMPLE_DIR.exists():
+        return jsonify({
+            "success": False,
+            "error": "Sample documents bundle not installed",
+        }), 500
+
+    account = Account(
+        name="Demo Workspace (Fred Hutch samples)",
+        slug=DEMO_SLUG,
+        facility_name="Fred Hutch Cell Processing Facility (demo)",
+        department="Manufacturing",
+        default_product="CD4+ / CD8+ T Cells",
+        default_process="CliniMACS Prodigy Enrichment",
+        terminology_json=json.dumps({
+            "BSC": "Biosafety Cabinet",
+            "TSCD": "Total Sterile Connecting Device",
+            "CPF": "Cell Processing Facility",
+            "IPA": "Isopropyl Alcohol",
+        }),
+        style_notes=(
+            "Use passive voice. Refer to operators as Manufacturing Technician. "
+            "Always cite procedure numbers when referencing SOPs."
+        ),
+        reference_sops_json=json.dumps([
+            "EQ-002 Operation and Maintenance of Biological Safety Cabinets",
+            "GN-005 Aseptic Technique",
+            "PR-010 Cell Processing and Cryopreservation",
+        ]),
+    )
+    db.session.add(account)
+    db.session.commit()
+
+    # Copy each bundled sample into the account's upload dir and
+    # parse + infer doc_type so it shows up exactly like a real upload.
+    dest_dir = _get_upload_dir(account.id)
+    uploads: list[dict] = []
+    for sample_path in sorted(SAMPLE_DIR.glob("*.docx")):
+        try:
+            dest = dest_dir / sample_path.name
+            shutil.copyfile(sample_path, dest)
+            upload = ProtocolUpload(
+                account_id=account.id,
+                filename=sample_path.name,
+                file_type="docx",
+                file_path=str(dest),
+                status="uploaded",
+            )
+            db.session.add(upload)
+            db.session.commit()
+
+            parsed = parser.parse(str(dest), "docx")
+            upload.raw_text = parsed.get("text", "")[:100000]
+            upload.structure_json = json.dumps(parsed.get("sections", []))
+            upload.formatting_json = json.dumps(parsed.get("formatting", {}))
+            inferred, _ = infer_doc_type(sample_path.name, upload.raw_text)
+            if inferred:
+                upload.doc_type = inferred
+                upload.doc_type_source = "inferred"
+            upload.status = "parsed"
+            db.session.commit()
+            uploads.append(upload.to_dict())
+        except Exception as e:
+            logger.warning("Failed to seed sample %s: %s", sample_path.name, e)
+
+    return jsonify({
+        "success": True,
+        "account": account.to_dict(),
+        "uploads": uploads,
+        "already_seeded": False,
+    }), 201
 
 
 @account_bp.route("/<int:account_id>/effective-style", methods=["GET"])

@@ -1278,3 +1278,23 @@
 @media (max-width: 900px) {
   .doc-preview-grid.is-compare { grid-template-columns: 1fr; }
 }
+
+/* ── Save-as-template inline action ─────────────────────────── */
+.section-save-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed hsl(240 5.9% 90%);
+}
+.section-save-hint {
+  font-size: 11px;
+  color: hsl(240 3.8% 46.1%);
+}
+
+.fill-all-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

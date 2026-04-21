@@ -332,6 +332,21 @@ class GMPDocumentGenerator:
                 enriched_context["_terminology"] = acct_ctx["terminology"]
             if acct_ctx.get("protocol_knowledge"):
                 enriched_context["_protocol_knowledge"] = acct_ctx["protocol_knowledge"]
+            # Few-shot examples — filter down to ones matching this
+            # section's type so the model sees relevant exemplars, not
+            # just the user's most recent edits of anything.
+            few_shot = acct_ctx.get("few_shot_examples") or []
+            section_type_str = section_def.type.value
+            relevant = [
+                fs for fs in few_shot
+                if fs.get("section_type") == section_type_str
+            ]
+            # Fall back to any few-shot if none match the type — better
+            # than no signal at all.
+            if relevant:
+                enriched_context["_few_shot_examples"] = relevant[:3]
+            elif few_shot:
+                enriched_context["_few_shot_examples"] = few_shot[:2]
 
         result = self._generate_section_with_llm(section_def, enriched_context)
 
@@ -488,6 +503,32 @@ class GMPDocumentGenerator:
                 if rules:
                     lines = [f"- {r}" for r in rules[:10]]
                     parts.append("Follow these procedural conventions:\n" + "\n".join(lines))
+
+        # Few-shot exemplars from the user's own high-rated training
+        # data — this is the highest-signal prompt addition because the
+        # model learns "this is EXACTLY how this org writes this section"
+        # from their own approved output.
+        few_shot = context.get("_few_shot_examples") or []
+        if few_shot:
+            block_lines = [
+                "Below are high-quality examples of this kind of section "
+                "from this organization. Follow the same voice, structure, "
+                "terminology, and level of detail when generating new content."
+            ]
+            for i, ex in enumerate(few_shot[:3], 1):
+                prompt_snip = (ex.get("prompt_snippet") or "").strip()
+                completion_snip = (ex.get("completion_snippet") or "").strip()
+                if not completion_snip:
+                    continue
+                block_lines.append(f"\n--- EXAMPLE {i} ---")
+                if prompt_snip:
+                    block_lines.append(f"Request: {prompt_snip}")
+                block_lines.append(f"Approved response:\n{completion_snip}")
+            block_lines.append(
+                "\nNow, following the same style, terminology, and structure, "
+                "generate the requested section."
+            )
+            parts.append("\n".join(block_lines))
 
         return "\n\n".join(parts)
 

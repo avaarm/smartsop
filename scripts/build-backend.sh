@@ -45,6 +45,7 @@ pyinstaller \
   --name "$BINARY_NAME" \
   --distpath "$DIST_DIR" \
   --add-data "ml_model/gmp/templates:ml_model/gmp/templates" \
+  --add-data "ml_model/gmp/sample_docs:ml_model/gmp/sample_docs" \
   --add-data "ml_model/gmp:ml_model/gmp" \
   --hidden-import "flask" \
   --hidden-import "flask_cors" \

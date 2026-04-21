@@ -74,8 +74,15 @@ export class DocumentBuilderComponent implements OnInit {
 
   // Per-section AI loading
   sectionGenerating: Record<string, boolean> = {};
+  savingTemplate: Record<string, boolean> = {};
+  savedTemplate: Record<string, boolean> = {};
   fillAllInProgress = false;
   fillAllProgress = { current: 0, total: 0 };
+  fillAllCancelled = false;
+  // Concurrency cap so we don't overwhelm cloud providers (rate-limited)
+  // or a slow local machine. Ollama serializes internally so any >1 is
+  // moot there, but keeps cloud traffic sane.
+  private readonly FILL_CONCURRENCY = 4;
 
   // Paper scraping state
   paperSearchQuery = '';
@@ -289,48 +296,136 @@ export class DocumentBuilderComponent implements OnInit {
     }
 
     this.fillAllInProgress = true;
+    this.fillAllCancelled = false;
     this.fillAllProgress = { current: 0, total: sectionsToFill.length };
-    let completed = 0;
 
-    // Run all section fills in parallel
-    sectionsToFill.forEach((section) => {
+    // Worker-pool pattern: N in-flight at a time, each worker pops the
+    // next pending section when its current one completes. Keeps load
+    // sane for cloud providers without serialising everything.
+    const queue = [...sectionsToFill];
+    let completed = 0;
+    let failures = 0;
+
+    const runOne = (): Promise<void> => {
+      const section = queue.shift();
+      if (!section || this.fillAllCancelled) return Promise.resolve();
       this.sectionGenerating[section.id] = true;
+
       const ctx: Record<string, any> = {
         product_name: this.productName,
         process_type: this.processType,
         description: this.description,
       };
       if (this.activeAccount) ctx['account_id'] = this.activeAccount.id;
-      this.gmp.previewSection({
-        doc_type: this.selectedTemplateId,
-        section_id: section.id,
-        context: ctx,
-      }).subscribe({
-        next: (res) => {
-          if (res.data) {
-            this.sectionData[section.id] = res.data;
-          }
-          this.sectionGenerating[section.id] = false;
-          completed++;
-          this.fillAllProgress.current = completed;
-          if (completed === sectionsToFill.length) {
-            this.fillAllInProgress = false;
-            this.successMessage = `${sectionsToFill.length} sections filled with AI`;
-            setTimeout(() => (this.successMessage = ''), 4000);
-          }
-        },
-        error: (err) => {
-          this.sectionGenerating[section.id] = false;
-          completed++;
-          this.fillAllProgress.current = completed;
-          if (completed === sectionsToFill.length) {
-            this.fillAllInProgress = false;
-          }
-          this.errorMessage = `Failed on ${section.title}: ${err.message}`;
-          setTimeout(() => (this.errorMessage = ''), 5000);
-        },
-      });
+
+      return new Promise<void>((resolve) => {
+        this.gmp.previewSection({
+          doc_type: this.selectedTemplateId,
+          section_id: section.id,
+          context: ctx,
+        }).subscribe({
+          next: (res) => {
+            if (res.data) this.sectionData[section.id] = res.data;
+            this.sectionGenerating[section.id] = false;
+            completed++;
+            this.fillAllProgress.current = completed;
+            resolve();
+          },
+          error: (err) => {
+            this.sectionGenerating[section.id] = false;
+            completed++;
+            failures++;
+            this.fillAllProgress.current = completed;
+            // Surface last error but don't abort — the batch keeps going.
+            this.errorMessage = `Failed on ${section.title}: ${err.message}`;
+            setTimeout(() => (this.errorMessage = ''), 5000);
+            resolve();
+          },
+        });
+      }).then(() => runOne());  // tail-chain: worker picks the next item
+    };
+
+    const workers = Array.from(
+      { length: Math.min(this.FILL_CONCURRENCY, sectionsToFill.length) },
+      () => runOne(),
+    );
+
+    Promise.all(workers).then(() => {
+      this.fillAllInProgress = false;
+      if (this.fillAllCancelled) {
+        this.successMessage = `Stopped after ${completed} section${completed === 1 ? '' : 's'}`;
+      } else if (failures === 0) {
+        this.successMessage = `${sectionsToFill.length} section${sectionsToFill.length === 1 ? '' : 's'} filled with AI`;
+      } else {
+        this.successMessage = `Filled ${completed - failures}/${sectionsToFill.length} (${failures} failed)`;
+      }
+      setTimeout(() => (this.successMessage = ''), 4000);
     });
+  }
+
+  cancelFillAll(): void {
+    // Workers check this on each tail-chain iteration and bail out.
+    // In-flight requests still complete — that's intentional; a true
+    // abort would leave partial data in a weird state.
+    this.fillAllCancelled = true;
+  }
+
+  /** Record the user's current section content as a gold-standard
+   *  training example (``source: user_edited``, rating: 5). Future
+   *  few-shot generations of this section type will pull it in. */
+  saveSectionAsTemplate(section: GMPSectionSchema): void {
+    if (!this.activeAccount) return;
+    const data = this.sectionData[section.id];
+    if (!data) return;
+
+    this.savingTemplate[section.id] = true;
+
+    // Reconstruct the prompt the LLM was (or would have been) given.
+    const promptText = this.formatLLMPrompt(section);
+    // Completion is the current section data serialized — downstream
+    // few-shot uses completion_snippet (first 500 chars) so JSON is fine.
+    const completionText = typeof data === 'string'
+      ? data
+      : JSON.stringify(data, null, 2);
+
+    this.accountService.addTrainingExample(this.activeAccount.id, {
+      prompt: promptText,
+      completion: completionText,
+      section_type: section.type,
+      source: 'user_edited',
+      quality_rating: 5,
+      product_name: this.productName,
+      process_type: this.processType,
+    }).subscribe({
+      next: () => {
+        this.savingTemplate[section.id] = false;
+        this.savedTemplate[section.id] = true;
+        this.successMessage = `"${section.title}" saved — future generations will learn from it`;
+        setTimeout(() => (this.successMessage = ''), 4000);
+      },
+      error: (err) => {
+        this.savingTemplate[section.id] = false;
+        this.errorMessage = err.message;
+        setTimeout(() => (this.errorMessage = ''), 5000);
+      },
+    });
+  }
+
+  private formatLLMPrompt(section: GMPSectionSchema): string {
+    const base = section.llm_prompt || section.type;
+    // Best-effort substitute the same context placeholders the backend
+    // uses. Anything we can't fill stays as the literal placeholder —
+    // consistent with what the backend recorded for AI generations.
+    try {
+      return base
+        .replace(/\{product_name\}/g, this.productName || '')
+        .replace(/\{process_type\}/g, this.processType || '')
+        .replace(/\{description\}/g, this.description || '')
+        .replace(/\{title\}/g, this.docTitle || '')
+        .replace(/\{doc_type\}/g, this.selectedTemplateId || '');
+    } catch {
+      return base;
+    }
   }
 
   generateDocument(): void {
@@ -506,6 +601,8 @@ export class DocumentBuilderComponent implements OnInit {
     this.compareOpen = false;
     this.unstyledDocUrl = '';
     this.applyLearnedStyle = true;
+    this.savedTemplate = {};
+    this.savingTemplate = {};
     this.paperSearchQuery = '';
     this.paperSearchResults = [];
     this.importedPapers = [];

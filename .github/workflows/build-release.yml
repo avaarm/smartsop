@@ -73,6 +73,7 @@ jobs:
             --name smartsop-backend \
             --distpath dist-backend \
             --add-data "ml_model/gmp/templates${SEP}ml_model/gmp/templates" \
+            --add-data "ml_model/gmp/sample_docs${SEP}ml_model/gmp/sample_docs" \
             --add-data "ml_model/gmp${SEP}ml_model/gmp" \
             --hidden-import flask \
             --hidden-import flask_cors \

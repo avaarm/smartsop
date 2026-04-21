@@ -38,6 +38,9 @@ export class ProtocolsComponent implements OnInit {
   newAccountName = '';
   newFacilityName = '';
 
+  // Demo-workspace one-click seeder
+  seedingDemo = false;
+
   // Uploads
   protocolUploads: ProtocolUpload[] = [];
   protocolsLoading = false;
@@ -98,6 +101,35 @@ export class ProtocolsComponent implements OnInit {
     this.accountService.setActiveAccount(account);
     this.activeAccount = account;
     this.loadProtocols();
+  }
+
+  /** One-click seed the demo workspace with sample Fred-Hutch docs.
+   *  Idempotent: if the demo already exists we just activate it. */
+  seedDemo(): void {
+    this.seedingDemo = true;
+    this.accountService.seedDemoWorkspace().subscribe({
+      next: (res) => {
+        this.seedingDemo = false;
+        // Insert the new account (if not already in the list) and activate it
+        const idx = this.accounts.findIndex(a => a.id === res.account.id);
+        if (idx < 0) {
+          this.accounts.push(res.account);
+        } else {
+          this.accounts[idx] = res.account;
+        }
+        this.showCreateForm = false;
+        this.selectAccount(res.account);
+        if (res.already_seeded) {
+          this.toast('Demo workspace already exists — activating it', 'success');
+        } else {
+          this.toast('Demo workspace loaded — 2 sample batch records ready to extract', 'success');
+        }
+      },
+      error: (err) => {
+        this.seedingDemo = false;
+        this.toast(err.message, 'error');
+      },
+    });
   }
 
   createAccount(): void {

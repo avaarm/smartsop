@@ -188,8 +188,21 @@ export class AccountService {
     return this.http.get<any>(url).pipe(timeout(15000), catchError(this.handleError));
   }
 
-  addTrainingExample(accountId: number, data: { prompt: string; completion: string; section_type?: string }):
-    Observable<{ success: boolean; example: TrainingExample }> {
+  addTrainingExample(
+    accountId: number,
+    data: {
+      prompt: string;
+      completion: string;
+      section_type?: string;
+      /** ``manual`` (default) or ``user_edited`` for inline edits the
+       *  user wants fed back into few-shot generation. */
+      source?: 'manual' | 'user_edited';
+      /** 1–5. Defaults to null (unrated). Pass 5 to mark "gold standard". */
+      quality_rating?: number;
+      product_name?: string;
+      process_type?: string;
+    },
+  ): Observable<{ success: boolean; example: TrainingExample }> {
     return this.http.post<{ success: boolean; example: TrainingExample }>(
       `${this.baseUrl}/${accountId}/training`, data
     ).pipe(timeout(10000), catchError(this.handleError));
@@ -303,6 +316,18 @@ export class AccountService {
     return this.http.get<EffectiveStyleResponse>(
       `${this.baseUrl}/${accountId}/effective-style${qs}`
     ).pipe(timeout(10000), catchError(this.handleError));
+  }
+
+  /**
+   * Seed a pre-populated demo workspace with Fred-Hutch cell-processing
+   * sample batch records. Idempotent — returns the existing demo
+   * account if one already exists.
+   */
+  seedDemoWorkspace():
+    Observable<{ success: boolean; account: Account; already_seeded: boolean; uploads?: ProtocolUpload[] }> {
+    return this.http.post<{ success: boolean; account: Account; already_seeded: boolean; uploads?: ProtocolUpload[] }>(
+      `${this.baseUrl}/demo`, {}
+    ).pipe(timeout(30000), catchError(this.handleError));
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {

@@ -322,16 +322,25 @@
             <h2>Review sections</h2>
             <p>Fill sections with AI or leave empty to use template defaults</p>
           </div>
-          <button *ngIf="ollamaStatus?.available"
-                  class="btn btn-ai"
-                  (click)="fillAllSectionsWithAI()"
-                  [disabled]="fillAllInProgress">
-            <svg *ngIf="!fillAllInProgress" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M12 2l1.7 5.3L19 9l-5.3 1.7L12 16l-1.7-5.3L5 9l5.3-1.7z"/>
-            </svg>
-            <div *ngIf="fillAllInProgress" class="spinner spinner-sm"></div>
-            {{ fillAllInProgress ? 'Filling ' + fillAllProgress.current + '/' + fillAllProgress.total + '…' : 'Fill all with AI' }}
-          </button>
+          <div class="fill-all-group">
+            <button *ngIf="ollamaStatus?.available"
+                    class="btn btn-ai"
+                    (click)="fillAllSectionsWithAI()"
+                    [disabled]="fillAllInProgress">
+              <svg *ngIf="!fillAllInProgress" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M12 2l1.7 5.3L19 9l-5.3 1.7L12 16l-1.7-5.3L5 9l5.3-1.7z"/>
+              </svg>
+              <div *ngIf="fillAllInProgress" class="spinner spinner-sm"></div>
+              {{ fillAllInProgress
+                  ? 'Filling ' + fillAllProgress.current + '/' + fillAllProgress.total + '…'
+                  : 'Fill all with AI' }}
+            </button>
+            <button *ngIf="fillAllInProgress && !fillAllCancelled"
+                    class="btn btn-ghost btn-sm"
+                    (click)="cancelFillAll()">
+              Stop
+            </button>
+          </div>
         </div>
       </div>
 
@@ -377,6 +386,31 @@
             </div>
             <div *ngIf="!sectionHasContent(section.id)" class="empty-hint">
               No content yet. Click "Fill with AI" to generate, or leave empty for defaults.
+            </div>
+
+            <!-- Save as template: closes the training loop by recording
+                 the current section content as a user-approved exemplar
+                 that future few-shot prompts will pull from. -->
+            <div *ngIf="activeAccount && sectionHasContent(section.id)"
+                 class="section-save-row">
+              <button class="btn btn-ghost btn-sm"
+                      (click)="saveSectionAsTemplate(section)"
+                      [disabled]="savingTemplate[section.id] || savedTemplate[section.id]">
+                <svg *ngIf="!savedTemplate[section.id]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                </svg>
+                <svg *ngIf="savedTemplate[section.id]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="hsl(143 70% 35%)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                {{ savingTemplate[section.id]
+                    ? 'Saving…'
+                    : (savedTemplate[section.id]
+                        ? 'Saved as template'
+                        : 'Save as template for future docs') }}
+              </button>
+              <span *ngIf="!savedTemplate[section.id]" class="section-save-hint">
+                Future generations of this section type will learn from it.
+              </span>
             </div>
           </div>
         </div>
