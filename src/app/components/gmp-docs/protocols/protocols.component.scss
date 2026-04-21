@@ -724,3 +724,28 @@
 
   .btn { flex-shrink: 0; }
 }
+
+/* ── Workspace bar actions (rename/delete/new) ───────────────── */
+.workspace-bar {
+  .ws-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .ws-delete:hover:not(:disabled) {
+    background: hsl(0 70% 95%);
+    color: hsl(0 70% 40%);
+    border-color: hsl(0 70% 85%);
+  }
+  .ws-rename {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid var(--primary);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    background: white;
+    color: var(--primary);
+    font-family: inherit;
+    &:focus { outline: none; box-shadow: 0 0 0 3px hsl(240 5.9% 90% / 0.6); }
+  }
+}

@@ -357,6 +357,21 @@ h2 {
   padding: 96px 0;
 }
 
+.download-note {
+  max-width: 720px;
+  margin: 0 auto 40px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #eff6ff, #eef2ff);
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #3730a3;
+  text-align: center;
+}
+.download-note strong { color: #4338ca; }
+.download-note em { font-style: normal; font-weight: 600; color: #1e1b4b; }
+
 .download-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

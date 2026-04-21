@@ -90,6 +90,48 @@ def update_account(account_id):
     return jsonify({"success": True, "account": account.to_dict()})
 
 
+@account_bp.route("/<int:account_id>", methods=["DELETE"])
+def delete_account(account_id):
+    """Delete an entire workspace and everything it owns.
+
+    Cascades to: ProtocolUploads (+ knowledge), TrainingExamples,
+    Documents, and any on-disk files in the account's upload directory.
+    Irreversible — the frontend MUST double-prompt the user.
+    """
+    import shutil
+    account = Account.query.get_or_404(account_id)
+
+    # Remove per-upload files before deleting the rows so we don't leave
+    # orphaned files behind if the DB delete succeeds.
+    for upload in ProtocolUpload.query.filter_by(account_id=account_id).all():
+        if upload.file_path and os.path.exists(upload.file_path):
+            try:
+                os.unlink(upload.file_path)
+            except OSError as e:
+                logger.warning("Could not delete %s: %s", upload.file_path, e)
+
+    # And the upload directory itself if it's now empty.
+    upload_dir = UPLOAD_DIR / str(account_id)
+    if upload_dir.exists():
+        try:
+            shutil.rmtree(upload_dir)
+        except OSError as e:
+            logger.warning("Could not remove %s: %s", upload_dir, e)
+
+    # Cascade the relational cleanup. ProtocolKnowledge has
+    # cascade="all, delete-orphan" on the ProtocolUpload relationship,
+    # so deleting uploads removes their knowledge rows. Training
+    # examples and documents need explicit deletes since they only
+    # backref the account via ForeignKey.
+    ProtocolUpload.query.filter_by(account_id=account_id).delete()
+    TrainingExample.query.filter_by(account_id=account_id).delete()
+    Document.query.filter_by(account_id=account_id).delete()
+
+    db.session.delete(account)
+    db.session.commit()
+    return jsonify({"success": True, "deleted_account_id": account_id})
+
+
 # ── Documents (history) ──
 
 @account_bp.route("/<int:account_id>/documents", methods=["GET"])
@@ -542,8 +584,10 @@ def seed_demo_workspace():
     db.session.add(account)
     db.session.commit()
 
-    # Copy each bundled sample into the account's upload dir and
-    # parse + infer doc_type so it shows up exactly like a real upload.
+    # Copy each bundled sample into the account's upload dir, parse it,
+    # and if a ``.knowledge.json`` sidecar exists next to the DOCX, load
+    # the pre-extracted knowledge rows directly so the demo account
+    # lands in "Knowledge extracted" status — no Ollama required.
     dest_dir = _get_upload_dir(account.id)
     uploads: list[dict] = []
     for sample_path in sorted(SAMPLE_DIR.glob("*.docx")):
@@ -568,8 +612,42 @@ def seed_demo_workspace():
             if inferred:
                 upload.doc_type = inferred
                 upload.doc_type_source = "inferred"
-            upload.status = "parsed"
-            db.session.commit()
+
+            # Look for a sidecar knowledge file bundled with the sample.
+            # If present, create ProtocolKnowledge rows so the demo
+            # workspace ships as "Knowledge extracted" not "Parsed".
+            sidecar = sample_path.with_suffix(".knowledge.json")
+            if sidecar.exists():
+                try:
+                    sidecar_data = json.loads(sidecar.read_text())
+                    for category, payload in sidecar_data.items():
+                        if not isinstance(payload, dict):
+                            continue
+                        k = ProtocolKnowledge(
+                            account_id=account.id,
+                            upload_id=upload.id,
+                            category=category,
+                            knowledge_json=json.dumps(
+                                payload.get("knowledge") or {}
+                            ),
+                            summary=payload.get("summary") or "",
+                            confidence=payload.get("confidence"),
+                            is_active=True,
+                        )
+                        db.session.add(k)
+                    upload.status = "complete"
+                    db.session.commit()
+                except Exception as e:
+                    logger.warning(
+                        "Sidecar %s could not be loaded: %s — leaving upload as parsed",
+                        sidecar.name, e,
+                    )
+                    upload.status = "parsed"
+                    db.session.commit()
+            else:
+                upload.status = "parsed"
+                db.session.commit()
+
             uploads.append(upload.to_dict())
         except Exception as e:
             logger.warning("Failed to seed sample %s: %s", sample_path.name, e)

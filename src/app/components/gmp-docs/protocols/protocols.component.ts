@@ -41,6 +41,11 @@ export class ProtocolsComponent implements OnInit {
   // Demo-workspace one-click seeder
   seedingDemo = false;
 
+  // Workspace rename/delete
+  renamingAccount = false;
+  renameDraft = '';
+  deletingAccount = false;
+
   // Uploads
   protocolUploads: ProtocolUpload[] = [];
   protocolsLoading = false;
@@ -127,6 +132,77 @@ export class ProtocolsComponent implements OnInit {
       },
       error: (err) => {
         this.seedingDemo = false;
+        this.toast(err.message, 'error');
+      },
+    });
+  }
+
+  // ── Workspace rename / delete ──
+
+  beginRename(): void {
+    if (!this.activeAccount) return;
+    this.renameDraft = this.activeAccount.name;
+    this.renamingAccount = true;
+  }
+
+  cancelRename(): void {
+    this.renamingAccount = false;
+    this.renameDraft = '';
+  }
+
+  commitRename(): void {
+    const name = this.renameDraft.trim();
+    if (!this.activeAccount || !name || name === this.activeAccount.name) {
+      this.renamingAccount = false;
+      return;
+    }
+    this.accountService.updateAccount(this.activeAccount.id, { name }).subscribe({
+      next: (res) => {
+        // Propagate the updated account everywhere
+        const idx = this.accounts.findIndex(a => a.id === res.account.id);
+        if (idx >= 0) this.accounts[idx] = res.account;
+        this.accountService.setActiveAccount(res.account);
+        this.activeAccount = res.account;
+        this.renamingAccount = false;
+        this.toast('Workspace renamed', 'success');
+      },
+      error: (err) => this.toast(err.message, 'error'),
+    });
+  }
+
+  deleteActiveWorkspace(): void {
+    if (!this.activeAccount) return;
+    const name = this.activeAccount.name;
+    // Intentionally two-step — first a standard confirm, then a typed
+    // echo of the workspace name. Destructive action, no undo.
+    if (!confirm(
+      `Delete "${name}" and all its uploaded documents, extracted ` +
+      `knowledge, generated history, and training data?\n\n` +
+      `This cannot be undone.`,
+    )) return;
+    const typed = prompt(
+      `Type the workspace name to confirm deletion:\n\n${name}`,
+    );
+    if (typed !== name) {
+      this.toast('Deletion cancelled — name did not match', 'error');
+      return;
+    }
+
+    this.deletingAccount = true;
+    const id = this.activeAccount.id;
+    this.accountService.deleteAccount(id).subscribe({
+      next: () => {
+        this.deletingAccount = false;
+        this.accounts = this.accounts.filter(a => a.id !== id);
+        this.activeAccount = null;
+        this.accountService.setActiveAccount(null);
+        this.protocolUploads = [];
+        // If no accounts remain, send the user back to the create form.
+        if (this.accounts.length === 0) this.showCreateForm = true;
+        this.toast(`Deleted workspace "${name}"`, 'success');
+      },
+      error: (err) => {
+        this.deletingAccount = false;
         this.toast(err.message, 'error');
       },
     });

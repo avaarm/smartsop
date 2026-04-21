@@ -1,0 +1,239 @@
+{
+  "terminology": {
+    "summary": "Extracted 11 organization terms and 5 standard phrases",
+    "confidence": 0.9,
+    "knowledge": {
+      "terms": {
+        "BSC": "Biosafety Cabinet",
+        "TSCD": "Total Sterile Connecting Device",
+        "CPF": "Cell Processing Facility",
+        "BR": "Batch Record",
+        "IPA": "Isopropyl Alcohol",
+        "PBMC": "Peripheral Blood Mononuclear Cell",
+        "PPE": "Personal Protective Equipment",
+        "QA": "Quality Assurance",
+        "SOP": "Standard Operating Procedure",
+        "POC": "Product of Component",
+        "CD8": "Cluster of Differentiation 8 (T-cell marker)"
+      },
+      "standard_phrases": [
+        "Don PPE per gowning SOP",
+        "Sanitize all penetrations with 70% IPA prior to sterile connection",
+        "Record the room number and equipment ID",
+        "Notify the supervisor of any deviation",
+        "Verify label matches Part No., Lot No., and Subject ID"
+      ]
+    }
+  },
+  "procedural_rules": {
+    "summary": "Extracted 7 procedural conventions",
+    "confidence": 0.85,
+    "knowledge": {
+      "rules": [
+        "All aseptic operations inside the Biosafety Cabinet are preceded by [BSC] in the procedure text.",
+        "Two-person verification is required at every record-a-measurement step.",
+        "Times are recorded in 24-hour format (HHMM) with \u00b12 minute tolerance unless otherwise specified.",
+        "Every deviation from the procedure is recorded in the Deviations section, no matter how minor.",
+        "Centrifugations use a counter-balanced second container matching the test-tube mass within 1 g.",
+        "Labels are applied only after verification against the Part No., Lot No., and Subject ID.",
+        "Bag ports, vial septa, and tubing penetrations are sanitized with 70% IPA before sterile connection."
+      ]
+    }
+  },
+  "writing_style": {
+    "summary": "Passive voice, imperative verbs, third-person impersonal",
+    "confidence": 0.8,
+    "knowledge": {
+      "voice": "passive",
+      "tense": "present",
+      "person": "third",
+      "sentence_patterns": [
+        "Verify that <condition> before proceeding.",
+        "Record the <measurement> on the batch record.",
+        "[BSC] Perform <action> inside the Biosafety Cabinet.",
+        "Notify the supervisor if <exception>.",
+        "Confirm <parameter> is within <range>."
+      ]
+    }
+  },
+  "section_structure": {
+    "summary": "Hierarchical X.Y.Z numbering with landscape layout",
+    "confidence": 0.9,
+    "knowledge": {
+      "numbering_scheme": "X.X.X",
+      "sections": [
+        {
+          "number": "1",
+          "title": "Purpose"
+        },
+        {
+          "number": "2",
+          "title": "Scope"
+        },
+        {
+          "number": "3",
+          "title": "Responsibilities"
+        },
+        {
+          "number": "4",
+          "title": "Equipment and Materials"
+        },
+        {
+          "number": "5",
+          "title": "Procedure"
+        },
+        {
+          "number": "6",
+          "title": "Calculations"
+        },
+        {
+          "number": "7",
+          "title": "Post-Process Review"
+        },
+        {
+          "number": "8",
+          "title": "Deviations"
+        }
+      ]
+    }
+  },
+  "formatting": {
+    "summary": "Landscape 11x8.5, Cambria 10pt body, BFBFBF/F2F2F2 shading",
+    "confidence": 0.95,
+    "knowledge": {
+      "page": {
+        "orientation": "landscape",
+        "size_inches": [
+          11.0,
+          8.5
+        ],
+        "margins_inches": {
+          "top": 0.75,
+          "right": 0.5,
+          "bottom": 0.5,
+          "left": 0.5
+        }
+      },
+      "body_font": {
+        "name": "Cambria",
+        "size_pt": 10,
+        "line_spacing": 1.0,
+        "space_after_pt": 0
+      },
+      "heading_fonts": [
+        {
+          "level": 1,
+          "name": "Calibri",
+          "size_pt": 12,
+          "bold": true,
+          "space_before_pt": 6,
+          "space_after_pt": 0
+        },
+        {
+          "level": 2,
+          "name": "Calibri",
+          "size_pt": 11,
+          "bold": true,
+          "space_before_pt": 4,
+          "space_after_pt": 0
+        }
+      ],
+      "header_pattern": "Logo (left, 2 cols) | Document title (center, bold 12pt) | Page N of M (right) with Doc #, Effective Date, Rev",
+      "footer_pattern": "Confidential \u2014 For use within Fred Hutch Cell Processing Facility only. Printed copies are uncontrolled.",
+      "shading_roles": {
+        "section_header": "BFBFBF",
+        "label_cell": "F2F2F2",
+        "alternating_rows": null
+      },
+      "table_conventions": [
+        "Every table uses a fixed layout with DXA-specified column widths (table-level tblLayout=fixed).",
+        "Section-header rows span the full table width with BFBFBF shading and bold white-on-gray text.",
+        "Label/value rows use F2F2F2 in column 1 and white in column 2.",
+        "All six borders (top/left/bottom/right/insideH/insideV) are a single 0.5pt rule in the 'auto' color."
+      ],
+      "list_style": {
+        "bullets": "round",
+        "numbering": "X.X",
+        "indent_inches": 0.25
+      },
+      "observations": [
+        "Theme fonts resolve to Calibri (major/headings) and Cambria (minor/body).",
+        "Nine numbering definitions in numbering.xml; all are bullet lists with ascending indent.",
+        "Page size is 15840 x 12240 DXA (landscape US Letter), with 1080/720/720/720 DXA margins."
+      ]
+    }
+  },
+  "table_templates": {
+    "summary": "5 reusable table patterns: approval block, equipment list, step procedure, references, post-process review",
+    "confidence": 0.85,
+    "knowledge": {
+      "templates": [
+        {
+          "name": "approval_block",
+          "rows": 5,
+          "cols": 3,
+          "col_widths_dxa": [
+            4860,
+            4860,
+            4860
+          ],
+          "header_shading_hex": "BFBFBF",
+          "description": "3-column approval sign-off: Role | Name | Date. Header row BFBFBF."
+        },
+        {
+          "name": "step_procedure",
+          "rows": 9,
+          "cols": 8,
+          "col_widths_dxa": [
+            2160,
+            3240,
+            720,
+            1260,
+            2070,
+            720,
+            2070,
+            2340
+          ],
+          "header_shading_hex": "BFBFBF",
+          "description": "8-column step procedure: Step # | Instruction | Variable | Result | Performed By | Date | Time | Verified By."
+        },
+        {
+          "name": "equipment_list",
+          "rows": 6,
+          "cols": 4,
+          "col_widths_dxa": [
+            1260,
+            5400,
+            3960,
+            3960
+          ],
+          "header_shading_hex": "BFBFBF",
+          "description": "4-column equipment: # | Description | Equipment ID | Last Service Date. Header row BFBFBF."
+        },
+        {
+          "name": "references",
+          "rows": 4,
+          "cols": 2,
+          "col_widths_dxa": [
+            2160,
+            12420
+          ],
+          "header_shading_hex": "BFBFBF",
+          "description": "2-column reference list: Doc # | Title. Header row BFBFBF."
+        },
+        {
+          "name": "post_process_review",
+          "rows": 8,
+          "cols": 3,
+          "col_widths_dxa": [
+            10080,
+            2160,
+            2340
+          ],
+          "header_shading_hex": "BFBFBF",
+          "description": "3-column manufacturing review checklist: Item | Manufacturer | QA."
+        }
+      ]
+    }
+  }
+}

@@ -152,6 +152,15 @@ export class AccountService {
     ).pipe(timeout(10000), catchError(this.handleError));
   }
 
+  /** Permanently delete an account and everything it owns (uploads,
+   *  extracted knowledge, training examples, document history,
+   *  on-disk files). No recovery — callers MUST confirm first. */
+  deleteAccount(id: number): Observable<{ success: boolean; deleted_account_id: number }> {
+    return this.http.delete<{ success: boolean; deleted_account_id: number }>(
+      `${this.baseUrl}/${id}`
+    ).pipe(timeout(10000), catchError(this.handleError));
+  }
+
   setActiveAccount(account: Account | null): void {
     this.activeAccount$.next(account);
     if (account) {
