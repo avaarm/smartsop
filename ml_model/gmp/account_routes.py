@@ -2,11 +2,12 @@
 
 import json
 import logging
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, g
 
-from .database import db, Account, Document, TrainingExample
+from .database import db, Account, Document, TrainingExample, Membership
 from .data_collector import DataCollector
 from .training_export import TrainingExporter
+from .auth import require_auth, require_account_access, has_account_role
 
 logger = logging.getLogger(__name__)
 
@@ -18,14 +19,26 @@ exporter = TrainingExporter()
 # ── Account CRUD ──
 
 @account_bp.route("", methods=["GET"])
+@require_auth
 def list_accounts():
-    accounts = Account.query.order_by(Account.name).all()
+    """List accounts the current user can access (all accounts for a superadmin)."""
+    user = g.current_user
+    if user.is_superadmin:
+        accounts = Account.query.order_by(Account.name).all()
+    else:
+        account_ids = [m.account_id for m in user.memberships]
+        accounts = (
+            Account.query.filter(Account.id.in_(account_ids))
+            .order_by(Account.name)
+            .all()
+        )
     return jsonify({"success": True, "accounts": [a.to_dict() for a in accounts]})
 
 
 @account_bp.route("", methods=["POST"])
+@require_auth
 def create_account():
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data or not data.get("name"):
         return jsonify({"success": False, "error": "name is required"}), 400
 
@@ -47,18 +60,25 @@ def create_account():
         reference_sops_json=json.dumps(data.get("reference_sops", [])),
     )
     db.session.add(account)
+    db.session.flush()
+    # The creator owns the account they just made.
+    db.session.add(Membership(user_id=g.current_user.id, account_id=account.id, role="owner"))
     db.session.commit()
     return jsonify({"success": True, "account": account.to_dict()}), 201
 
 
 @account_bp.route("/<int:account_id>", methods=["GET"])
+@require_account_access
 def get_account(account_id):
     account = Account.query.get_or_404(account_id)
     return jsonify({"success": True, "account": account.to_dict()})
 
 
 @account_bp.route("/<int:account_id>", methods=["PUT"])
+@require_account_access
 def update_account(account_id):
+    if not has_account_role(g.current_user, account_id, ("owner", "admin")):
+        return jsonify({"success": False, "error": "Only account owners or admins can update settings"}), 403
     account = Account.query.get_or_404(account_id)
     data = request.get_json(silent=True)
     if not data:
@@ -88,6 +108,7 @@ def update_account(account_id):
 # ── Documents (history) ──
 
 @account_bp.route("/<int:account_id>/documents", methods=["GET"])
+@require_account_access
 def list_documents(account_id):
     docs = Document.query.filter_by(account_id=account_id).order_by(
         Document.created_at.desc()
@@ -98,6 +119,7 @@ def list_documents(account_id):
 # ── Training Data ──
 
 @account_bp.route("/<int:account_id>/training", methods=["GET"])
+@require_account_access
 def list_training_examples(account_id):
     """List training examples with optional filters."""
     source = request.args.get("source")
@@ -120,6 +142,7 @@ def list_training_examples(account_id):
 
 
 @account_bp.route("/<int:account_id>/training", methods=["POST"])
+@require_account_access
 def add_training_example(account_id):
     """Manually add a training example (e.g. paste in a gold-standard section)."""
     data = request.get_json()
@@ -143,6 +166,7 @@ def add_training_example(account_id):
 
 
 @account_bp.route("/<int:account_id>/training/<int:example_id>/edit", methods=["POST"])
+@require_account_access
 def record_edit(account_id, example_id):
     """Record a user's edit of an AI-generated section."""
     data = request.get_json(silent=True)
@@ -169,6 +193,7 @@ def record_edit(account_id, example_id):
 
 
 @account_bp.route("/<int:account_id>/training/<int:example_id>/rate", methods=["POST"])
+@require_account_access
 def rate_example(account_id, example_id):
     """Rate a training example 1-5."""
     data = request.get_json(silent=True) or {}
@@ -186,6 +211,7 @@ def rate_example(account_id, example_id):
 
 
 @account_bp.route("/<int:account_id>/training/stats", methods=["GET"])
+@require_account_access
 def training_stats(account_id):
     stats = collector.get_account_stats(account_id)
     return jsonify({"success": True, **stats})
@@ -194,6 +220,7 @@ def training_stats(account_id):
 # ── Export ──
 
 @account_bp.route("/<int:account_id>/export/jsonl", methods=["GET"])
+@require_account_access
 def export_jsonl(account_id):
     """Export training data as JSONL for fine-tuning."""
     min_rating = request.args.get("min_rating", type=int)
@@ -212,6 +239,7 @@ def export_jsonl(account_id):
 
 
 @account_bp.route("/<int:account_id>/export/modelfile", methods=["GET"])
+@require_account_access
 def export_modelfile(account_id):
     """Generate an Ollama Modelfile with account-specific system prompt."""
     base_model = request.args.get("base_model", "llama3")
@@ -224,6 +252,7 @@ def export_modelfile(account_id):
 
 
 @account_bp.route("/<int:account_id>/export/full", methods=["GET"])
+@require_account_access
 def export_full(account_id):
     """Export all account data (documents + training examples + config)."""
     result = exporter.export_full_dataset(account_id)

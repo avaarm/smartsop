@@ -13,6 +13,7 @@ import logging
 
 from ml_model.gmp.routes import gmp_bp
 from ml_model.gmp.account_routes import account_bp
+from ml_model.gmp.auth_routes import auth_bp
 from ml_model.gmp.database import init_db
 
 logging.basicConfig(level=logging.INFO)
@@ -41,6 +42,7 @@ init_db(app)
 
 app.register_blueprint(gmp_bp)
 app.register_blueprint(account_bp)
+app.register_blueprint(auth_bp)
 
 
 @app.route('/api/download/<filename>')
