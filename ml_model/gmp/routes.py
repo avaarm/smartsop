@@ -1,9 +1,10 @@
 """Flask Blueprint for GMP document generation API endpoints."""
 
 import logging
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 
 from .document_generator import GMPDocumentGenerator
+from .auth import require_auth, has_account_access
 
 logger = logging.getLogger(__name__)
 
@@ -48,16 +49,22 @@ def get_template(template_id: str):
 
 
 @gmp_bp.route("/generate", methods=["POST"])
+@require_auth
 def generate_document():
     """Generate a GMP document."""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True)
         if not data:
             return jsonify({"success": False, "error": "No JSON body"}), 400
 
         doc_type = data.get("doc_type")
         if not doc_type:
             return jsonify({"success": False, "error": "doc_type is required"}), 400
+
+        # If the document is filed under an account, the caller must belong to it.
+        account_id = data.get("account_id")
+        if account_id and not has_account_access(g.current_user, account_id):
+            return jsonify({"success": False, "error": "You do not have access to this account"}), 403
 
         gen = get_generator()
         result = gen.generate_document(doc_type, data)
@@ -79,10 +86,11 @@ def generate_document():
 
 
 @gmp_bp.route("/preview", methods=["POST"])
+@require_auth
 def preview_section():
     """Generate a preview for a single document section."""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         doc_type = data.get("doc_type")
         section_id = data.get("section_id")
         context = data.get("context", {})
@@ -92,6 +100,11 @@ def preview_section():
                 "success": False,
                 "error": "doc_type and section_id are required"
             }), 400
+
+        # Preview can be filed under an account (records training data); guard it.
+        account_id = context.get("account_id") if isinstance(context, dict) else None
+        if account_id and not has_account_access(g.current_user, account_id):
+            return jsonify({"success": False, "error": "You do not have access to this account"}), 403
 
         gen = get_generator()
         result = gen.preview_section(doc_type, section_id, context)
