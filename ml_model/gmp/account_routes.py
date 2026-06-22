@@ -60,7 +60,9 @@ def get_account(account_id):
 @account_bp.route("/<int:account_id>", methods=["PUT"])
 def update_account(account_id):
     account = Account.query.get_or_404(account_id)
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"success": False, "error": "No JSON body"}), 400
 
     if "name" in data:
         account.name = data["name"]
@@ -143,11 +145,13 @@ def add_training_example(account_id):
 @account_bp.route("/<int:account_id>/training/<int:example_id>/edit", methods=["POST"])
 def record_edit(account_id, example_id):
     """Record a user's edit of an AI-generated section."""
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data or not data.get("edited_content"):
         return jsonify({"success": False, "error": "edited_content is required"}), 400
 
-    original = TrainingExample.query.get_or_404(example_id)
+    original = TrainingExample.query.filter_by(id=example_id, account_id=account_id).first()
+    if original is None:
+        return jsonify({"success": False, "error": "Training example not found for this account"}), 404
     example = collector.record_user_edit(
         account_id=account_id,
         section_type=original.section_type,
@@ -167,10 +171,14 @@ def record_edit(account_id, example_id):
 @account_bp.route("/<int:account_id>/training/<int:example_id>/rate", methods=["POST"])
 def rate_example(account_id, example_id):
     """Rate a training example 1-5."""
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     rating = data.get("rating")
     if not rating or not isinstance(rating, int) or not 1 <= rating <= 5:
         return jsonify({"success": False, "error": "rating must be an integer 1-5"}), 400
+
+    example = TrainingExample.query.filter_by(id=example_id, account_id=account_id).first()
+    if example is None:
+        return jsonify({"success": False, "error": "Example not found"}), 404
 
     if collector.rate_example(example_id, rating):
         return jsonify({"success": True})
