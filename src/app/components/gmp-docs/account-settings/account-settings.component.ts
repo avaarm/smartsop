@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, PLATFORM_ID, inject } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   AccountService,
@@ -63,14 +63,19 @@ export class AccountSettingsComponent implements OnInit {
   exportLoading = false;
   modelfileResult: { model_name: string; instructions: string } | null = null;
 
+  private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+
   constructor(private accountService: AccountService) {}
 
   ngOnInit(): void {
-    this.loadAccounts();
     this.accountService.activeAccount$.subscribe(a => {
       this.activeAccount = a;
       if (a) this.populateForm(a);
     });
+    // Account data comes from the backend over a relative URL that can't be
+    // resolved during server-side rendering, so defer the fetch to the browser.
+    if (!this.isBrowser) return;
+    this.loadAccounts();
   }
 
   loadAccounts(): void {

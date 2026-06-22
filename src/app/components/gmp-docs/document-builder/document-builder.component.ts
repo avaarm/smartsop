@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, PLATFORM_ID, inject } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import {
@@ -68,12 +68,18 @@ export class DocumentBuilderComponent implements OnInit {
 
   activeAccount: Account | null = null;
 
+  private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+
   constructor(private gmp: GMPDocumentService, private accountService: AccountService) {}
 
   ngOnInit(): void {
+    this.accountService.activeAccount$.subscribe(a => this.activeAccount = a);
+    // Skip backend/localStorage access during server-side rendering — relative
+    // API URLs can't be resolved in Node and localStorage doesn't exist there.
+    // This data loads in the browser after hydration.
+    if (!this.isBrowser) return;
     this.loadTemplates();
     this.checkOllamaStatus();
-    this.accountService.activeAccount$.subscribe(a => this.activeAccount = a);
     this.accountService.loadSavedAccount();
   }
 
