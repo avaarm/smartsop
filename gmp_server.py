@@ -6,6 +6,8 @@ Ollama LLM integration and Word document generation.
 
 from flask import Flask, jsonify, send_file
 from flask_cors import CORS
+from werkzeug.exceptions import HTTPException
+from werkzeug.utils import secure_filename
 import os
 import logging
 
@@ -16,6 +18,10 @@ from ml_model.gmp.database import init_db
 logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
+
+# Cap request bodies to protect against oversized/abusive payloads (default 16 MB).
+app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))
+
 allowed_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:4200,http://127.0.0.1:4200').split(',')
 CORS(app,
      origins=allowed_origins,
@@ -39,8 +45,13 @@ app.register_blueprint(account_bp)
 
 @app.route('/api/download/<filename>')
 def download_file(filename):
-    filepath = os.path.join(GENERATED_DOCS_DIR, filename)
-    if os.path.exists(filepath):
+    # secure_filename strips any path separators / traversal sequences so a
+    # crafted name like "../../etc/passwd" can't escape the docs directory.
+    safe_name = secure_filename(filename)
+    if not safe_name:
+        return jsonify({"error": "Invalid filename"}), 400
+    filepath = os.path.join(GENERATED_DOCS_DIR, safe_name)
+    if os.path.isfile(filepath):
         return send_file(filepath, as_attachment=True)
     return jsonify({"error": "File not found"}), 404
 
@@ -48,6 +59,19 @@ def download_file(filename):
 @app.route('/health')
 def health():
     return jsonify({"status": "ok"})
+
+
+@app.errorhandler(HTTPException)
+def handle_http_exception(e):
+    """Return JSON (not HTML) for HTTP errors so API clients get a consistent shape."""
+    return jsonify({"success": False, "error": e.description}), e.code
+
+
+@app.errorhandler(Exception)
+def handle_unexpected_exception(e):
+    """Catch-all so unexpected errors return JSON without leaking a stack trace."""
+    logging.exception("Unhandled exception")
+    return jsonify({"success": False, "error": "Internal server error"}), 500
 
 
 if __name__ == '__main__':
