@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, PLATFORM_ID, inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, catchError, throwError, timeout, BehaviorSubject } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -70,6 +71,7 @@ export interface TrainingStats {
 @Injectable({ providedIn: 'root' })
 export class AccountService {
   private baseUrl = '/api/accounts';
+  private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   activeAccount$ = new BehaviorSubject<Account | null>(null);
 
@@ -103,6 +105,7 @@ export class AccountService {
 
   setActiveAccount(account: Account | null): void {
     this.activeAccount$.next(account);
+    if (!this.isBrowser) return;
     if (account) {
       localStorage.setItem('active_account_id', String(account.id));
     } else {
@@ -111,6 +114,7 @@ export class AccountService {
   }
 
   loadSavedAccount(): void {
+    if (!this.isBrowser) return;
     const savedId = localStorage.getItem('active_account_id');
     if (savedId) {
       this.getAccount(Number(savedId)).subscribe({
