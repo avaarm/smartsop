@@ -59,8 +59,25 @@ python gmp_server.py
 # 4. In a new terminal, start the Angular dev server
 npm start
 
-# 5. Open http://localhost:4200
+# 5. Open http://localhost:4200 and create your account.
+#    The first registered user becomes the platform superadmin.
 ```
+
+## Accounts & authentication
+
+The app is multi-tenant: every document and training-data set belongs to an
+**account** (an organization or facility), and users reach an account through a
+**membership** (`owner` / `admin` / `member`).
+
+- Visiting the app redirects to **`/login`**; users register or sign in there.
+- The **first user to register becomes the superadmin** (can see every account).
+  Registering with an organization name also creates that account and makes the
+  user its owner.
+- Auth is a short-lived **JWT** sent as `Authorization: Bearer <token>`. Set a
+  strong **`JWT_SECRET`** in production — without it the server falls back to an
+  insecure development key and logs a warning.
+- Every account and document API requires a valid token and membership, so one
+  organization can't read or modify another's data.
 
 The Angular dev server proxies `/api` requests to `localhost:5001` (configured in `proxy.conf.json`).
 
@@ -125,20 +142,31 @@ smartsop/
 
 ## API endpoints
 
-All routes are prefixed with `/api/gmp`.
+**Auth** (`/api/auth`):
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/register` | Create a user (+ optional account); returns a JWT |
+| `POST` | `/login` | Exchange email/password for a JWT |
+| `GET` | `/me` | Current user and their account memberships |
+
+**GMP documents** (`/api/gmp`). `generate` and `preview` require a Bearer token:
 
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/templates` | List all templates |
 | `GET` | `/templates/:id` | Get template schema (sections, fields) |
-| `POST` | `/generate` | Generate DOCX from template + data |
-| `POST` | `/preview` | AI-generate a single section |
+| `POST` | `/generate` | Generate DOCX from template + data (auth) |
+| `POST` | `/preview` | AI-generate a single section (auth) |
 | `GET` | `/ollama/status` | Check Ollama availability |
 | `GET` | `/papers/search?q=...&limit=10` | Search PubMed Central |
 | `GET` | `/papers/:pmcid/methods` | Fetch paper methods section |
 | `POST` | `/papers/autofill` | Extract GMP data from paper via LLM |
 | `GET` | `/api/download/:filename` | Download generated DOCX |
 | `GET` | `/health` | Backend health check |
+
+**Accounts** (`/api/accounts`) — all routes require a Bearer token and
+membership in the target account (superadmins may access any account).
 
 ## Adding a new template
 
@@ -181,8 +209,13 @@ All routes are prefixed with `/api/gmp`.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `JWT_SECRET` | _(insecure dev key)_ | **Set this in production.** Signs auth tokens |
+| `JWT_TTL_HOURS` | `168` | Token lifetime (hours) |
 | `OLLAMA_HOST` | `http://localhost:11434` | Ollama API URL |
-| `API_URL` | `http://localhost:5001` | Backend URL (used by SSR proxy) |
+| `API_URL` | `http://127.0.0.1:5001` | Backend URL (used by SSR proxy) |
+| `CORS_ORIGINS` | `http://localhost:4200,http://127.0.0.1:4200` | Comma-separated allowed origins |
+| `MAX_CONTENT_LENGTH` | `16777216` | Max request body size in bytes (16 MB) |
+| `DATABASE_URL` | `sqlite:///smartsop.db` | SQLAlchemy database URL |
 | `PORT` | `4000` | Frontend SSR port |
 | `FLASK_ENV` | `development` | Flask environment |
 
