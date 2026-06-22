@@ -18,8 +18,10 @@ export function app(): express.Express {
   server.set('view engine', 'html');
   server.set('views', browserDistFolder);
 
-  // Proxy /api requests to the Flask backend
-  const apiUrl = process.env['API_URL'] || 'http://localhost:5001';
+  // Proxy /api requests to the Flask backend. Use an IPv4 literal by default:
+  // Node resolves "localhost" to ::1 first, but Flask binds IPv4, so a
+  // "localhost" target fails with ECONNREFUSED on ::1.
+  const apiUrl = process.env['API_URL'] || 'http://127.0.0.1:5001';
   server.use('/api', createProxyMiddleware({
     target: apiUrl,
     changeOrigin: true,

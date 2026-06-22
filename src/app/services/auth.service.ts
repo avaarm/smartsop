@@ -1,0 +1,128 @@
+import { Injectable, PLATFORM_ID, inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, BehaviorSubject, catchError, throwError, tap, timeout } from 'rxjs';
+
+export interface Membership {
+  id: number;
+  user_id: number;
+  account_id: number;
+  role: 'owner' | 'admin' | 'member';
+  account_name: string | null;
+  account_slug: string | null;
+}
+
+export interface AuthUser {
+  id: number;
+  email: string;
+  name: string;
+  is_superadmin: boolean;
+  is_active: boolean;
+  created_at: string;
+  memberships: Membership[];
+}
+
+interface AuthResponse {
+  success: boolean;
+  token: string;
+  user: AuthUser;
+}
+
+const TOKEN_KEY = 'smartsop_token';
+const USER_KEY = 'smartsop_user';
+
+@Injectable({ providedIn: 'root' })
+export class AuthService {
+  private baseUrl = '/api/auth';
+  private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+
+  currentUser$ = new BehaviorSubject<AuthUser | null>(null);
+
+  constructor(private http: HttpClient) {
+    // Restore a cached session on startup so the UI doesn't flicker; /me
+    // refreshes it against the server.
+    if (this.isBrowser) {
+      const cached = this.readUser();
+      if (cached && this.token) {
+        this.currentUser$.next(cached);
+        this.refreshUser();
+      }
+    }
+  }
+
+  get token(): string | null {
+    return this.isBrowser ? localStorage.getItem(TOKEN_KEY) : null;
+  }
+
+  isAuthenticated(): boolean {
+    return !!this.token;
+  }
+
+  login(email: string, password: string): Observable<AuthResponse> {
+    return this.http
+      .post<AuthResponse>(`${this.baseUrl}/login`, { email, password })
+      .pipe(timeout(15000), tap(res => this.storeSession(res)), catchError(this.handleError));
+  }
+
+  register(data: { email: string; password: string; name?: string; account_name?: string }):
+    Observable<AuthResponse> {
+    return this.http
+      .post<AuthResponse>(`${this.baseUrl}/register`, data)
+      .pipe(timeout(15000), tap(res => this.storeSession(res)), catchError(this.handleError));
+  }
+
+  /** Re-fetch the current user from the server (e.g. after membership changes). */
+  refreshUser(): void {
+    this.http.get<{ success: boolean; user: AuthUser }>(`${this.baseUrl}/me`)
+      .pipe(timeout(15000))
+      .subscribe({
+        next: res => {
+          this.currentUser$.next(res.user);
+          if (this.isBrowser) localStorage.setItem(USER_KEY, JSON.stringify(res.user));
+        },
+        error: () => this.clearSession(),
+      });
+  }
+
+  logout(): void {
+    this.clearSession();
+  }
+
+  /** Clear all client-side auth state. Does not navigate. */
+  clearSession(): void {
+    if (this.isBrowser) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+    }
+    this.currentUser$.next(null);
+  }
+
+  private storeSession(res: AuthResponse): void {
+    if (this.isBrowser) {
+      localStorage.setItem(TOKEN_KEY, res.token);
+      localStorage.setItem(USER_KEY, JSON.stringify(res.user));
+    }
+    this.currentUser$.next(res.user);
+  }
+
+  private readUser(): AuthUser | null {
+    if (!this.isBrowser) return null;
+    const raw = localStorage.getItem(USER_KEY);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as AuthUser;
+    } catch {
+      return null;
+    }
+  }
+
+  private handleError(error: HttpErrorResponse): Observable<never> {
+    let message = 'An error occurred';
+    if (error.status === 0) {
+      message = 'Cannot connect to server. Is the backend running?';
+    } else if (error.error?.error) {
+      message = error.error.error;
+    }
+    return throwError(() => new Error(message));
+  }
+}
