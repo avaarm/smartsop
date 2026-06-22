@@ -1,6 +1,8 @@
 import { Component } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
+
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-main-layout',
@@ -45,6 +47,22 @@ import { CommonModule } from '@angular/common';
         </nav>
 
         <div class="sidebar-footer">
+          <div class="user-box" *ngIf="auth.currentUser$ | async as user">
+            <div class="user-info">
+              <div class="user-avatar">{{ (user.name || user.email).charAt(0).toUpperCase() }}</div>
+              <div class="user-meta">
+                <div class="user-name">{{ user.name || user.email }}</div>
+                <div class="user-email" *ngIf="user.name">{{ user.email }}</div>
+              </div>
+            </div>
+            <button class="logout-btn" type="button" (click)="logout()" title="Sign out">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </button>
+          </div>
           <div class="footer-text">Powered by Llama 3</div>
         </div>
       </aside>
@@ -155,13 +173,86 @@ import { CommonModule } from '@angular/common';
     }
 
     .sidebar-footer {
-      padding: 14px 18px;
+      padding: 12px 14px 14px;
       border-top: 1px solid hsl(0 0% 10%);
+    }
+
+    .user-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px;
+      margin-bottom: 10px;
+      border-radius: 7px;
+      background: hsl(0 0% 8%);
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .user-avatar {
+      width: 28px;
+      height: 28px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: linear-gradient(135deg, hsl(263 70% 55%) 0%, hsl(217 91% 55%) 100%);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .user-meta { min-width: 0; }
+
+    .user-name {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: hsl(0 0% 92%);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .user-email {
+      font-size: 10.5px;
+      color: hsl(0 0% 50%);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .logout-btn {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: hsl(0 0% 55%);
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .logout-btn:hover {
+      background: hsl(0 0% 14%);
+      color: hsl(0 0% 90%);
     }
 
     .footer-text {
       font-size: 11px;
       color: hsl(0 0% 40%);
+      padding: 0 4px;
     }
 
     .main-content {
@@ -175,4 +266,11 @@ import { CommonModule } from '@angular/common';
     .sidebar::-webkit-scrollbar-thumb { background: hsl(0 0% 15%); border-radius: 2px; }
   `]
 })
-export class MainLayoutComponent {}
+export class MainLayoutComponent {
+  constructor(public auth: AuthService, private router: Router) {}
+
+  logout(): void {
+    this.auth.logout();
+    this.router.navigate(['/login']);
+  }
+}
