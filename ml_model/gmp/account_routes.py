@@ -5,10 +5,13 @@ import logging
 from flask import Blueprint, request, jsonify, send_file, g
 from sqlalchemy import func
 
-from .database import db, Account, Document, TrainingExample, Membership
+from .database import db, Account, Document, TrainingExample, Membership, User
 from .data_collector import DataCollector
 from .training_export import TrainingExporter
 from .auth import require_auth, require_account_access, has_account_role
+
+ROLES = ("owner", "admin", "member")
+MANAGER_ROLES = ("owner", "admin")
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +131,111 @@ def update_account(account_id):
 
     db.session.commit()
     return jsonify({"success": True, "account": account.to_dict()})
+
+
+# ── Members (team) ──
+
+def _member_dict(membership, user):
+    return {
+        "user_id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "role": membership.role,
+        "is_superadmin": user.is_superadmin,
+        "joined_at": membership.created_at.isoformat() if membership.created_at else None,
+    }
+
+
+def _owner_count(account_id):
+    return Membership.query.filter_by(account_id=account_id, role="owner").count()
+
+
+@account_bp.route("/<int:account_id>/members", methods=["GET"])
+@require_account_access
+def list_members(account_id):
+    rows = (
+        db.session.query(Membership, User)
+        .join(User, Membership.user_id == User.id)
+        .filter(Membership.account_id == account_id)
+        .order_by(User.name, User.email)
+        .all()
+    )
+    return jsonify({"success": True, "members": [_member_dict(m, u) for m, u in rows]})
+
+
+@account_bp.route("/<int:account_id>/members", methods=["POST"])
+@require_account_access
+def add_member(account_id):
+    if not has_account_role(g.current_user, account_id, MANAGER_ROLES):
+        return jsonify({"success": False, "error": "Only owners or admins can add members"}), 403
+
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    role = (data.get("role") or "member").lower()
+    if not email:
+        return jsonify({"success": False, "error": "email is required"}), 400
+    if role not in ROLES:
+        return jsonify({"success": False, "error": f"role must be one of {', '.join(ROLES)}"}), 400
+    # Only an owner (or superadmin) may grant the owner role.
+    if role == "owner" and not has_account_role(g.current_user, account_id, ("owner",)):
+        return jsonify({"success": False, "error": "Only an owner can grant the owner role"}), 403
+
+    user = User.query.filter_by(email=email).first()
+    if user is None:
+        return jsonify({
+            "success": False,
+            "error": "No registered user with that email. Ask them to sign up first.",
+        }), 404
+    if Membership.query.filter_by(user_id=user.id, account_id=account_id).first():
+        return jsonify({"success": False, "error": "That user is already a member"}), 409
+
+    membership = Membership(user_id=user.id, account_id=account_id, role=role)
+    db.session.add(membership)
+    db.session.commit()
+    return jsonify({"success": True, "member": _member_dict(membership, user)}), 201
+
+
+@account_bp.route("/<int:account_id>/members/<int:user_id>", methods=["PATCH"])
+@require_account_access
+def update_member(account_id, user_id):
+    if not has_account_role(g.current_user, account_id, MANAGER_ROLES):
+        return jsonify({"success": False, "error": "Only owners or admins can change roles"}), 403
+
+    data = request.get_json(silent=True) or {}
+    role = (data.get("role") or "").lower()
+    if role not in ROLES:
+        return jsonify({"success": False, "error": f"role must be one of {', '.join(ROLES)}"}), 400
+
+    membership = Membership.query.filter_by(account_id=account_id, user_id=user_id).first()
+    if membership is None:
+        return jsonify({"success": False, "error": "Member not found"}), 404
+    if role == "owner" and not has_account_role(g.current_user, account_id, ("owner",)):
+        return jsonify({"success": False, "error": "Only an owner can grant the owner role"}), 403
+    # Don't let the last owner be demoted — the account would become unmanageable.
+    if membership.role == "owner" and role != "owner" and _owner_count(account_id) <= 1:
+        return jsonify({"success": False, "error": "Cannot demote the last owner"}), 400
+
+    membership.role = role
+    db.session.commit()
+    user = User.query.get(user_id)
+    return jsonify({"success": True, "member": _member_dict(membership, user)})
+
+
+@account_bp.route("/<int:account_id>/members/<int:user_id>", methods=["DELETE"])
+@require_account_access
+def remove_member(account_id, user_id):
+    if not has_account_role(g.current_user, account_id, MANAGER_ROLES):
+        return jsonify({"success": False, "error": "Only owners or admins can remove members"}), 403
+
+    membership = Membership.query.filter_by(account_id=account_id, user_id=user_id).first()
+    if membership is None:
+        return jsonify({"success": False, "error": "Member not found"}), 404
+    if membership.role == "owner" and _owner_count(account_id) <= 1:
+        return jsonify({"success": False, "error": "Cannot remove the last owner"}), 400
+
+    db.session.delete(membership)
+    db.session.commit()
+    return jsonify({"success": True})
 
 
 # ── Documents (history) ──

@@ -68,6 +68,17 @@ export interface TrainingStats {
   documents_generated: number;
 }
 
+export type MemberRole = 'owner' | 'admin' | 'member';
+
+export interface Member {
+  user_id: number;
+  email: string;
+  name: string;
+  role: MemberRole;
+  is_superadmin: boolean;
+  joined_at: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AccountService {
   private baseUrl = '/api/accounts';
@@ -122,6 +133,34 @@ export class AccountService {
         error: () => localStorage.removeItem('active_account_id'),
       });
     }
+  }
+
+  // ── Members (team) ──
+
+  listMembers(accountId: number): Observable<{ success: boolean; members: Member[] }> {
+    return this.http.get<{ success: boolean; members: Member[] }>(
+      `${this.baseUrl}/${accountId}/members`
+    ).pipe(timeout(10000), catchError(this.handleError));
+  }
+
+  addMember(accountId: number, email: string, role: MemberRole):
+    Observable<{ success: boolean; member: Member }> {
+    return this.http.post<{ success: boolean; member: Member }>(
+      `${this.baseUrl}/${accountId}/members`, { email, role }
+    ).pipe(timeout(10000), catchError(this.handleError));
+  }
+
+  updateMemberRole(accountId: number, userId: number, role: MemberRole):
+    Observable<{ success: boolean; member: Member }> {
+    return this.http.patch<{ success: boolean; member: Member }>(
+      `${this.baseUrl}/${accountId}/members/${userId}`, { role }
+    ).pipe(timeout(10000), catchError(this.handleError));
+  }
+
+  removeMember(accountId: number, userId: number): Observable<{ success: boolean }> {
+    return this.http.delete<{ success: boolean }>(
+      `${this.baseUrl}/${accountId}/members/${userId}`
+    ).pipe(timeout(10000), catchError(this.handleError));
   }
 
   // ── Documents ──
