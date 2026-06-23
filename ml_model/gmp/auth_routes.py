@@ -6,6 +6,7 @@ from flask import Blueprint, request, jsonify, g
 
 from .database import db, User, Account, Membership
 from .auth import require_auth, generate_token
+from .extensions import limiter, AUTH_RATELIMIT
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ def _slugify(name: str) -> str:
 
 
 @auth_bp.route("/register", methods=["POST"])
+@limiter.limit(AUTH_RATELIMIT)
 def register():
     """Create a user. The first user ever created becomes the platform superadmin.
 
@@ -68,6 +70,7 @@ def register():
 
 
 @auth_bp.route("/login", methods=["POST"])
+@limiter.limit(AUTH_RATELIMIT)
 def login():
     data = request.get_json(silent=True) or {}
     email = (data.get("email") or "").strip().lower()

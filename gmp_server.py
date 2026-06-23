@@ -18,6 +18,7 @@ from ml_model.gmp.account_routes import account_bp
 from ml_model.gmp.auth_routes import auth_bp
 from ml_model.gmp.database import init_db, db
 from ml_model.gmp.storage import get_document_storage
+from ml_model.gmp.extensions import limiter
 
 logging.basicConfig(level=logging.INFO)
 
@@ -39,6 +40,9 @@ app.config['OLLAMA_HOST'] = OLLAMA_HOST
 
 # Initialize SQLite database
 init_db(app)
+
+# Rate limiting (protects auth + LLM endpoints; see extensions.py)
+limiter.init_app(app)
 
 app.register_blueprint(gmp_bp)
 app.register_blueprint(account_bp)

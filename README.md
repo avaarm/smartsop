@@ -221,6 +221,8 @@ membership in the target account (superadmins may access any account).
 | `S3_BUCKET` / `S3_PREFIX` / `S3_ENDPOINT_URL` | — | Object storage config when `DOCUMENT_STORAGE=s3` |
 | `GENERATED_DOCS_DIR` | `./generated_docs` | Local storage directory |
 | `GUNICORN_WORKERS` / `GUNICORN_THREADS` | `cpu_count` / `8` | Backend worker concurrency |
+| `AUTH_RATELIMIT` / `LLM_RATELIMIT` | `10/min` / `30/min` | Per-IP limits on auth and LLM endpoints |
+| `RATELIMIT_STORAGE_URI` | `memory://` | Set to `redis://…` for shared limits across instances |
 | `PORT` | `4000` (web) / `5001` (api) | Service port |
 | `FLASK_ENV` | `development` | Flask environment |
 

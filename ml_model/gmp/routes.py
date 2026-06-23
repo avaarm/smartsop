@@ -5,6 +5,7 @@ from flask import Blueprint, request, jsonify, g
 
 from .document_generator import GMPDocumentGenerator
 from .auth import require_auth, has_account_access
+from .extensions import limiter, LLM_RATELIMIT
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,7 @@ def get_template(template_id: str):
 
 
 @gmp_bp.route("/generate", methods=["POST"])
+@limiter.limit(LLM_RATELIMIT)
 @require_auth
 def generate_document():
     """Generate a GMP document."""
@@ -86,6 +88,7 @@ def generate_document():
 
 
 @gmp_bp.route("/preview", methods=["POST"])
+@limiter.limit(LLM_RATELIMIT)
 @require_auth
 def preview_section():
     """Generate a preview for a single document section."""
