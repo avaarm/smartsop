@@ -73,3 +73,6 @@ ENV/
 /collected_data/
 /training_exports/
 *.db
+# SQLite WAL/shared-memory sidecar files (WAL journal mode is enabled)
+*.db-shm
+*.db-wal
