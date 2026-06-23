@@ -11,10 +11,12 @@ from werkzeug.utils import secure_filename
 import os
 import logging
 
+from sqlalchemy import text
+
 from ml_model.gmp.routes import gmp_bp
 from ml_model.gmp.account_routes import account_bp
 from ml_model.gmp.auth_routes import auth_bp
-from ml_model.gmp.database import init_db
+from ml_model.gmp.database import init_db, db
 
 logging.basicConfig(level=logging.INFO)
 
@@ -60,7 +62,19 @@ def download_file(filename):
 
 @app.route('/health')
 def health():
+    """Liveness probe: the process is up. Cheap, no dependencies."""
     return jsonify({"status": "ok"})
+
+
+@app.route('/ready')
+def ready():
+    """Readiness probe: the instance can serve traffic (database reachable)."""
+    try:
+        db.session.execute(text("SELECT 1"))
+        return jsonify({"status": "ready"})
+    except Exception:
+        logging.exception("Readiness check failed")
+        return jsonify({"status": "unavailable"}), 503
 
 
 @app.errorhandler(HTTPException)

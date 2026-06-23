@@ -1,6 +1,7 @@
 flask
 flask-cors
 flask-sqlalchemy
+psycopg2-binary
 PyJWT
 python-dotenv
 requests

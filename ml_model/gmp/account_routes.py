@@ -3,6 +3,7 @@
 import json
 import logging
 from flask import Blueprint, request, jsonify, send_file, g
+from sqlalchemy import func
 
 from .database import db, Account, Document, TrainingExample, Membership
 from .data_collector import DataCollector
@@ -32,7 +33,31 @@ def list_accounts():
             .order_by(Account.name)
             .all()
         )
-    return jsonify({"success": True, "accounts": [a.to_dict() for a in accounts]})
+
+    # Count documents and training examples for the whole set in two grouped
+    # queries instead of two per account (avoids N+1 as the org count grows).
+    ids = [a.id for a in accounts]
+    doc_counts = dict(
+        db.session.query(Document.account_id, func.count(Document.id))
+        .filter(Document.account_id.in_(ids))
+        .group_by(Document.account_id)
+        .all()
+    ) if ids else {}
+    train_counts = dict(
+        db.session.query(TrainingExample.account_id, func.count(TrainingExample.id))
+        .filter(TrainingExample.account_id.in_(ids))
+        .group_by(TrainingExample.account_id)
+        .all()
+    ) if ids else {}
+
+    payload = [
+        a.to_dict(counts={
+            "documents": doc_counts.get(a.id, 0),
+            "training": train_counts.get(a.id, 0),
+        })
+        for a in accounts
+    ]
+    return jsonify({"success": True, "accounts": payload})
 
 
 @account_bp.route("", methods=["POST"])
@@ -110,10 +135,20 @@ def update_account(account_id):
 @account_bp.route("/<int:account_id>/documents", methods=["GET"])
 @require_account_access
 def list_documents(account_id):
-    docs = Document.query.filter_by(account_id=account_id).order_by(
-        Document.created_at.desc()
-    ).all()
-    return jsonify({"success": True, "documents": [d.to_dict() for d in docs]})
+    page = max(1, request.args.get("page", 1, type=int))
+    per_page = min(max(1, request.args.get("per_page", 50, type=int)), 200)
+    paginated = (
+        Document.query.filter_by(account_id=account_id)
+        .order_by(Document.created_at.desc())
+        .paginate(page=page, per_page=per_page, error_out=False)
+    )
+    return jsonify({
+        "success": True,
+        "documents": [d.to_dict() for d in paginated.items],
+        "total": paginated.total,
+        "page": paginated.page,
+        "pages": paginated.pages,
+    })
 
 
 # ── Training Data ──

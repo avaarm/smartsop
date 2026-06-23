@@ -1,8 +1,11 @@
 """SQLite database models for account-scoped GMP document storage and training data."""
 
 import os
+import sqlite3
 from datetime import datetime
+
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import event
 from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
@@ -11,13 +14,66 @@ db = SQLAlchemy()
 DEFAULT_DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "smartsop.db")
 
 
+def _normalize_db_url(url: str) -> str:
+    """Accept the legacy `postgres://` scheme that some platforms still hand out."""
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql://", 1)
+    return url
+
+
+def _apply_sqlite_pragmas(dbapi_conn, _record):
+    """Tune SQLite for concurrent access. No-op for non-SQLite backends.
+
+    WAL lets readers run while a writer is active, and a busy timeout makes
+    concurrent writers wait for the lock instead of failing immediately —
+    the two biggest sources of "database is locked" errors under load.
+    """
+    if isinstance(dbapi_conn, sqlite3.Connection):
+        cur = dbapi_conn.cursor()
+        cur.execute("PRAGMA journal_mode=WAL")
+        cur.execute("PRAGMA busy_timeout=5000")
+        cur.execute("PRAGMA synchronous=NORMAL")
+        cur.execute("PRAGMA foreign_keys=ON")
+        cur.close()
+
+
 def init_db(app):
-    """Initialize the database with the Flask app."""
-    db_url = os.environ.get("DATABASE_URL", f"sqlite:///{os.path.abspath(DEFAULT_DB_PATH)}")
+    """Initialize the database with the Flask app.
+
+    Works with the zero-config SQLite default and with a pooled Postgres
+    (or other) backend via DATABASE_URL, so the app can scale from a laptop
+    to multiple stateless instances behind a load balancer.
+    """
+    db_url = _normalize_db_url(
+        os.environ.get("DATABASE_URL", f"sqlite:///{os.path.abspath(DEFAULT_DB_PATH)}")
+    )
+    is_sqlite = db_url.startswith("sqlite")
+
+    engine_options = {
+        # Recycle/validate pooled connections so a stale or dropped server-side
+        # connection (idle timeout, failover) doesn't surface as a 500.
+        "pool_pre_ping": True,
+        "pool_recycle": int(os.environ.get("DB_POOL_RECYCLE", 1800)),
+    }
+    if is_sqlite:
+        # SQLite connections are bound to the creating thread by default; relax
+        # that so the pool can hand them to gunicorn worker threads.
+        engine_options["connect_args"] = {"check_same_thread": False}
+    else:
+        # Per-worker connection pool. Keep pool_size in line with the number of
+        # threads each gunicorn worker runs (see gunicorn.conf.py).
+        engine_options["pool_size"] = int(os.environ.get("DB_POOL_SIZE", 10))
+        engine_options["max_overflow"] = int(os.environ.get("DB_MAX_OVERFLOW", 20))
+        engine_options["pool_timeout"] = int(os.environ.get("DB_POOL_TIMEOUT", 30))
+
     app.config["SQLALCHEMY_DATABASE_URI"] = db_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = engine_options
+
     db.init_app(app)
     with app.app_context():
+        if is_sqlite:
+            event.listen(db.engine, "connect", _apply_sqlite_pragmas)
         db.create_all()
 
 
@@ -112,7 +168,19 @@ class Account(db.Model):
     documents = db.relationship("Document", backref="account", lazy="dynamic")
     training_examples = db.relationship("TrainingExample", backref="account", lazy="dynamic")
 
-    def to_dict(self):
+    def to_dict(self, counts=None):
+        """Serialize the account.
+
+        Pass `counts={"documents": int, "training": int}` (e.g. computed in
+        bulk for a list) to avoid a per-account count query (N+1). When omitted,
+        the two counts are queried individually — fine for a single account.
+        """
+        if counts is None:
+            document_count = self.documents.count()
+            training_example_count = self.training_examples.count()
+        else:
+            document_count = counts.get("documents", 0)
+            training_example_count = counts.get("training", 0)
         return {
             "id": self.id,
             "name": self.name,
@@ -125,8 +193,8 @@ class Account(db.Model):
             "style_notes": self.style_notes,
             "reference_sops": self.reference_sops_json,
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "document_count": self.documents.count(),
-            "training_example_count": self.training_examples.count(),
+            "document_count": document_count,
+            "training_example_count": training_example_count,
         }
 
 
