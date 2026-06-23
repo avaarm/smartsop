@@ -4,7 +4,7 @@ Lightweight Flask server for the GMP document builder with
 Ollama LLM integration and Word document generation.
 """
 
-from flask import Flask, jsonify, send_file
+from flask import Flask, jsonify
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 from werkzeug.utils import secure_filename
@@ -17,6 +17,7 @@ from ml_model.gmp.routes import gmp_bp
 from ml_model.gmp.account_routes import account_bp
 from ml_model.gmp.auth_routes import auth_bp
 from ml_model.gmp.database import init_db, db
+from ml_model.gmp.storage import get_document_storage
 
 logging.basicConfig(level=logging.INFO)
 
@@ -31,9 +32,6 @@ CORS(app,
      supports_credentials=True,
      allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
      expose_headers=["Content-Disposition"])
-
-GENERATED_DOCS_DIR = os.path.join(os.path.dirname(__file__), 'generated_docs')
-os.makedirs(GENERATED_DOCS_DIR, exist_ok=True)
 
 # Allow Ollama host override via environment variable (for Docker networking)
 OLLAMA_HOST = os.environ.get('OLLAMA_HOST', 'http://localhost:11434')
@@ -50,14 +48,16 @@ app.register_blueprint(auth_bp)
 @app.route('/api/download/<filename>')
 def download_file(filename):
     # secure_filename strips any path separators / traversal sequences so a
-    # crafted name like "../../etc/passwd" can't escape the docs directory.
+    # crafted name like "../../etc/passwd" can't escape the storage backend.
     safe_name = secure_filename(filename)
     if not safe_name:
         return jsonify({"error": "Invalid filename"}), 400
-    filepath = os.path.join(GENERATED_DOCS_DIR, safe_name)
-    if os.path.isfile(filepath):
-        return send_file(filepath, as_attachment=True)
-    return jsonify({"error": "File not found"}), 404
+    # download_response streams from local disk or redirects to a presigned S3
+    # URL, depending on the configured backend; returns None if not found.
+    response = get_document_storage().download_response(safe_name)
+    if response is None:
+        return jsonify({"error": "File not found"}), 404
+    return response
 
 
 @app.route('/health')
