@@ -7,7 +7,10 @@ import {
   DocumentRecord,
   TrainingExample,
   TrainingStats,
+  Member,
+  MemberRole,
 } from '../../../services/account.service';
+import { AuthService } from '../../../services/auth.service';
 
 @Component({
   selector: 'app-account-settings',
@@ -18,7 +21,15 @@ import {
 })
 export class AccountSettingsComponent implements OnInit {
   // Tabs
-  activeTab: 'account' | 'training' | 'export' | 'history' = 'account';
+  activeTab: 'account' | 'team' | 'training' | 'export' | 'history' = 'account';
+
+  // Team members
+  members: Member[] = [];
+  membersLoading = false;
+  newMemberEmail = '';
+  newMemberRole: MemberRole = 'member';
+  addingMember = false;
+  readonly roles: MemberRole[] = ['member', 'admin', 'owner'];
 
   // Accounts
   accounts: Account[] = [];
@@ -65,7 +76,16 @@ export class AccountSettingsComponent implements OnInit {
 
   private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
-  constructor(private accountService: AccountService) {}
+  constructor(private accountService: AccountService, private auth: AuthService) {}
+
+  /** True if the signed-in user can manage the team for the active account. */
+  get canManageTeam(): boolean {
+    const user = this.auth.currentUser$.value;
+    if (!user || !this.activeAccount) return false;
+    if (user.is_superadmin) return true;
+    const membership = user.memberships.find(m => m.account_id === this.activeAccount!.id);
+    return !!membership && (membership.role === 'owner' || membership.role === 'admin');
+  }
 
   ngOnInit(): void {
     this.accountService.activeAccount$.subscribe(a => {
@@ -102,6 +122,54 @@ export class AccountSettingsComponent implements OnInit {
     this.loadTrainingStats();
     this.loadTrainingExamples();
     this.loadDocuments();
+    this.loadMembers();
+  }
+
+  // ── Team management ──
+
+  loadMembers(): void {
+    if (!this.activeAccount) return;
+    this.membersLoading = true;
+    this.accountService.listMembers(this.activeAccount.id).subscribe({
+      next: (res) => { this.members = res.members; this.membersLoading = false; },
+      error: (err) => { this.errorMessage = err.message; this.membersLoading = false; },
+    });
+  }
+
+  addMember(): void {
+    if (!this.activeAccount || !this.newMemberEmail.trim()) return;
+    this.addingMember = true;
+    this.errorMessage = '';
+    this.accountService.addMember(this.activeAccount.id, this.newMemberEmail.trim(), this.newMemberRole).subscribe({
+      next: (res) => {
+        this.members = [...this.members, res.member];
+        this.newMemberEmail = '';
+        this.newMemberRole = 'member';
+        this.addingMember = false;
+        this.successMessage = `${res.member.email} added to the team`;
+      },
+      error: (err) => { this.errorMessage = err.message; this.addingMember = false; },
+    });
+  }
+
+  changeMemberRole(member: Member, role: MemberRole): void {
+    if (!this.activeAccount || member.role === role) return;
+    this.accountService.updateMemberRole(this.activeAccount.id, member.user_id, role).subscribe({
+      next: (res) => { member.role = res.member.role; },
+      error: (err) => { this.errorMessage = err.message; this.loadMembers(); },
+    });
+  }
+
+  removeMember(member: Member): void {
+    if (!this.activeAccount) return;
+    this.accountService.removeMember(this.activeAccount.id, member.user_id).subscribe({
+      next: () => { this.members = this.members.filter(m => m.user_id !== member.user_id); },
+      error: (err) => { this.errorMessage = err.message; },
+    });
+  }
+
+  isSelf(member: Member): boolean {
+    return this.auth.currentUser$.value?.id === member.user_id;
   }
 
   createAccount(): void {
