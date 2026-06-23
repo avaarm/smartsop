@@ -165,9 +165,10 @@ export class AccountService {
 
   // ── Documents ──
 
-  listDocuments(accountId: number): Observable<{ success: boolean; documents: DocumentRecord[] }> {
-    return this.http.get<{ success: boolean; documents: DocumentRecord[] }>(
-      `${this.baseUrl}/${accountId}/documents`
+  listDocuments(accountId: number, page = 1, perPage = 20):
+    Observable<{ success: boolean; documents: DocumentRecord[]; total: number; page: number; pages: number }> {
+    return this.http.get<{ success: boolean; documents: DocumentRecord[]; total: number; page: number; pages: number }>(
+      `${this.baseUrl}/${accountId}/documents?page=${page}&per_page=${perPage}`
     ).pipe(timeout(15000), catchError(this.handleError));
   }
 

@@ -348,5 +348,11 @@
         </div>
       </div>
     </div>
+
+    <div *ngIf="documentsPages > 1" class="pagination">
+      <button class="btn btn-ghost btn-sm" (click)="changeDocumentsPage(-1)" [disabled]="documentsPage <= 1">Prev</button>
+      <span>{{ documentsPage }} / {{ documentsPages }} ({{ documentsTotal }} total)</span>
+      <button class="btn btn-ghost btn-sm" (click)="changeDocumentsPage(1)" [disabled]="documentsPage >= documentsPages">Next</button>
+    </div>
   </section>
 </div>

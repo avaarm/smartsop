@@ -69,6 +69,9 @@ export class AccountSettingsComponent implements OnInit {
   // Document history
   documents: DocumentRecord[] = [];
   documentsLoading = false;
+  documentsPage = 1;
+  documentsPages = 1;
+  documentsTotal = 0;
 
   // Export
   exportLoading = false;
@@ -119,6 +122,8 @@ export class AccountSettingsComponent implements OnInit {
 
   selectAccount(account: Account): void {
     this.accountService.setActiveAccount(account);
+    this.trainingPage = 1;
+    this.documentsPage = 1;
     this.loadTrainingStats();
     this.loadTrainingExamples();
     this.loadDocuments();
@@ -338,13 +343,20 @@ export class AccountSettingsComponent implements OnInit {
   loadDocuments(): void {
     if (!this.activeAccount) return;
     this.documentsLoading = true;
-    this.accountService.listDocuments(this.activeAccount.id).subscribe({
+    this.accountService.listDocuments(this.activeAccount.id, this.documentsPage).subscribe({
       next: (res) => {
         this.documents = res.documents;
+        this.documentsTotal = res.total;
+        this.documentsPages = res.pages;
         this.documentsLoading = false;
       },
       error: () => this.documentsLoading = false,
     });
+  }
+
+  changeDocumentsPage(delta: number): void {
+    this.documentsPage = Math.max(1, Math.min(this.documentsPages, this.documentsPage + delta));
+    this.loadDocuments();
   }
 
   // ── Export ──
