@@ -1,12 +1,9 @@
 import { bootstrapApplication } from '@angular/platform-browser';
 import { AppComponent } from './app/app.component';
-import { provideHttpClient } from '@angular/common/http';
-import { provideRouter } from '@angular/router';
-import { routes } from './app/app.routes';
+import { appConfig } from './app/app.config';
 
-bootstrapApplication(AppComponent, {
-  providers: [
-    provideHttpClient(),
-    provideRouter(routes)
-  ]
-}).catch(err => console.error(err));
+// Use the shared appConfig so the browser gets the same providers as SSR —
+// crucially the auth HTTP interceptor and client hydration. (Bootstrapping
+// with a separate inline config here silently dropped both on the client.)
+bootstrapApplication(AppComponent, appConfig)
+  .catch(err => console.error(err));
