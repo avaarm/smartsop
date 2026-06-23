@@ -18,6 +18,7 @@ from .word_engine import GMPWordEngine
 from .ollama_service import OllamaService
 from .paper_scraper import PaperScraper, Paper, PaperMethods
 from .data_collector import DataCollector
+from .storage import get_document_storage
 
 logger = logging.getLogger(__name__)
 
@@ -220,22 +221,20 @@ class GMPDocumentGenerator:
         # Generate DOCX
         docx_bytes = self.word_engine.generate(template, data)
 
-        # Save to disk
+        # Persist via the configured storage backend (local disk or S3) so the
+        # file is downloadable from any instance, not just the one that made it.
         safe_title = "".join(
             c if c.isalnum() or c in "-_ " else ""
             for c in user_input.get("title", "document")
         ).strip().replace(" ", "_")
         filename = f"{safe_title}_{timestamp.strftime('%Y%m%d_%H%M%S')}.docx"
-        file_path = self.generated_docs_dir / filename
-
-        with open(file_path, "wb") as f:
-            f.write(docx_bytes)
+        get_document_storage().save(filename, docx_bytes)
 
         logger.info(f"Generated GMP document: {filename} ({doc_type})")
 
         result = {
             "doc_id": doc_id,
-            "file_path": str(file_path),
+            "file_path": filename,
             "filename": filename,
             "download_url": f"/api/download/{filename}",
             "preview_sections": preview_sections,
