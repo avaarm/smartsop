@@ -215,9 +215,39 @@ membership in the target account (superadmins may access any account).
 | `API_URL` | `http://127.0.0.1:5001` | Backend URL (used by SSR proxy) |
 | `CORS_ORIGINS` | `http://localhost:4200,http://127.0.0.1:4200` | Comma-separated allowed origins |
 | `MAX_CONTENT_LENGTH` | `16777216` | Max request body size in bytes (16 MB) |
-| `DATABASE_URL` | `sqlite:///smartsop.db` | SQLAlchemy database URL |
-| `PORT` | `4000` | Frontend SSR port |
+| `DATABASE_URL` | `sqlite:///smartsop.db` | SQLAlchemy database URL (use `postgresql://…` in prod) |
+| `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` | `10` / `20` | Per-worker DB connection pool (non-SQLite) |
+| `DOCUMENT_STORAGE` | `local` | `local` or `s3` |
+| `S3_BUCKET` / `S3_PREFIX` / `S3_ENDPOINT_URL` | — | Object storage config when `DOCUMENT_STORAGE=s3` |
+| `GENERATED_DOCS_DIR` | `./generated_docs` | Local storage directory |
+| `GUNICORN_WORKERS` / `GUNICORN_THREADS` | `cpu_count` / `8` | Backend worker concurrency |
+| `PORT` | `4000` (web) / `5001` (api) | Service port |
 | `FLASK_ENV` | `development` | Flask environment |
+
+## Scaling to multiple instances
+
+The backend is **stateless**, so it scales horizontally — run as many
+instances behind a load balancer as you need. Three pieces of state must be
+externalized (each is a single env var):
+
+1. **Database** — point `DATABASE_URL` at Postgres
+   (`postgresql://user:pass@host/db`). Connections are pooled and
+   health-checked; `psycopg2-binary` ships in the image. SQLite (the default)
+   is single-writer and only suitable for one instance.
+2. **Generated documents** — set `DOCUMENT_STORAGE=s3` with `S3_BUCKET` so a
+   file created on one instance is downloadable from any (served via presigned
+   URLs). The local default pins files to one box. (`pip install boto3` for S3.)
+3. **Auth** — already stateless (JWTs); just set the same `JWT_SECRET` on every
+   instance.
+
+Each instance serves concurrent requests with threaded gunicorn workers
+(`gunicorn.conf.py`), so slow LLM calls don't block other users. Load balancers
+should probe **`/health`** (liveness) and **`/ready`** (readiness — verifies the
+database is reachable).
+
+> Not yet externalized: long LLM generations still run in-request. For very high
+> throughput, move them to a task queue (e.g. Celery + Redis) and add Alembic
+> migrations for schema changes — see the issues/roadmap.
 
 ## CI/CD
 
