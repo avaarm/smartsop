@@ -80,7 +80,14 @@ export class AuthService {
           this.currentUser$.next(res.user);
           if (this.isBrowser) localStorage.setItem(USER_KEY, JSON.stringify(res.user));
         },
-        error: () => this.clearSession(),
+        error: (err) => {
+          // Only drop the session if the token was actually rejected. Transient
+          // failures (offline, 5xx, or a request cancelled during navigation/
+          // hydration) must NOT log out a user who has a valid cached session.
+          if (err?.status === 401 || err?.status === 403) {
+            this.clearSession();
+          }
+        },
       });
   }
 
