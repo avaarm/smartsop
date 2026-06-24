@@ -2,6 +2,7 @@
 
 import json
 import logging
+from datetime import datetime
 from flask import Blueprint, request, jsonify, send_file, g
 from sqlalchemy import func
 
@@ -285,6 +286,18 @@ def update_document_status(account_id, doc_id):
             "success": False,
             "error": "Only owners or admins can approve or change an approved document",
         }), 403
+
+    # Record who acted and when. Reopening to "generated" voids prior sign-offs.
+    actor = (g.current_user.name or "").strip() or g.current_user.email
+    now = datetime.utcnow()
+    if status == "generated":
+        doc.reviewed_by = doc.reviewed_at = None
+        doc.approved_by = doc.approved_at = None
+    elif status == "reviewed":
+        doc.reviewed_by, doc.reviewed_at = actor, now
+        doc.approved_by = doc.approved_at = None
+    elif status == "approved":
+        doc.approved_by, doc.approved_at = actor, now
 
     doc.status = status
     db.session.commit()

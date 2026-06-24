@@ -374,7 +374,7 @@ export class AccountSettingsComponent implements OnInit {
     const previous = doc.status;
     doc.status = status; // optimistic
     this.accountService.updateDocumentStatus(this.activeAccount.id, doc.id, status).subscribe({
-      next: (res) => { doc.status = res.document.status; },
+      next: (res) => { Object.assign(doc, res.document); }, // pick up audit fields too
       error: (err) => {
         doc.status = previous; // revert on failure (e.g. 403)
         this.errorMessage = err.message;
@@ -416,7 +416,7 @@ export class AccountSettingsComponent implements OnInit {
     });
   }
 
-  formatDate(iso: string): string {
+  formatDate(iso: string | null | undefined): string {
     if (!iso) return '';
     return new Date(iso).toLocaleDateString('en-US', {
       month: 'short', day: 'numeric', year: 'numeric',

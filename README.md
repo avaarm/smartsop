@@ -217,6 +217,7 @@ membership in the target account (superadmins may access any account).
 | `MAX_CONTENT_LENGTH` | `16777216` | Max request body size in bytes (16 MB) |
 | `DATABASE_URL` | `sqlite:///smartsop.db` | SQLAlchemy database URL (use `postgresql://…` in prod) |
 | `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` | `10` / `20` | Per-worker DB connection pool (non-SQLite) |
+| `AUTO_CREATE_TABLES` | `true` | Create tables on boot. Set `false` in prod and use migrations |
 | `DOCUMENT_STORAGE` | `local` | `local` or `s3` |
 | `S3_BUCKET` / `S3_PREFIX` / `S3_ENDPOINT_URL` | — | Object storage config when `DOCUMENT_STORAGE=s3` |
 | `GENERATED_DOCS_DIR` | `./generated_docs` | Local storage directory |
@@ -248,8 +249,26 @@ should probe **`/health`** (liveness) and **`/ready`** (readiness — verifies t
 database is reachable).
 
 > Not yet externalized: long LLM generations still run in-request. For very high
-> throughput, move them to a task queue (e.g. Celery + Redis) and add Alembic
-> migrations for schema changes — see the issues/roadmap.
+> throughput, move them to a task queue (e.g. Celery + Redis) — see the roadmap.
+
+## Database migrations
+
+Schema changes are managed with Alembic (via Flask-Migrate). The zero-config
+default still creates tables directly (`AUTO_CREATE_TABLES=true`); in production
+set `AUTO_CREATE_TABLES=false` and let migrations own the schema:
+
+```bash
+export FLASK_APP=gmp_server.py
+flask db upgrade                       # apply pending migrations
+
+# after changing a model:
+flask db migrate -m "describe change"  # autogenerate a migration
+flask db upgrade                       # apply it
+```
+
+Adopting migrations on a database that was first created with
+`AUTO_CREATE_TABLES=true`: stamp the baseline once, then upgrade —
+`flask db stamp <initial-revision> && flask db upgrade`.
 
 ## CI/CD
 

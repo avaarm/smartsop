@@ -356,6 +356,10 @@
         <div *ngIf="doc.filename" class="history-file">
           <a [href]="'/api/download/' + doc.filename" target="_blank">{{ doc.filename }}</a>
         </div>
+        <div *ngIf="doc.reviewed_by || doc.approved_by" class="history-audit">
+          <span *ngIf="doc.reviewed_by">Reviewed by {{ doc.reviewed_by }} · {{ formatDate(doc.reviewed_at) }}</span>
+          <span *ngIf="doc.approved_by" class="audit-approved">✓ Approved by {{ doc.approved_by }} · {{ formatDate(doc.approved_at) }}</span>
+        </div>
       </div>
     </div>
 

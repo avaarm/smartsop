@@ -46,6 +46,10 @@ export interface DocumentRecord {
   filename: string;
   status: DocumentStatus;
   created_at: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
 }
 
 export interface TrainingExample {

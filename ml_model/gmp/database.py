@@ -74,7 +74,10 @@ def init_db(app):
     with app.app_context():
         if is_sqlite:
             event.listen(db.engine, "connect", _apply_sqlite_pragmas)
-        db.create_all()
+        # Zero-config default: create tables directly. Set AUTO_CREATE_TABLES=false
+        # in production to let Alembic migrations (flask db upgrade) own the schema.
+        if os.environ.get("AUTO_CREATE_TABLES", "true").lower() in ("1", "true", "yes"):
+            db.create_all()
 
 
 class User(db.Model):
@@ -221,6 +224,13 @@ class Document(db.Model):
     status = db.Column(db.String(50), default="generated")  # generated, reviewed, approved
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Approval audit trail. Names are denormalized (captured at the time of the
+    # action) so the record is preserved even if a user is later renamed/removed.
+    reviewed_by = db.Column(db.String(255), nullable=True)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    approved_by = db.Column(db.String(255), nullable=True)
+    approved_at = db.Column(db.DateTime, nullable=True)
+
     training_examples = db.relationship("TrainingExample", backref="document", lazy="dynamic")
 
     def to_dict(self):
@@ -237,6 +247,10 @@ class Document(db.Model):
             "filename": self.filename,
             "status": self.status,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "reviewed_by": self.reviewed_by,
+            "reviewed_at": self.reviewed_at.isoformat() if self.reviewed_at else None,
+            "approved_by": self.approved_by,
+            "approved_at": self.approved_at.isoformat() if self.approved_at else None,
         }
 
 
