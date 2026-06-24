@@ -20,6 +20,7 @@ from ml_model.gmp.auth_routes import auth_bp
 from ml_model.gmp.database import init_db, db
 from ml_model.gmp.storage import get_document_storage
 from ml_model.gmp.extensions import limiter
+from ml_model.gmp.celery_app import make_celery
 
 logging.basicConfig(level=logging.INFO)
 
@@ -44,6 +45,11 @@ init_db(app)
 
 # Alembic migrations via `flask db ...` (init/migrate/upgrade).
 migrate = Migrate(app, db)
+
+# Celery: long LLM calls run as tasks. `celery_app` is the worker entrypoint
+# (celery -A gmp_server:celery_app worker). Importing tasks registers them.
+celery_app = make_celery(app)
+from ml_model.gmp import tasks  # noqa: E402,F401  (registers tasks on celery_app)
 
 # Rate limiting (protects auth + LLM endpoints; see extensions.py)
 limiter.init_app(app)

@@ -1,6 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, catchError, throwError, timeout } from 'rxjs';
+import {
+  Observable, catchError, throwError, timeout, of, timer,
+  switchMap, map, takeWhile, last, shareReplay,
+} from 'rxjs';
 
 export interface GMPTemplate {
   id: string;
@@ -98,7 +101,35 @@ export interface PaperAutofillResponse {
 export class GMPDocumentService {
   private baseUrl = '/api/gmp';
 
-  constructor(private http: HttpClient) {}
+  // Whether the backend runs LLM calls on a worker (enqueue + poll). Fetched
+  // once and shared; falls back to false (synchronous) if the call fails.
+  private readonly asyncEnabled$: Observable<boolean>;
+
+  constructor(private http: HttpClient) {
+    this.asyncEnabled$ = this.http
+      .get<{ success: boolean; async_tasks: boolean }>(`${this.baseUrl}/config`)
+      .pipe(
+        map(r => !!r.async_tasks),
+        catchError(() => of(false)),
+        shareReplay(1),
+      );
+  }
+
+  /** Enqueue a task, then poll until it finishes; emits the task result. */
+  private enqueueAndPoll(url: string, body: any): Observable<any> {
+    return this.http.post<{ task_id: string }>(url, body).pipe(
+      switchMap(res => timer(0, 1500).pipe(
+        switchMap(() => this.http.get<{ state: string; result?: any; error?: string }>(
+          `${this.baseUrl}/tasks/${res.task_id}`)),
+        takeWhile(t => t.state === 'PENDING' || t.state === 'STARTED' || t.state === 'RETRY', true),
+        last(),
+        switchMap(t => t.state === 'SUCCESS'
+          ? of(t.result)
+          : throwError(() => new Error(t.error || 'Generation failed'))),
+      )),
+      timeout(180000),
+    );
+  }
 
   getTemplates(): Observable<{ success: boolean; templates: GMPTemplate[] }> {
     return this.http.get<{ success: boolean; templates: GMPTemplate[] }>(
@@ -120,10 +151,16 @@ export class GMPDocumentService {
   }
 
   previewSection(request: SectionPreviewRequest): Observable<{ success: boolean; data: any }> {
-    // Each LLM section generation can take 10-50 seconds
-    return this.http.post<{ success: boolean; data: any }>(
-      `${this.baseUrl}/preview`, request
-    ).pipe(timeout(90000), catchError(this.handleError));
+    // When the backend offloads LLM work to a worker, enqueue + poll so the
+    // request doesn't hang for 10-90s; otherwise call the synchronous endpoint.
+    return this.asyncEnabled$.pipe(
+      switchMap(async => async
+        ? this.enqueueAndPoll(`${this.baseUrl}/preview/async`, request)
+            .pipe(map(result => ({ success: true, data: result })))
+        : this.http.post<{ success: boolean; data: any }>(`${this.baseUrl}/preview`, request)
+            .pipe(timeout(90000))),
+      catchError(this.handleError),
+    );
   }
 
   getOllamaStatus(): Observable<OllamaStatus> {
@@ -149,10 +186,14 @@ export class GMPDocumentService {
 
   autofillFromPaper(pmcid: string, context: Record<string, any>):
     Observable<{ success: boolean } & PaperAutofillResponse> {
-    return this.http.post<{ success: boolean } & PaperAutofillResponse>(
-      `${this.baseUrl}/papers/autofill`,
-      { pmcid, context }
-    ).pipe(timeout(120000), catchError(this.handleError));
+    return this.asyncEnabled$.pipe(
+      switchMap(async => async
+        ? this.enqueueAndPoll(`${this.baseUrl}/papers/autofill/async`, { pmcid, context })
+            .pipe(map(result => ({ success: true, ...(result as PaperAutofillResponse) })))
+        : this.http.post<{ success: boolean } & PaperAutofillResponse>(
+            `${this.baseUrl}/papers/autofill`, { pmcid, context }).pipe(timeout(120000))),
+      catchError(this.handleError),
+    );
   }
 
   getDownloadUrl(filename: string): string {

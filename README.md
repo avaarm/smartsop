@@ -224,6 +224,8 @@ membership in the target account (superadmins may access any account).
 | `GUNICORN_WORKERS` / `GUNICORN_THREADS` | `cpu_count` / `8` | Backend worker concurrency |
 | `AUTH_RATELIMIT` / `LLM_RATELIMIT` | `10/min` / `30/min` | Per-IP limits on auth and LLM endpoints |
 | `RATELIMIT_STORAGE_URI` | `memory://` | Set to `redis://…` for shared limits across instances |
+| `CELERY_BROKER_URL` | — | Set (e.g. `redis://…`) to offload LLM calls to a worker |
+| `CELERY_RESULT_BACKEND` | broker / sqlite | Where task results are stored |
 | `PORT` | `4000` (web) / `5001` (api) | Service port |
 | `FLASK_ENV` | `development` | Flask environment |
 
@@ -248,8 +250,21 @@ Each instance serves concurrent requests with threaded gunicorn workers
 should probe **`/health`** (liveness) and **`/ready`** (readiness — verifies the
 database is reachable).
 
-> Not yet externalized: long LLM generations still run in-request. For very high
-> throughput, move them to a task queue (e.g. Celery + Redis) — see the roadmap.
+### Async LLM tasks
+
+Section generation and paper autofill can each take 10-90s. Set
+`CELERY_BROKER_URL` (e.g. `redis://redis:6379/0`) and run a Celery worker to
+move them off the request path; the endpoints then enqueue a task and return a
+`task_id` the client polls. Without a broker, tasks run inline (no Redis needed
+for local dev). The frontend switches automatically based on `/api/gmp/config`.
+
+```bash
+# run a worker (production)
+celery -A gmp_server:celery_app worker --loglevel=info --concurrency=4
+```
+
+`docker compose up` brings up the full stack — frontend, backend, **worker**,
+Redis, Postgres, and Ollama — wired together.
 
 ## Database migrations
 
