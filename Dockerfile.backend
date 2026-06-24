@@ -11,6 +11,7 @@ COPY requirements-gmp.txt .
 RUN pip install --no-cache-dir -r requirements-gmp.txt
 
 COPY ml_model/ ml_model/
+COPY migrations/ migrations/
 COPY gmp_server.py gunicorn.conf.py ./
 
 # Generated documents are written here at runtime (local storage backend).

@@ -219,6 +219,17 @@
 .history-meta { font-size: 12px; color: var(--muted-fg); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .sep { color: var(--border); }
 .history-file { margin-top: 6px; a { font-size: 12px; color: hsl(220 80% 50%); text-decoration: none; &:hover { text-decoration: underline; } } }
+.history-audit {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 11.5px;
+  color: var(--muted-fg);
+  .audit-approved { color: hsl(143 70% 30%); font-weight: 500; }
+}
 
 /* Team tab */
 .team-intro { margin-bottom: 18px; h3 { margin: 0 0 4px; font-size: 15px; } }

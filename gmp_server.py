@@ -6,6 +6,7 @@ Ollama LLM integration and Word document generation.
 
 from flask import Flask, jsonify
 from flask_cors import CORS
+from flask_migrate import Migrate
 from werkzeug.exceptions import HTTPException
 from werkzeug.utils import secure_filename
 import os
@@ -40,6 +41,9 @@ app.config['OLLAMA_HOST'] = OLLAMA_HOST
 
 # Initialize SQLite database
 init_db(app)
+
+# Alembic migrations via `flask db ...` (init/migrate/upgrade).
+migrate = Migrate(app, db)
 
 # Rate limiting (protects auth + LLM endpoints; see extensions.py)
 limiter.init_app(app)
