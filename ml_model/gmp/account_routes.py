@@ -12,6 +12,7 @@ from .auth import require_auth, require_account_access, has_account_role
 
 ROLES = ("owner", "admin", "member")
 MANAGER_ROLES = ("owner", "admin")
+DOC_STATUSES = ("generated", "reviewed", "approved")
 
 logger = logging.getLogger(__name__)
 
@@ -257,6 +258,37 @@ def list_documents(account_id):
         "page": paginated.page,
         "pages": paginated.pages,
     })
+
+
+@account_bp.route("/<int:account_id>/documents/<int:doc_id>/status", methods=["PATCH"])
+@require_account_access
+def update_document_status(account_id, doc_id):
+    """Move a document through the generated -> reviewed -> approved workflow.
+
+    Anyone in the account can mark a document reviewed or reopen it, but only
+    owners/admins can approve a document (QA sign-off) or change one that is
+    already approved.
+    """
+    data = request.get_json(silent=True) or {}
+    status = (data.get("status") or "").lower()
+    if status not in DOC_STATUSES:
+        return jsonify({"success": False, "error": f"status must be one of {', '.join(DOC_STATUSES)}"}), 400
+
+    doc = Document.query.filter_by(id=doc_id, account_id=account_id).first()
+    if doc is None:
+        return jsonify({"success": False, "error": "Document not found"}), 404
+
+    # Approving, or touching an already-approved record, is a manager action.
+    needs_manager = status == "approved" or doc.status == "approved"
+    if needs_manager and not has_account_role(g.current_user, account_id, MANAGER_ROLES):
+        return jsonify({
+            "success": False,
+            "error": "Only owners or admins can approve or change an approved document",
+        }), 403
+
+    doc.status = status
+    db.session.commit()
+    return jsonify({"success": True, "document": doc.to_dict()})
 
 
 # ── Training Data ──
