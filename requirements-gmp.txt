@@ -3,6 +3,8 @@ flask-cors
 flask-sqlalchemy
 flask-migrate
 flask-limiter
+celery
+redis
 psycopg2-binary
 PyJWT
 python-dotenv

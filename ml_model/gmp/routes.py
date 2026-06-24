@@ -1,27 +1,17 @@
 """Flask Blueprint for GMP document generation API endpoints."""
 
 import logging
-from flask import Blueprint, request, jsonify, g
+from flask import Blueprint, request, jsonify, g, current_app
+from celery.result import AsyncResult
 
-from .document_generator import GMPDocumentGenerator
 from .auth import require_auth, has_account_access
 from .extensions import limiter, LLM_RATELIMIT
+from .generator_provider import get_generator
+from .tasks import preview_section_task, autofill_from_paper_task
 
 logger = logging.getLogger(__name__)
 
 gmp_bp = Blueprint("gmp", __name__, url_prefix="/api/gmp")
-
-# Lazy initialization
-_generator = None
-
-
-def get_generator() -> GMPDocumentGenerator:
-    global _generator
-    if _generator is None:
-        import os
-        ollama_url = os.environ.get('OLLAMA_HOST', 'http://localhost:11434')
-        _generator = GMPDocumentGenerator(ollama_url=ollama_url)
-    return _generator
 
 
 @gmp_bp.route("/templates", methods=["GET"])
@@ -119,6 +109,50 @@ def preview_section():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@gmp_bp.route("/preview/async", methods=["POST"])
+@limiter.limit(LLM_RATELIMIT)
+@require_auth
+def preview_section_async():
+    """Queue section generation on a worker; returns a task id to poll."""
+    data = request.get_json(silent=True) or {}
+    doc_type = data.get("doc_type")
+    section_id = data.get("section_id")
+    context = data.get("context", {})
+
+    if not doc_type or not section_id:
+        return jsonify({"success": False, "error": "doc_type and section_id are required"}), 400
+
+    account_id = context.get("account_id") if isinstance(context, dict) else None
+    if account_id and not has_account_access(g.current_user, account_id):
+        return jsonify({"success": False, "error": "You do not have access to this account"}), 403
+
+    task = preview_section_task.delay(doc_type, section_id, context)
+    return jsonify({"success": True, "task_id": task.id, "state": task.state}), 202
+
+
+@gmp_bp.route("/tasks/<task_id>", methods=["GET"])
+@require_auth
+def task_status(task_id):
+    """Poll a queued LLM task. State is PENDING/STARTED/SUCCESS/FAILURE."""
+    res = AsyncResult(task_id, app=current_app.extensions["celery"])
+    body = {"success": True, "task_id": task_id, "state": res.state}
+    if res.successful():
+        body["result"] = res.result
+    elif res.failed():
+        body["state"] = "FAILURE"
+        body["error"] = str(res.result)
+    return jsonify(body)
+
+
+@gmp_bp.route("/config", methods=["GET"])
+def gmp_config():
+    """Client config — whether long LLM calls are offloaded to a worker."""
+    return jsonify({
+        "success": True,
+        "async_tasks": bool(current_app.config.get("ASYNC_TASKS_ENABLED")),
+    })
+
+
 @gmp_bp.route("/ollama/status", methods=["GET"])
 def ollama_status():
     """Check Ollama service status."""
@@ -206,3 +240,22 @@ def autofill_from_paper():
     except Exception as e:
         logger.error(f"Autofill failed: {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@gmp_bp.route("/papers/autofill/async", methods=["POST"])
+@limiter.limit(LLM_RATELIMIT)
+@require_auth
+def autofill_from_paper_async():
+    """Queue paper autofill on a worker; returns a task id to poll."""
+    data = request.get_json(silent=True) or {}
+    pmcid = data.get("pmcid")
+    context = data.get("context", {})
+    if not pmcid:
+        return jsonify({"success": False, "error": "pmcid is required"}), 400
+
+    account_id = context.get("account_id") if isinstance(context, dict) else None
+    if account_id and not has_account_access(g.current_user, account_id):
+        return jsonify({"success": False, "error": "You do not have access to this account"}), 403
+
+    task = autofill_from_paper_task.delay(pmcid, context)
+    return jsonify({"success": True, "task_id": task.id, "state": task.state}), 202

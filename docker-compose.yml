@@ -24,6 +24,10 @@ services:
     environment:
       - FLASK_ENV=production
       - OLLAMA_HOST=http://ollama:11434
+      - JWT_SECRET=${JWT_SECRET:-please-change-me-in-production}
+      - DATABASE_URL=postgresql://smartsop:smartsop@db:5432/smartsop
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
     volumes:
       - generated_docs:/app/generated_docs
     healthcheck:
@@ -32,7 +36,55 @@ services:
       timeout: 5s
       retries: 3
     depends_on:
-      - ollama
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      ollama:
+        condition: service_started
+
+  # Celery worker — runs the long LLM tasks off the request path
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    command: ["celery", "-A", "gmp_server:celery_app", "worker", "--loglevel=info", "--concurrency=4"]
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - DATABASE_URL=postgresql://smartsop:smartsop@db:5432/smartsop
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - AUTO_CREATE_TABLES=false
+    volumes:
+      - generated_docs:/app/generated_docs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      ollama:
+        condition: service_started
+
+  # Redis — Celery broker + result backend
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+
+  # Postgres — shared by backend and worker
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=smartsop
+      - POSTGRES_PASSWORD=smartsop
+      - POSTGRES_DB=smartsop
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartsop"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Ollama LLM service
   ollama:
@@ -49,3 +101,5 @@ services:
 volumes:
   generated_docs:
   ollama_data:
+  redis_data:
+  postgres_data:
