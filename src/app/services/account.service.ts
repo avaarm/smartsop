@@ -31,6 +31,8 @@ export interface AccountInput {
   reference_sops?: string[];
 }
 
+export type DocumentStatus = 'generated' | 'reviewed' | 'approved';
+
 export interface DocumentRecord {
   id: number;
   account_id: number;
@@ -42,7 +44,7 @@ export interface DocumentRecord {
   doc_number: string;
   revision: string;
   filename: string;
-  status: string;
+  status: DocumentStatus;
   created_at: string;
 }
 
@@ -164,6 +166,13 @@ export class AccountService {
   }
 
   // ── Documents ──
+
+  updateDocumentStatus(accountId: number, docId: number, status: DocumentStatus):
+    Observable<{ success: boolean; document: DocumentRecord }> {
+    return this.http.patch<{ success: boolean; document: DocumentRecord }>(
+      `${this.baseUrl}/${accountId}/documents/${docId}/status`, { status }
+    ).pipe(timeout(10000), catchError(this.handleError));
+  }
 
   listDocuments(accountId: number, page = 1, perPage = 20):
     Observable<{ success: boolean; documents: DocumentRecord[]; total: number; page: number; pages: number }> {

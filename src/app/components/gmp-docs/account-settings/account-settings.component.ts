@@ -5,6 +5,7 @@ import {
   AccountService,
   Account,
   DocumentRecord,
+  DocumentStatus,
   TrainingExample,
   TrainingStats,
   Member,
@@ -81,14 +82,17 @@ export class AccountSettingsComponent implements OnInit {
 
   constructor(private accountService: AccountService, private auth: AuthService) {}
 
-  /** True if the signed-in user can manage the team for the active account. */
-  get canManageTeam(): boolean {
+  /** True if the signed-in user is an owner/admin (or superadmin) of the active account. */
+  get isManager(): boolean {
     const user = this.auth.currentUser$.value;
     if (!user || !this.activeAccount) return false;
     if (user.is_superadmin) return true;
     const membership = user.memberships.find(m => m.account_id === this.activeAccount!.id);
     return !!membership && (membership.role === 'owner' || membership.role === 'admin');
   }
+
+  /** Managing the team and approving documents both require owner/admin. */
+  get canManageTeam(): boolean { return this.isManager; }
 
   ngOnInit(): void {
     this.accountService.activeAccount$.subscribe(a => {
@@ -357,6 +361,26 @@ export class AccountSettingsComponent implements OnInit {
   changeDocumentsPage(delta: number): void {
     this.documentsPage = Math.max(1, Math.min(this.documentsPages, this.documentsPage + delta));
     this.loadDocuments();
+  }
+
+  /** Whether the current user may change this document's status at all. */
+  canChangeDocStatus(doc: DocumentRecord): boolean {
+    // Approving, or editing an already-approved record, is restricted to managers.
+    return this.isManager || doc.status !== 'approved';
+  }
+
+  setDocumentStatus(doc: DocumentRecord, status: DocumentStatus): void {
+    if (!this.activeAccount || doc.status === status) return;
+    const previous = doc.status;
+    doc.status = status; // optimistic
+    this.accountService.updateDocumentStatus(this.activeAccount.id, doc.id, status).subscribe({
+      next: (res) => { doc.status = res.document.status; },
+      error: (err) => {
+        doc.status = previous; // revert on failure (e.g. 403)
+        this.errorMessage = err.message;
+        setTimeout(() => this.errorMessage = '', 4000);
+      },
+    });
   }
 
   // ── Export ──

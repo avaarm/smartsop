@@ -334,7 +334,17 @@
     </div>
     <div class="history-list">
       <div *ngFor="let doc of documents" class="history-card">
-        <div class="history-title">{{ doc.title }}</div>
+        <div class="history-head">
+          <div class="history-title">{{ doc.title }}</div>
+          <select class="status-select" [ngClass]="'status-' + doc.status"
+                  [ngModel]="doc.status" (ngModelChange)="setDocumentStatus(doc, $event)"
+                  [disabled]="!canChangeDocStatus(doc)" [name]="'status-' + doc.id"
+                  title="Document status">
+            <option value="generated">Generated</option>
+            <option value="reviewed">Reviewed</option>
+            <option value="approved" [disabled]="!isManager">Approved</option>
+          </select>
+        </div>
         <div class="history-meta">
           <span class="badge badge-outline">{{ doc.doc_type }}</span>
           <span>{{ doc.product_name }}</span>
