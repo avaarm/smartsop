@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 import jwt
 from flask import request, jsonify, g
 
-from .database import User, Membership
+from .database import db, User, Membership
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ def _user_from_request():
         user_id = int(payload.get("sub", 0))
     except (TypeError, ValueError):
         return None
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if user is None or not user.is_active:
         return None
     return user

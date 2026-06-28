@@ -219,7 +219,7 @@ def update_member(account_id, user_id):
 
     membership.role = role
     db.session.commit()
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     return jsonify({"success": True, "member": _member_dict(membership, user)})
 
 
