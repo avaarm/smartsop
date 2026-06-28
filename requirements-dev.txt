@@ -1,0 +1,3 @@
+# Test/dev tooling (installed on top of requirements-gmp.txt)
+-r requirements-gmp.txt
+pytest

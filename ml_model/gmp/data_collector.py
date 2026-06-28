@@ -107,7 +107,7 @@ class DataCollector:
     def rate_example(self, example_id: int, rating: int) -> bool:
         """Rate a training example (1-5 quality score)."""
         try:
-            example = TrainingExample.query.get(example_id)
+            example = db.session.get(TrainingExample, example_id)
             if example:
                 example.quality_rating = max(1, min(5, rating))
                 db.session.commit()
@@ -173,7 +173,7 @@ class DataCollector:
         Returns terminology, reference SOPs, style notes, and recent
         high-quality completions to use as few-shot examples.
         """
-        account = Account.query.get(account_id)
+        account = db.session.get(Account, account_id)
         if not account:
             return {}
 
