@@ -354,6 +354,104 @@ class Protocol(db.Model):
         return d
 
 
+class ProtocolRun(db.Model):
+    """An execution of a protocol — protocols.io's "run record".
+
+    A run snapshots the protocol's steps at start time so later edits to the
+    protocol don't rewrite history, and records who did what and when.
+    """
+
+    __tablename__ = "protocol_runs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False)
+    protocol_id = db.Column(db.Integer, db.ForeignKey("protocols.id"), nullable=False)
+
+    protocol_title = db.Column(db.String(500), default="")   # snapshot at start
+    protocol_version = db.Column(db.Integer, default=1)
+    experiment_id = db.Column(db.String(200), default="")
+    status = db.Column(db.String(50), default="running")      # running, completed
+
+    started_by = db.Column(db.String(255), default="")
+    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+    run_steps = db.relationship(
+        "ProtocolRunStep", backref="run", lazy="dynamic",
+        cascade="all, delete-orphan", order_by="ProtocolRunStep.order_index",
+    )
+
+    def progress(self):
+        total = self.run_steps.count()
+        done = self.run_steps.filter(ProtocolRunStep.status != "pending").count()
+        return done, total
+
+    def to_dict(self, include_steps=False):
+        done, total = self.progress()
+        d = {
+            "id": self.id,
+            "account_id": self.account_id,
+            "protocol_id": self.protocol_id,
+            "protocol_title": self.protocol_title,
+            "protocol_version": self.protocol_version,
+            "experiment_id": self.experiment_id,
+            "status": self.status,
+            "started_by": self.started_by,
+            "started_at": self.started_at.isoformat() if self.started_at else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "completed_steps": done,
+            "total_steps": total,
+        }
+        if include_steps:
+            d["steps"] = [s.to_dict() for s in self.run_steps]
+        return d
+
+
+class ProtocolRunStep(db.Model):
+    """One step within a run: the snapshotted instruction plus its outcome."""
+
+    __tablename__ = "protocol_run_steps"
+
+    id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(db.Integer, db.ForeignKey("protocol_runs.id"), nullable=False)
+    step_id = db.Column(db.Integer, nullable=True)   # original step (may later be deleted)
+
+    order_index = db.Column(db.Integer, default=0, nullable=False)
+    title = db.Column(db.String(500), default="")
+    description = db.Column(db.Text, default="")
+    duration_seconds = db.Column(db.Integer, nullable=True)
+    warning = db.Column(db.Text, default="")
+    reagents_json = db.Column(db.Text, default="[]")
+
+    # Outcome — protocols.io offers Done / Fail / Skip, not a binary checkbox.
+    status = db.Column(db.String(50), default="pending")   # pending, done, failed, skipped
+    note = db.Column(db.Text, default="")                  # recorded observation
+    completed_by = db.Column(db.String(255), default="")
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+    def to_dict(self):
+        import json as _json
+        try:
+            reagents = _json.loads(self.reagents_json or "[]")
+        except ValueError:
+            reagents = []
+        return {
+            "id": self.id,
+            "run_id": self.run_id,
+            "step_id": self.step_id,
+            "order_index": self.order_index,
+            "title": self.title,
+            "description": self.description,
+            "duration_seconds": self.duration_seconds,
+            "warning": self.warning,
+            "reagents": reagents,
+            "status": self.status,
+            "note": self.note,
+            "completed_by": self.completed_by,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+        }
+
+
 class ProtocolStep(db.Model):
     """One ordered step of a protocol, with optional structured components."""
 

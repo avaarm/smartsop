@@ -5,12 +5,15 @@ All routes are account-scoped and require membership (require_account_access).
 
 import json
 import logging
+from datetime import datetime
 
 from flask import Blueprint, request, jsonify, g
 from sqlalchemy import func
 
-from .database import db, Protocol, ProtocolStep
+from .database import db, Protocol, ProtocolStep, ProtocolRun, ProtocolRunStep
 from .auth import require_account_access
+
+RUN_STEP_STATUSES = ("pending", "done", "failed", "skipped")
 
 logger = logging.getLogger(__name__)
 
@@ -190,3 +193,135 @@ def reorder_steps(account_id, protocol_id):
         steps[step_id].order_index = index
     db.session.commit()
     return jsonify({"success": True})
+
+
+# ── Runs (executing a protocol) ──
+
+def _get_run(account_id, run_id):
+    return ProtocolRun.query.filter_by(id=run_id, account_id=account_id).first()
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/runs", methods=["POST"])
+@require_account_access
+def start_run(account_id, protocol_id):
+    """Start a run: snapshot the protocol's steps so later edits don't rewrite history."""
+    protocol = _get_protocol(account_id, protocol_id)
+    if protocol is None:
+        return jsonify({"success": False, "error": "Protocol not found"}), 404
+
+    steps = protocol.steps.all()
+    if not steps:
+        return jsonify({"success": False, "error": "Cannot run a protocol with no steps"}), 400
+
+    data = request.get_json(silent=True) or {}
+    actor = (g.current_user.name or "").strip() or g.current_user.email
+    run = ProtocolRun(
+        account_id=account_id,
+        protocol_id=protocol_id,
+        protocol_title=protocol.title,
+        protocol_version=protocol.version,
+        experiment_id=(data.get("experiment_id") or "")[:200],
+        started_by=actor,
+    )
+    db.session.add(run)
+    db.session.flush()
+
+    for step in steps:
+        db.session.add(ProtocolRunStep(
+            run_id=run.id,
+            step_id=step.id,
+            order_index=step.order_index,
+            title=step.title,
+            description=step.description,
+            duration_seconds=step.duration_seconds,
+            warning=step.warning,
+            reagents_json=step.reagents_json,
+        ))
+    db.session.commit()
+    return jsonify({"success": True, "run": run.to_dict(include_steps=True)}), 201
+
+
+@protocol_bp.route("/<int:account_id>/runs", methods=["GET"])
+@require_account_access
+def list_runs(account_id):
+    page = max(1, request.args.get("page", 1, type=int))
+    per_page = min(max(1, request.args.get("per_page", 20, type=int)), 100)
+    query = ProtocolRun.query.filter_by(account_id=account_id)
+    protocol_id = request.args.get("protocol_id", type=int)
+    if protocol_id:
+        query = query.filter_by(protocol_id=protocol_id)
+    paginated = query.order_by(ProtocolRun.started_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False)
+    return jsonify({
+        "success": True,
+        "runs": [r.to_dict() for r in paginated.items],
+        "total": paginated.total,
+        "page": paginated.page,
+        "pages": paginated.pages,
+    })
+
+
+@protocol_bp.route("/<int:account_id>/runs/<int:run_id>", methods=["GET"])
+@require_account_access
+def get_run(account_id, run_id):
+    run = _get_run(account_id, run_id)
+    if run is None:
+        return jsonify({"success": False, "error": "Run not found"}), 404
+    return jsonify({"success": True, "run": run.to_dict(include_steps=True)})
+
+
+@protocol_bp.route("/<int:account_id>/runs/<int:run_id>", methods=["PUT"])
+@require_account_access
+def update_run(account_id, run_id):
+    run = _get_run(account_id, run_id)
+    if run is None:
+        return jsonify({"success": False, "error": "Run not found"}), 404
+    data = request.get_json(silent=True) or {}
+    if "experiment_id" in data:
+        run.experiment_id = (data.get("experiment_id") or "")[:200]
+    db.session.commit()
+    return jsonify({"success": True, "run": run.to_dict()})
+
+
+@protocol_bp.route("/<int:account_id>/runs/<int:run_id>/steps/<int:run_step_id>", methods=["PATCH"])
+@require_account_access
+def set_run_step_outcome(account_id, run_id, run_step_id):
+    """Mark a run step Done / Fail / Skip (or back to pending) and record a note."""
+    run = _get_run(account_id, run_id)
+    if run is None:
+        return jsonify({"success": False, "error": "Run not found"}), 404
+    step = ProtocolRunStep.query.filter_by(id=run_step_id, run_id=run_id).first()
+    if step is None:
+        return jsonify({"success": False, "error": "Run step not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    if "status" in data:
+        status = (data.get("status") or "").lower()
+        if status not in RUN_STEP_STATUSES:
+            return jsonify({
+                "success": False,
+                "error": f"status must be one of {', '.join(RUN_STEP_STATUSES)}",
+            }), 400
+        step.status = status
+        if status == "pending":
+            step.completed_by, step.completed_at = "", None
+        else:
+            step.completed_by = (g.current_user.name or "").strip() or g.current_user.email
+            step.completed_at = datetime.utcnow()
+    if "note" in data:
+        step.note = data.get("note") or ""
+
+    db.session.commit()
+    return jsonify({"success": True, "step": step.to_dict()})
+
+
+@protocol_bp.route("/<int:account_id>/runs/<int:run_id>/finish", methods=["POST"])
+@require_account_access
+def finish_run(account_id, run_id):
+    run = _get_run(account_id, run_id)
+    if run is None:
+        return jsonify({"success": False, "error": "Run not found"}), 404
+    run.status = "completed"
+    run.completed_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({"success": True, "run": run.to_dict(include_steps=True)})
