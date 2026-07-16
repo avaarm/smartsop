@@ -1,0 +1,54 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>Protocols</h1>
+      <p class="subtitle">Create and run step-by-step lab protocols.</p>
+    </div>
+    <button class="btn-primary" (click)="showNewForm = !showNewForm" *ngIf="activeAccount">
+      + New protocol
+    </button>
+  </header>
+
+  <div class="toast toast-error" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="empty" *ngIf="!activeAccount">
+    Select or create an account on the <strong>Account &amp; Training</strong> page to start building protocols.
+  </div>
+
+  <ng-container *ngIf="activeAccount">
+    <section class="new-form" *ngIf="showNewForm">
+      <input type="text" [(ngModel)]="newTitle" name="newTitle" placeholder="Protocol title (e.g. Cryopreserved Cell Thawing)" (keyup.enter)="createProtocol()" />
+      <textarea [(ngModel)]="newDescription" name="newDescription" rows="2" placeholder="Short description / abstract (optional)"></textarea>
+      <div class="new-actions">
+        <button class="btn-primary" (click)="createProtocol()" [disabled]="creating || !newTitle.trim()">
+          {{ creating ? 'Creating…' : 'Create protocol' }}
+        </button>
+        <button class="btn-ghost" (click)="showNewForm = false">Cancel</button>
+      </div>
+    </section>
+
+    <div class="loading" *ngIf="loading">Loading…</div>
+
+    <div class="empty" *ngIf="!loading && protocols.length === 0 && !showNewForm">
+      No protocols yet. Click <strong>+ New protocol</strong> to create your first one.
+    </div>
+
+    <div class="protocol-list" *ngIf="!loading">
+      <button class="protocol-card" *ngFor="let p of protocols" (click)="open(p)">
+        <div class="card-main">
+          <div class="card-title">{{ p.title }}</div>
+          <div class="card-desc" *ngIf="p.description">{{ p.description }}</div>
+          <div class="card-meta">
+            <span class="pill" [class.published]="p.status === 'published'">{{ p.status }}</span>
+            <span>v{{ p.version }}</span>
+            <span class="sep">·</span>
+            <span>{{ p.step_count }} step{{ p.step_count === 1 ? '' : 's' }}</span>
+            <span class="sep">·</span>
+            <span>Updated {{ formatDate(p.updated_at) }}</span>
+          </div>
+        </div>
+        <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+  </ng-container>
+</div>

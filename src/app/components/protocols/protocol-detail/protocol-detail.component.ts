@@ -1,0 +1,160 @@
+import { Component, OnInit, PLATFORM_ID, inject } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+
+import { ProtocolService, Protocol, ProtocolStep } from '../../../services/protocol.service';
+import { AccountService, Account } from '../../../services/account.service';
+
+@Component({
+  selector: 'app-protocol-detail',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './protocol-detail.component.html',
+  styleUrl: './protocol-detail.component.scss',
+})
+export class ProtocolDetailComponent implements OnInit {
+  account: Account | null = null;
+  protocol: Protocol | null = null;
+  steps: ProtocolStep[] = [];
+  protocolId!: number;
+
+  loading = false;
+  errorMessage = '';
+  successMessage = '';
+  editingMeta = false;
+
+  private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+
+  constructor(
+    private protocolService: ProtocolService,
+    private accountService: AccountService,
+    private route: ActivatedRoute,
+    public router: Router,
+  ) {}
+
+  ngOnInit(): void {
+    this.protocolId = Number(this.route.snapshot.paramMap.get('id'));
+    this.accountService.activeAccount$.subscribe(a => {
+      this.account = a;
+      if (a && this.isBrowser && !this.protocol) this.load();
+    });
+    if (this.isBrowser) this.accountService.loadSavedAccount();
+  }
+
+  private load(): void {
+    if (!this.account) return;
+    this.loading = true;
+    this.protocolService.getProtocol(this.account.id, this.protocolId).subscribe({
+      next: (res) => {
+        this.protocol = res.protocol;
+        this.steps = res.protocol.steps || [];
+        this.loading = false;
+      },
+      error: (err) => { this.errorMessage = err.message; this.loading = false; },
+    });
+  }
+
+  private flash(msg: string): void {
+    this.successMessage = msg;
+    setTimeout(() => (this.successMessage = ''), 2000);
+  }
+
+  // ── Protocol meta ──
+
+  saveMeta(): void {
+    if (!this.account || !this.protocol || !this.protocol.title.trim()) return;
+    this.protocolService.updateProtocol(this.account.id, this.protocolId, {
+      title: this.protocol.title,
+      description: this.protocol.description,
+    }).subscribe({
+      next: (res) => { this.protocol = { ...res.protocol, steps: this.steps }; this.editingMeta = false; this.flash('Saved'); },
+      error: (err) => (this.errorMessage = err.message),
+    });
+  }
+
+  togglePublish(): void {
+    if (!this.account || !this.protocol) return;
+    const next = this.protocol.status === 'published' ? 'draft' : 'published';
+    this.protocolService.updateProtocol(this.account.id, this.protocolId, { status: next }).subscribe({
+      next: (res) => { this.protocol!.status = res.protocol.status; this.flash(next === 'published' ? 'Published' : 'Moved to draft'); },
+      error: (err) => (this.errorMessage = err.message),
+    });
+  }
+
+  deleteProtocol(): void {
+    if (!this.account || !this.protocol) return;
+    if (this.isBrowser && !confirm('Delete this protocol? This cannot be undone.')) return;
+    this.protocolService.deleteProtocol(this.account.id, this.protocolId).subscribe({
+      next: () => this.router.navigate(['/protocols']),
+      error: (err) => (this.errorMessage = err.message),
+    });
+  }
+
+  runProtocol(): void {
+    this.router.navigate(['/protocols', this.protocolId, 'run']);
+  }
+
+  // ── Steps ──
+
+  addStep(): void {
+    if (!this.account) return;
+    this.protocolService.addStep(this.account.id, this.protocolId, { title: '', description: '' }).subscribe({
+      next: (res) => { this.steps = [...this.steps, res.step]; },
+      error: (err) => (this.errorMessage = err.message),
+    });
+  }
+
+  saveStep(step: ProtocolStep): void {
+    if (!this.account) return;
+    this.protocolService.updateStep(this.account.id, this.protocolId, step.id, {
+      title: step.title,
+      description: step.description,
+      warning: step.warning,
+      duration_seconds: step.duration_seconds,
+      reagents: step.reagents,
+    }).subscribe({
+      next: () => this.flash('Saved'),
+      error: (err) => (this.errorMessage = err.message),
+    });
+  }
+
+  deleteStep(step: ProtocolStep): void {
+    if (!this.account) return;
+    this.protocolService.deleteStep(this.account.id, this.protocolId, step.id).subscribe({
+      next: () => { this.steps = this.steps.filter(s => s.id !== step.id); },
+      error: (err) => (this.errorMessage = err.message),
+    });
+  }
+
+  moveStep(index: number, dir: -1 | 1): void {
+    const target = index + dir;
+    if (!this.account || target < 0 || target >= this.steps.length) return;
+    const reordered = [...this.steps];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    this.steps = reordered;
+    this.protocolService.reorderSteps(this.account.id, this.protocolId, reordered.map(s => s.id)).subscribe({
+      error: (err) => { this.errorMessage = err.message; this.load(); },
+    });
+  }
+
+  // Duration helpers (UI works in minutes)
+  durationMinutes(step: ProtocolStep): number | null {
+    return step.duration_seconds != null ? Math.round(step.duration_seconds / 60) : null;
+  }
+
+  setDurationMinutes(step: ProtocolStep, value: any): void {
+    const mins = value === '' || value == null ? null : Number(value);
+    step.duration_seconds = mins == null || isNaN(mins) ? null : Math.max(0, Math.round(mins * 60));
+    this.saveStep(step);
+  }
+
+  addReagent(step: ProtocolStep): void {
+    step.reagents = [...(step.reagents || []), { name: '', amount: '' }];
+  }
+
+  removeReagent(step: ProtocolStep, i: number): void {
+    step.reagents.splice(i, 1);
+    this.saveStep(step);
+  }
+}
