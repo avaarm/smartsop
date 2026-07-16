@@ -308,3 +308,87 @@ class TrainingExample(db.Model):
         messages.append({"role": "user", "content": self.user_prompt})
         messages.append({"role": "assistant", "content": self.completion})
         return {"messages": messages}
+
+
+class Protocol(db.Model):
+    """A protocols.io-style step-by-step method that can be edited, run, and shared.
+
+    Unlike a one-shot generated Document, a Protocol is a living, versioned,
+    ordered list of steps that a user executes ("runs") in the lab.
+    """
+
+    __tablename__ = "protocols"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False)
+
+    title = db.Column(db.String(500), nullable=False)
+    description = db.Column(db.Text, default="")   # abstract / overview
+    status = db.Column(db.String(50), default="draft")   # draft, published
+    version = db.Column(db.Integer, default=1, nullable=False)
+    created_by = db.Column(db.String(255), default="")   # denormalized author name
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    steps = db.relationship(
+        "ProtocolStep", backref="protocol", lazy="dynamic",
+        cascade="all, delete-orphan", order_by="ProtocolStep.order_index",
+    )
+
+    def to_dict(self, include_steps=False):
+        d = {
+            "id": self.id,
+            "account_id": self.account_id,
+            "title": self.title,
+            "description": self.description,
+            "status": self.status,
+            "version": self.version,
+            "created_by": self.created_by,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "step_count": self.steps.count(),
+        }
+        if include_steps:
+            d["steps"] = [s.to_dict() for s in self.steps]
+        return d
+
+
+class ProtocolStep(db.Model):
+    """One ordered step of a protocol, with optional structured components."""
+
+    __tablename__ = "protocol_steps"
+
+    id = db.Column(db.Integer, primary_key=True)
+    protocol_id = db.Column(db.Integer, db.ForeignKey("protocols.id"), nullable=False)
+
+    order_index = db.Column(db.Integer, default=0, nullable=False)
+    section = db.Column(db.String(200), default="")   # optional grouping heading
+    title = db.Column(db.String(500), default="")
+    description = db.Column(db.Text, default="")       # the instruction text
+
+    # protocols.io-style components
+    duration_seconds = db.Column(db.Integer, nullable=True)   # timer for this step
+    warning = db.Column(db.Text, default="")                  # safety / caution note
+    reagents_json = db.Column(db.Text, default="[]")          # [{name, amount, vendor}]
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        import json as _json
+        try:
+            reagents = _json.loads(self.reagents_json or "[]")
+        except ValueError:
+            reagents = []
+        return {
+            "id": self.id,
+            "protocol_id": self.protocol_id,
+            "order_index": self.order_index,
+            "section": self.section,
+            "title": self.title,
+            "description": self.description,
+            "duration_seconds": self.duration_seconds,
+            "warning": self.warning,
+            "reagents": reagents,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
