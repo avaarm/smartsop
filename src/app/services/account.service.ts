@@ -132,13 +132,24 @@ export class AccountService {
 
   loadSavedAccount(): void {
     if (!this.isBrowser) return;
+    if (this.activeAccount$.value) return;   // already loaded this session
     const savedId = localStorage.getItem('active_account_id');
     if (savedId) {
       this.getAccount(Number(savedId)).subscribe({
         next: (res) => this.activeAccount$.next(res.account),
-        error: () => localStorage.removeItem('active_account_id'),
+        error: () => { localStorage.removeItem('active_account_id'); this.autoSelectFirstAccount(); },
       });
+    } else {
+      this.autoSelectFirstAccount();
     }
+  }
+
+  /** Pick the user's first account so the app is usable without a manual selection. */
+  private autoSelectFirstAccount(): void {
+    this.listAccounts().subscribe({
+      next: (res) => { if (res.accounts.length) this.setActiveAccount(res.accounts[0]); },
+      error: () => {},
+    });
   }
 
   // ── Members (team) ──

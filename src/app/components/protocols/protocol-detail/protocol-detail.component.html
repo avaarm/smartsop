@@ -1,0 +1,80 @@
+<div class="page" *ngIf="account">
+  <a class="back" (click)="router.navigate(['/protocols'])">← Protocols</a>
+
+  <div class="toast toast-error" *ngIf="errorMessage">{{ errorMessage }}</div>
+  <div class="toast toast-success" *ngIf="successMessage">{{ successMessage }}</div>
+
+  <div class="loading" *ngIf="loading">Loading…</div>
+
+  <ng-container *ngIf="protocol">
+    <!-- Header -->
+    <header class="proto-head">
+      <div class="head-main">
+        <input class="title-input" [(ngModel)]="protocol.title" name="title"
+               (blur)="saveMeta()" placeholder="Untitled protocol" />
+        <textarea class="desc-input" [(ngModel)]="protocol.description" name="description"
+                  (blur)="saveMeta()" rows="2" placeholder="Add a description / abstract…"></textarea>
+        <div class="head-meta">
+          <span class="pill" [class.published]="protocol.status === 'published'">{{ protocol.status }}</span>
+          <span>v{{ protocol.version }}</span>
+          <span class="sep">·</span>
+          <span *ngIf="protocol.created_by">by {{ protocol.created_by }}</span>
+        </div>
+      </div>
+      <div class="head-actions">
+        <button class="btn-primary" (click)="runProtocol()" [disabled]="steps.length === 0" title="Run this protocol">▶ Run</button>
+        <button class="btn-ghost" (click)="togglePublish()">{{ protocol.status === 'published' ? 'Unpublish' : 'Publish' }}</button>
+        <button class="btn-danger" (click)="deleteProtocol()">Delete</button>
+      </div>
+    </header>
+
+    <!-- Steps -->
+    <div class="steps">
+      <div class="step-card" *ngFor="let step of steps; let i = index">
+        <div class="step-num">{{ i + 1 }}</div>
+        <div class="step-body">
+          <input class="step-title" [(ngModel)]="step.title" [name]="'st-' + step.id"
+                 (blur)="saveStep(step)" placeholder="Step title (optional)" />
+          <textarea class="step-desc" [(ngModel)]="step.description" [name]="'sd-' + step.id"
+                    (blur)="saveStep(step)" rows="2" placeholder="Describe what to do in this step…"></textarea>
+
+          <!-- Components -->
+          <div class="components">
+            <label class="comp">
+              <span>⏱ Duration (min)</span>
+              <input type="number" min="0" [ngModel]="durationMinutes(step)" [name]="'dur-' + step.id"
+                     (ngModelChange)="setDurationMinutes(step, $event)" placeholder="—" />
+            </label>
+            <label class="comp warn">
+              <span>⚠ Safety / caution</span>
+              <input type="text" [(ngModel)]="step.warning" [name]="'wn-' + step.id"
+                     (blur)="saveStep(step)" placeholder="e.g. Wear PPE, work in BSC" />
+            </label>
+          </div>
+
+          <!-- Reagents -->
+          <div class="reagents">
+            <div class="reagents-head">
+              <span>Reagents &amp; materials</span>
+              <button class="link" (click)="addReagent(step)">+ Add</button>
+            </div>
+            <div class="reagent-row" *ngFor="let r of step.reagents; let ri = index">
+              <input type="text" [(ngModel)]="r.name" [name]="'rn-' + step.id + '-' + ri"
+                     (blur)="saveStep(step)" placeholder="Reagent" />
+              <input type="text" [(ngModel)]="r.amount" [name]="'ra-' + step.id + '-' + ri"
+                     (blur)="saveStep(step)" placeholder="Amount" />
+              <button class="reagent-del" (click)="removeReagent(step, ri)" title="Remove">✕</button>
+            </div>
+          </div>
+        </div>
+        <div class="step-actions">
+          <button (click)="moveStep(i, -1)" [disabled]="i === 0" title="Move up">↑</button>
+          <button (click)="moveStep(i, 1)" [disabled]="i === steps.length - 1" title="Move down">↓</button>
+          <button class="del" (click)="deleteStep(step)" title="Delete step">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="add-step" (click)="addStep()">+ Add step</button>
+  </ng-container>
+</div>

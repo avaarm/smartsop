@@ -21,6 +21,18 @@ export const routes: Routes = [
             .then(m => m.DocumentBuilderComponent),
       },
       {
+        path: 'protocols',
+        loadComponent: () =>
+          import('./components/protocols/protocol-list/protocol-list.component')
+            .then(m => m.ProtocolListComponent),
+      },
+      {
+        path: 'protocols/:id',
+        loadComponent: () =>
+          import('./components/protocols/protocol-detail/protocol-detail.component')
+            .then(m => m.ProtocolDetailComponent),
+      },
+      {
         path: 'account',
         loadComponent: () =>
           import('./components/gmp-docs/account-settings/account-settings.component')
