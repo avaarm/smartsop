@@ -35,6 +35,40 @@ export interface Protocol {
   steps?: ProtocolStep[];
 }
 
+export type RunStepStatus = 'pending' | 'done' | 'failed' | 'skipped';
+
+export interface ProtocolRunStep {
+  id: number;
+  run_id: number;
+  step_id: number | null;
+  order_index: number;
+  title: string;
+  description: string;
+  duration_seconds: number | null;
+  warning: string;
+  reagents: Reagent[];
+  status: RunStepStatus;
+  note: string;
+  completed_by: string;
+  completed_at: string | null;
+}
+
+export interface ProtocolRun {
+  id: number;
+  account_id: number;
+  protocol_id: number;
+  protocol_title: string;
+  protocol_version: number;
+  experiment_id: string;
+  status: 'running' | 'completed';
+  started_by: string;
+  started_at: string;
+  completed_at: string | null;
+  completed_steps: number;
+  total_steps: number;
+  steps?: ProtocolRunStep[];
+}
+
 export interface StepInput {
   section?: string;
   title?: string;
@@ -99,6 +133,44 @@ export class ProtocolService {
 
   reorderSteps(accountId: number, protocolId: number, order: number[]): Observable<{ success: boolean }> {
     return this.http.post<any>(`${this.base(accountId)}/${protocolId}/steps/reorder`, { order })
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  // ── Runs ──
+
+  startRun(accountId: number, protocolId: number, experimentId = ''):
+    Observable<{ success: boolean; run: ProtocolRun }> {
+    return this.http.post<any>(`${this.base(accountId)}/${protocolId}/runs`, { experiment_id: experimentId })
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  listRuns(accountId: number, protocolId?: number):
+    Observable<{ success: boolean; runs: ProtocolRun[]; total: number }> {
+    const q = protocolId ? `?protocol_id=${protocolId}` : '';
+    return this.http.get<any>(`/api/accounts/${accountId}/runs${q}`)
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  getRun(accountId: number, runId: number): Observable<{ success: boolean; run: ProtocolRun }> {
+    return this.http.get<any>(`/api/accounts/${accountId}/runs/${runId}`)
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  updateRun(accountId: number, runId: number, patch: { experiment_id?: string }):
+    Observable<{ success: boolean; run: ProtocolRun }> {
+    return this.http.put<any>(`/api/accounts/${accountId}/runs/${runId}`, patch)
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  setRunStep(accountId: number, runId: number, runStepId: number,
+             patch: { status?: RunStepStatus; note?: string }):
+    Observable<{ success: boolean; step: ProtocolRunStep }> {
+    return this.http.patch<any>(`/api/accounts/${accountId}/runs/${runId}/steps/${runStepId}`, patch)
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  finishRun(accountId: number, runId: number): Observable<{ success: boolean; run: ProtocolRun }> {
+    return this.http.post<any>(`/api/accounts/${accountId}/runs/${runId}/finish`, {})
       .pipe(timeout(15000), catchError(this.handleError));
   }
 

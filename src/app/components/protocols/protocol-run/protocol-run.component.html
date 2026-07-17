@@ -1,0 +1,88 @@
+<div class="page" *ngIf="account">
+  <a class="back" (click)="router.navigate(['/protocols', protocolId])">← Back to protocol</a>
+
+  <div class="toast toast-error" *ngIf="errorMessage">{{ errorMessage }}</div>
+  <div class="loading" *ngIf="loading">Starting run…</div>
+
+  <ng-container *ngIf="run">
+    <!-- Header -->
+    <header class="run-head">
+      <div class="head-main">
+        <div class="run-label">RUN RECORD</div>
+        <h1>{{ run.protocol_title }}</h1>
+        <div class="head-meta">
+          <span>v{{ run.protocol_version }}</span>
+          <span class="sep">·</span>
+          <span>started by {{ run.started_by }}</span>
+          <span class="sep">·</span>
+          <span class="pill" [class.completed]="run.status === 'completed'">{{ run.status }}</span>
+        </div>
+      </div>
+      <div class="head-actions">
+        <label class="exp">
+          <span>Experiment ID</span>
+          <input type="text" [(ngModel)]="run.experiment_id" name="expId" (blur)="saveExperimentId()" placeholder="e.g. EXP-001" />
+        </label>
+        <button class="btn-primary" (click)="finish()" [disabled]="run.status === 'completed'">
+          {{ run.status === 'completed' ? '✓ Finished' : 'Finish run' }}
+        </button>
+      </div>
+    </header>
+
+    <!-- Progress -->
+    <div class="progress-bar">
+      <div class="progress-track"><div class="progress-fill" [style.width.%]="progressPercent"></div></div>
+      <div class="progress-stats">
+        <strong>{{ completedCount }}</strong> of {{ steps.length }} steps
+        <span class="sep">·</span>
+        Suggested time remaining: <strong>{{ suggestedRunTime }}</strong>
+      </div>
+    </div>
+
+    <!-- Steps -->
+    <div class="steps">
+      <div class="run-step" *ngFor="let step of steps; let i = index" [attr.data-status]="step.status">
+        <div class="step-num" [class.done]="step.status === 'done'" [class.failed]="step.status === 'failed'" [class.skipped]="step.status === 'skipped'">
+          <span *ngIf="step.status === 'done'">✓</span>
+          <span *ngIf="step.status === 'failed'">✕</span>
+          <span *ngIf="step.status === 'skipped'">»</span>
+          <span *ngIf="step.status === 'pending'">{{ i + 1 }}</span>
+        </div>
+        <div class="step-body">
+          <div class="step-title" *ngIf="step.title">{{ step.title }}</div>
+          <div class="step-desc" *ngIf="step.description">{{ step.description }}</div>
+
+          <div class="warn" *ngIf="step.warning">⚠ {{ step.warning }}</div>
+
+          <div class="reagents" *ngIf="step.reagents.length">
+            <span class="rlabel">Reagents:</span>
+            <span class="reagent" *ngFor="let r of step.reagents">{{ r.name }}<em *ngIf="r.amount"> — {{ r.amount }}</em></span>
+          </div>
+
+          <!-- Timer -->
+          <div class="timer" *ngIf="step.duration_seconds != null">
+            <span class="clock">⏱ {{ timerRunning(step) ? formatClock(remaining[step.id]) : formatClock(step.duration_seconds) }}</span>
+            <button class="btn-ghost sm" (click)="startTimer(step)" *ngIf="!timerRunning(step)">Start ▸</button>
+            <button class="btn-ghost sm" (click)="resetTimer(step)" *ngIf="timerRunning(step)">Reset ⟳</button>
+            <span class="timer-done" *ngIf="timerRunning(step) && remaining[step.id] === 0">Time's up</span>
+          </div>
+
+          <!-- Note -->
+          <input class="note" type="text" [(ngModel)]="step.note" [name]="'note-' + step.id"
+                 (blur)="saveNote(step)" placeholder="Record an observation / actual value…" />
+
+          <!-- Completion stamp -->
+          <div class="stamp" *ngIf="step.completed_at">
+            {{ step.status }} · {{ formatStamp(step.completed_at) }} · by {{ step.completed_by }}
+          </div>
+        </div>
+        <!-- Outcome buttons -->
+        <div class="outcomes">
+          <button class="oc done" [class.active]="step.status === 'done'" (click)="setStatus(step, 'done')" title="Done">✓ Done</button>
+          <button class="oc fail" [class.active]="step.status === 'failed'" (click)="setStatus(step, 'failed')" title="Fail">✕ Fail</button>
+          <button class="oc skip" [class.active]="step.status === 'skipped'" (click)="setStatus(step, 'skipped')" title="Skip">» Skip</button>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>
