@@ -21,17 +21,37 @@ export interface ProtocolStep {
   created_at: string;
 }
 
+export type ProtocolType = 'protocol' | 'sop' | 'gmp_sop';
+export type ProtocolStatus = 'draft' | 'in_review' | 'approved' | 'effective' | 'retired' | 'rejected';
+
+export interface ProtocolSignoff {
+  id: number;
+  role: 'reviewer' | 'approver' | 'author';
+  decision: 'approved' | 'rejected';
+  meaning: string;
+  comment: string;
+  signed_by: string;
+  signed_at: string;
+}
+
 export interface Protocol {
   id: number;
   account_id: number;
   title: string;
   description: string;
-  status: 'draft' | 'published';
+  protocol_type: ProtocolType;
+  status: ProtocolStatus;
   version: number;
   created_by: string;
+  sop_number: string;
+  department: string;
+  effective_date: string;
+  review_date: string;
+  supersedes_id: number | null;
   created_at: string;
   updated_at: string;
   step_count: number;
+  signoffs: ProtocolSignoff[];
   steps?: ProtocolStep[];
 }
 
@@ -103,11 +123,35 @@ export class ProtocolService {
       .pipe(timeout(15000), catchError(this.handleError));
   }
 
-  updateProtocol(accountId: number, id: number, patch: Partial<Pick<Protocol, 'title' | 'description' | 'status'>>):
+  updateProtocol(accountId: number, id: number,
+                 patch: Partial<Pick<Protocol, 'title' | 'description' | 'protocol_type' | 'sop_number' | 'department' | 'review_date'>>):
     Observable<{ success: boolean; protocol: Protocol }> {
     return this.http.put<any>(`${this.base(accountId)}/${id}`, patch)
       .pipe(timeout(15000), catchError(this.handleError));
   }
+
+  // ── Controlled-document lifecycle ──
+
+  private lifecycle(accountId: number, id: number, action: string, body: any = {}):
+    Observable<{ success: boolean; protocol: Protocol }> {
+    return this.http.post<any>(`${this.base(accountId)}/${id}/${action}`, body)
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  submitProtocol(accountId: number, id: number) { return this.lifecycle(accountId, id, 'submit'); }
+
+  signProtocol(accountId: number, id: number,
+               body: { role: 'reviewer' | 'approver'; decision: 'approved' | 'rejected'; password: string; meaning?: string; comment?: string }) {
+    return this.lifecycle(accountId, id, 'sign', body);
+  }
+
+  makeEffective(accountId: number, id: number, body: { review_date?: string } = {}) {
+    return this.lifecycle(accountId, id, 'make-effective', body);
+  }
+
+  retireProtocol(accountId: number, id: number) { return this.lifecycle(accountId, id, 'retire'); }
+
+  newVersion(accountId: number, id: number) { return this.lifecycle(accountId, id, 'new-version'); }
 
   deleteProtocol(accountId: number, id: number): Observable<{ success: boolean }> {
     return this.http.delete<any>(`${this.base(accountId)}/${id}`)

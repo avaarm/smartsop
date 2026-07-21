@@ -135,3 +135,74 @@ button { font-family: inherit; }
   color: var(--muted-fg); background: none; border: 1px dashed var(--border); border-radius: 12px; cursor: pointer;
   &:hover { border-color: hsl(240 5% 65%); color: var(--primary); background: hsl(240 4.8% 98%); }
 }
+
+/* ── SOP lifecycle additions ── */
+.head-side { display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0; }
+.title-input[readonly], .desc-input[readonly] { cursor: default; &:hover { border-color: transparent; } }
+
+.badges { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.type-badge {
+  padding: 2px 9px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.03em;
+  background: hsl(240 5% 92%); color: hsl(240 5% 30%);
+  &.gmp { background: hsl(263 70% 94%); color: hsl(263 60% 40%); }
+}
+.status-badge {
+  padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 600;
+  background: hsl(240 5% 94%); color: hsl(240 4% 40%);
+  &.st-draft { background: hsl(240 5% 93%); color: hsl(240 5% 35%); }
+  &.st-in_review { background: hsl(38 92% 90%); color: hsl(30 80% 32%); }
+  &.st-approved { background: hsl(217 91% 93%); color: hsl(217 80% 40%); }
+  &.st-effective { background: hsl(143 65% 90%); color: hsl(143 70% 27%); }
+  &.st-retired { background: hsl(240 5% 90%); color: hsl(240 5% 50%); }
+  &.st-rejected { background: hsl(0 75% 94%); color: hsl(0 65% 42%); }
+}
+.ver { font-size: 12px; color: var(--muted-fg); }
+.supersedes { font-size: 11px; color: var(--muted-fg); font-style: italic; }
+
+.sop-meta {
+  display: flex; flex-wrap: wrap; gap: 14px 22px; padding: 14px 16px; margin-bottom: 16px;
+  background: hsl(240 4.8% 98.5%); border: 1px solid var(--border); border-radius: 10px;
+}
+.mf { display: flex; flex-direction: column; gap: 4px;
+  span { font-size: 11px; font-weight: 500; color: var(--muted-fg); }
+  input, select { padding: 6px 9px; font-size: 12.5px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; background: #fff;
+    &:focus { outline: none; border-color: hsl(217 91% 60%); }
+    &:disabled, &[readonly] { background: hsl(240 5% 97%); color: hsl(240 4% 40%); }
+  }
+  .mf-static { font-size: 12.5px; font-weight: 600; padding: 6px 0; }
+}
+
+.lifecycle {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 14px 16px; margin-bottom: 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--card);
+}
+.lc-state strong { font-size: 14px; } .lc-hint { font-size: 12.5px; color: var(--muted-fg); margin-left: 8px; }
+.lc-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.signoffs { margin-bottom: 20px; h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted-fg); margin: 0 0 8px; } }
+.signoff { display: flex; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; background: var(--card); }
+.so-icon { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--done, hsl(143 70% 34%)); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+  &.rejected { background: hsl(0 72% 48%); } }
+.so-line { font-size: 13px; text-transform: capitalize; }
+.so-meaning { font-size: 12.5px; color: hsl(240 4% 30%); }
+.so-time { font-size: 11.5px; color: var(--muted-fg); }
+
+.steps-h { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted-fg); margin: 4px 0 10px; }
+
+/* Read-only step rendering */
+.rs-title { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+.rs-desc { font-size: 13px; line-height: 1.5; color: hsl(240 4% 25%); margin-bottom: 8px; }
+.rs-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.rs-tag { font-size: 12px; background: hsl(240 5% 96%); border-radius: 6px; padding: 2px 9px; color: hsl(240 4% 30%);
+  em { font-style: normal; } &.warn { background: hsl(0 75% 97%); color: hsl(0 65% 42%); } }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: hsl(0 0% 0% / 0.4); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+.modal { width: 100%; max-width: 440px; background: #fff; border-radius: 14px; padding: 24px; box-shadow: 0 10px 40px hsl(0 0% 0% / 0.2);
+  h3 { margin: 0 0 6px; font-size: 17px; } }
+.modal-sub { font-size: 13px; color: var(--muted-fg); margin: 0 0 16px; strong { color: var(--primary); text-transform: capitalize; } }
+.ml { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px;
+  span { font-size: 12px; font-weight: 500; color: hsl(240 4% 35%); }
+  input, textarea { padding: 8px 11px; font-size: 13px; border: 1px solid var(--border); border-radius: 7px; font-family: inherit;
+    &:focus { outline: none; border-color: hsl(217 91% 60%); } } }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }

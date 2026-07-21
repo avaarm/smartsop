@@ -64,5 +64,5 @@ h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 4px
 .pill {
   padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; text-transform: capitalize;
   background: hsl(240 5% 94%); color: hsl(240 4% 40%);
-  &.published { background: hsl(143 65% 92%); color: hsl(143 70% 28%); }
+  &.effective { background: hsl(143 65% 92%); color: hsl(143 70% 28%); }
 }
