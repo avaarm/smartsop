@@ -1,12 +1,14 @@
 """Flask Blueprint for user authentication (register, login, current user)."""
 
 import logging
+import os
 
-from flask import Blueprint, request, jsonify, g
+from flask import Blueprint, request, jsonify, g, session, redirect
 
 from .database import db, User, Account, Membership
 from .auth import require_auth, generate_token
 from .extensions import limiter, AUTH_RATELIMIT
+from . import sso
 
 logger = logging.getLogger(__name__)
 
@@ -94,3 +96,49 @@ def login():
 @require_auth
 def me():
     return jsonify({"success": True, "user": g.current_user.to_dict(include_memberships=True)})
+
+
+# ── Single sign-on (OIDC / OAuth2) ──
+
+@auth_bp.route("/sso/config", methods=["GET"])
+def sso_config():
+    """Tells the login page whether to offer an SSO button."""
+    return jsonify({"success": True, **sso.sso_config()})
+
+
+@auth_bp.route("/sso/login", methods=["GET"])
+def sso_login():
+    if not sso.sso_enabled():
+        return jsonify({"success": False, "error": "SSO is not configured"}), 404
+    state = sso.make_state()
+    session["sso_state"] = state
+    return redirect(sso.authorize_url(state))
+
+
+@auth_bp.route("/sso/callback", methods=["GET"])
+def sso_callback():
+    if not sso.sso_enabled():
+        return jsonify({"success": False, "error": "SSO is not configured"}), 404
+    if not request.args.get("state") or request.args.get("state") != session.pop("sso_state", None):
+        return jsonify({"success": False, "error": "Invalid SSO state"}), 400
+    code = request.args.get("code")
+    if not code:
+        return jsonify({"success": False, "error": "Missing authorization code"}), 400
+
+    try:
+        access_token = sso.exchange_code(code)
+        userinfo = sso.fetch_userinfo(access_token)
+    except Exception:
+        logger.exception("SSO token/userinfo exchange failed")
+        return jsonify({"success": False, "error": "SSO exchange failed"}), 502
+
+    user = sso.provision_user(userinfo)
+    if user is None:
+        return jsonify({"success": False, "error": "SSO did not return a usable email"}), 400
+    if not user.is_active:
+        return jsonify({"success": False, "error": "This account has been disabled"}), 403
+
+    token = generate_token(user)
+    # Hand the JWT back to the SPA in the URL fragment (never a query string).
+    frontend = os.environ.get("SSO_FRONTEND_REDIRECT", "/login")
+    return redirect(f"{frontend}#sso_token={token}")

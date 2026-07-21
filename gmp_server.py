@@ -27,6 +27,10 @@ logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 
+# Signs the Flask session cookie (used for the SSO state / CSRF check).
+app.secret_key = (os.environ.get("SECRET_KEY") or os.environ.get("JWT_SECRET")
+                  or "dev-insecure-secret-change-me")
+
 # Cap request bodies to protect against oversized/abusive payloads (default 16 MB).
 app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))
 
