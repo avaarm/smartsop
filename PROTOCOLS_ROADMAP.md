@@ -33,16 +33,16 @@ Legend: ✅ built · 🚧 in progress · ⬜ planned
 
 | Feature | Status |
 |---|---|
-| `New run record` modal: `Start run` vs `Create a completed record` (back-dated) | 🚧 |
+| `New run record` modal: `Start run` vs `Create a completed record` (back-dated) | ✅ |
 | Run filed into a workspace **folder**; run is a first-class record | ⬜ |
-| `/run/<id>` route with step cursor (`?step=1`) | 🚧 |
-| Per-step outcomes: **`Done` / `Fail` / `Skip`** (not a binary checkbox) | 🚧 |
-| Per-step **timers**: `Start ▸`, `Refresh ⟳`, live countdown | 🚧 |
-| Progress ring `N out of M` + total countdown | 🚧 |
-| `Suggested Run Time` recalculating as steps complete | ⬜ |
-| `Experiment ID` field | 🚧 |
-| Completion stamps: `Done` + timestamp + `by <user>` | 🚧 |
-| `Finish Run`; run tabs `Steps`/`Materials`/`Comments`/`History`/`Metadata` | 🚧 |
+| `/run/<id>` route with step cursor (`?step=1`) | ✅ |
+| Per-step outcomes: **`Done` / `Fail` / `Skip`** (not a binary checkbox) | ✅ |
+| Per-step **timers**: `Start ▸`, `Refresh ⟳`, live countdown | ✅ |
+| Progress ring `N out of M` + total countdown | ✅ |
+| `Suggested Run Time` recalculating as steps complete | ✅ |
+| `Experiment ID` field | ✅ |
+| Completion stamps: `Done` + timestamp + `by <user>` | ✅ |
+| `Finish Run`; run tabs `Steps`/`Materials`/`Comments`/`History`/`Metadata` | ✅ |
 | Edit steps mid-run | ⬜ |
 | `Make fork from run` | ⬜ |
 
@@ -50,15 +50,15 @@ Legend: ✅ built · 🚧 in progress · ⬜ planned
 
 | Feature | Status |
 |---|---|
-| Draft vs published status | ✅ (basic toggle) |
-| Version history; version id in title (`V.(jm6vck9e7)`) | ⬜ |
+| Controlled lifecycle: draft → in_review → approved → effective → retired | ✅ |
+| Versioning: version numbers + supersedes chain (new-version clones) | ✅ (basic) |
 | `Copy / Fork` + `Forks` tab | ⬜ |
 | `New Merge Request` (fork-and-merge contribution) | ⬜ |
 | **Publish wizard** (6 steps): `Complete your protocol`, `Authors and Funders`, `Comments and Additional`, `Workspaces`, `Preview`, `Confirmation` | ⬜ |
 | **DOI**: `Reserve DOI`, minted per version (`10.17504/protocols.io.<id>/vN`) | ⬜ |
 | `Cite this` modal: formatted citation, copy, download (RIS/BibTeX) | ⬜ |
 | Anonymous **reviewer private link** (`/private/<token>`) | ⬜ |
-| `Sign` / `Signed` banner (e-signature) — pairs with existing GMP approval | ⬜ |
+| `Sign` (e-signature, password re-auth, meaning, audit trail) | ✅ |
 | `Post draft`, `Peer Review options` | ⬜ |
 | Public view w/ globe icon; `Change language` | ⬜ |
 
