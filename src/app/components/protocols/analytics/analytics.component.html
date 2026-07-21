@@ -1,0 +1,67 @@
+<div class="page">
+  <header class="page-head">
+    <h1>Analytics</h1>
+    <p class="subtitle">Protocol execution across your workspace.</p>
+  </header>
+
+  <div class="toast toast-error" *ngIf="errorMessage">{{ errorMessage }}</div>
+  <div class="empty" *ngIf="!account">Select an account to view analytics.</div>
+  <div class="loading" *ngIf="loading">Loading…</div>
+
+  <ng-container *ngIf="data && account">
+    <!-- Stat tiles -->
+    <div class="tiles">
+      <div class="tile"><div class="tile-num">{{ data.totals.runs }}</div><div class="tile-label">Total runs</div></div>
+      <div class="tile"><div class="tile-num">{{ completionRate }}%</div><div class="tile-label">Completion rate</div></div>
+      <div class="tile"><div class="tile-num">{{ avgDuration() }}</div><div class="tile-label">Avg run time</div></div>
+      <div class="tile" [class.alert]="data.outcomes.failed > 0"><div class="tile-num">{{ data.outcomes.failed }}</div><div class="tile-label">Deviations (failed steps)</div></div>
+      <div class="tile"><div class="tile-num">{{ data.totals.effective_sops }}</div><div class="tile-label">Effective SOPs</div></div>
+      <div class="tile"><div class="tile-num">{{ data.totals.protocols }}</div><div class="tile-label">Protocols</div></div>
+    </div>
+
+    <div class="grid">
+      <!-- Runs by week -->
+      <section class="card">
+        <h3>Runs — last 8 weeks</h3>
+        <div class="bars">
+          <div class="bar-col" *ngFor="let w of data.runs_by_week">
+            <div class="bar-wrap">
+              <div class="bar" [style.height.%]="(w.runs / maxWeekRuns) * 100" [title]="w.runs + ' runs'"></div>
+            </div>
+            <div class="bar-val">{{ w.runs }}</div>
+            <div class="bar-lbl">{{ shortDate(w.week_ending) }}</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step outcomes -->
+      <section class="card">
+        <h3>Step outcomes</h3>
+        <div class="stack" *ngIf="outcomeTotal">
+          <div class="seg done" [style.width.%]="outcomePercent(data.outcomes.done)"></div>
+          <div class="seg failed" [style.width.%]="outcomePercent(data.outcomes.failed)"></div>
+          <div class="seg skipped" [style.width.%]="outcomePercent(data.outcomes.skipped)"></div>
+          <div class="seg pending" [style.width.%]="outcomePercent(data.outcomes.pending)"></div>
+        </div>
+        <div class="legend">
+          <span><i class="dot done"></i> Done {{ data.outcomes.done }}</span>
+          <span><i class="dot failed"></i> Failed {{ data.outcomes.failed }}</span>
+          <span><i class="dot skipped"></i> Skipped {{ data.outcomes.skipped }}</span>
+          <span><i class="dot pending"></i> Pending {{ data.outcomes.pending }}</span>
+        </div>
+        <div class="empty-mini" *ngIf="!outcomeTotal">No run steps yet.</div>
+      </section>
+    </div>
+
+    <!-- Top protocols -->
+    <section class="card">
+      <h3>Most-run protocols</h3>
+      <div class="empty-mini" *ngIf="!data.top_protocols.length">No runs yet.</div>
+      <div class="top-row" *ngFor="let p of data.top_protocols">
+        <span class="top-name">{{ p.title }}</span>
+        <div class="top-bar"><div class="top-fill" [style.width.%]="(p.runs / data.top_protocols[0].runs) * 100"></div></div>
+        <span class="top-num">{{ p.runs }}</span>
+      </div>
+    </section>
+  </ng-container>
+</div>
