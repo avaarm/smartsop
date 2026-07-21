@@ -226,3 +226,18 @@ button { font-family: inherit; }
   .comp-flag { flex: 1; font-size: 12px; color: hsl(263 55% 45%); font-style: italic; }
 }
 .rs-tag.comp { background: hsl(263 60% 96%); color: hsl(263 45% 38%); em { color: hsl(263 45% 30%); } }
+
+/* Decision / branch */
+.branch-block { border-top: 1px dashed var(--border); padding-top: 10px; margin-top: 10px; }
+.link.danger { color: hsl(0 70% 45%); }
+.branch-edit { margin-top: 6px; }
+.branch-q { width: 100%; box-sizing: border-box; padding: 7px 10px; font-size: 13px; border: 1px solid var(--border); border-radius: 7px; margin-bottom: 8px; font-family: inherit;
+  &:focus { outline: none; border-color: hsl(217 91% 60%); } }
+.branch-opt { display: flex; align-items: center; gap: 6px; margin-bottom: 5px;
+  input[type="text"] { flex: 1; padding: 5px 8px; font-size: 12.5px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; }
+  select { padding: 5px 8px; font-size: 12.5px; border: 1px solid var(--border); border-radius: 6px; background: #fff; font-family: inherit; }
+  .branch-target { width: 56px; padding: 5px 8px; font-size: 12.5px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; }
+  input:focus, select:focus { outline: none; border-color: hsl(217 91% 60%); } }
+.rs-decision { margin-top: 8px; font-size: 12.5px; color: hsl(217 60% 40%); background: hsl(217 91% 98%); border: 1px solid hsl(217 70% 92%); border-radius: 7px; padding: 7px 10px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center;
+  strong { color: hsl(217 70% 40%); } }
+.rs-opt { background: #fff; border: 1px solid hsl(217 70% 90%); border-radius: 6px; padding: 1px 8px; font-size: 11.5px; }

@@ -13,6 +13,16 @@ export interface StepComponent {
   value: string | boolean;
 }
 
+export interface BranchOption {
+  label: string;
+  action: 'continue' | 'goto' | 'halt';
+  target: number | null;   // 1-based step number for 'goto'
+}
+export interface StepBranch {
+  question: string;
+  options: BranchOption[];
+}
+
 /** Typed LOTO/safety component library — label, icon, and whether it's a flag. */
 export const COMPONENT_LIBRARY: { type: string; label: string; icon: string; flag?: boolean }[] = [
   { type: 'ppe', label: 'PPE required', icon: '🥽' },
@@ -46,6 +56,7 @@ export interface ProtocolStep {
   warning: string;
   reagents: Reagent[];
   components: StepComponent[];
+  branch: StepBranch | null;
   created_at: string;
 }
 
@@ -96,6 +107,7 @@ export interface ProtocolRunStep {
   warning: string;
   reagents: Reagent[];
   components: StepComponent[];
+  branch: StepBranch | null;
   status: RunStepStatus;
   note: string;
   completed_by: string;
@@ -134,6 +146,7 @@ export interface StepInput {
   warning?: string;
   reagents?: Reagent[];
   components?: StepComponent[];
+  branch?: StepBranch | null;
 }
 
 @Injectable({ providedIn: 'root' })

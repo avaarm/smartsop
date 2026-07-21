@@ -136,6 +136,30 @@
                 <button class="reagent-del" (click)="removeComponent(step, ci)" title="Remove">✕</button>
               </div>
             </div>
+
+            <!-- Decision / branch -->
+            <div class="branch-block">
+              <div class="reagents-head"><span>Decision / branch</span>
+                <button class="link" *ngIf="!step.branch" (click)="enableBranch(step)">+ Add decision</button>
+                <button class="link danger" *ngIf="step.branch" (click)="disableBranch(step)">Remove</button>
+              </div>
+              <div *ngIf="step.branch" class="branch-edit">
+                <input class="branch-q" type="text" [(ngModel)]="step.branch.question" [name]="'bq-' + step.id"
+                       (blur)="saveStep(step)" placeholder="Decision question, e.g. Is voltage &gt; 600V?" />
+                <div class="branch-opt" *ngFor="let o of step.branch.options; let oi = index">
+                  <input type="text" [(ngModel)]="o.label" [name]="'bl-' + step.id + '-' + oi" (blur)="saveStep(step)" placeholder="Answer" />
+                  <select [(ngModel)]="o.action" [name]="'ba-' + step.id + '-' + oi" (ngModelChange)="onBranchActionChange(step, o)">
+                    <option value="continue">→ Continue</option>
+                    <option value="goto">→ Go to step…</option>
+                    <option value="halt">✕ Halt &amp; notify</option>
+                  </select>
+                  <input *ngIf="o.action === 'goto'" type="number" min="1" class="branch-target"
+                         [(ngModel)]="o.target" [name]="'bt-' + step.id + '-' + oi" (blur)="saveStep(step)" placeholder="#" />
+                  <button class="reagent-del" (click)="removeBranchOption(step, oi)" title="Remove">✕</button>
+                </div>
+                <button class="link" (click)="addBranchOption(step)">+ Add answer</button>
+              </div>
+            </div>
           </ng-container>
           <ng-template #readStep>
             <div class="rs-title" *ngIf="step.title">{{ step.title }}</div>
@@ -145,6 +169,10 @@
               <span *ngIf="step.warning" class="rs-tag warn">⚠ {{ step.warning }}</span>
               <span *ngFor="let c of step.components" class="rs-tag comp">{{ meta(c.type).icon }} {{ meta(c.type).label }}<em *ngIf="c.value !== true && c.value"> — {{ c.value }}</em></span>
               <span *ngFor="let r of step.reagents" class="rs-tag">{{ r.name }}<em *ngIf="r.amount"> — {{ r.amount }}</em></span>
+            </div>
+            <div class="rs-decision" *ngIf="step.branch?.question">
+              <strong>⑂ Decision:</strong> {{ step.branch?.question }}
+              <span class="rs-opt" *ngFor="let o of step.branch?.options">{{ o.label }} → {{ o.action === 'goto' ? 'step ' + o.target : o.action }}</span>
             </div>
           </ng-template>
         </div>
