@@ -76,8 +76,8 @@ Legend: ✅ built · 🚧 in progress · ⬜ planned
 
 | Feature | Status |
 |---|---|
-| **`protocolify`** — create a protocol from an uploaded file/text | ⬜ |
-| Paste-to-steps: `Each number is a step` / `Each line is a step` / `Markdown text` | ⬜ |
+| **`protocolify`** — create a protocol from an uploaded file/text | ✅ |
+| Paste-to-steps: `Each number is a step` / `Each line is a step` / `Markdown text` | ✅ |
 | `Troubleshooting` tab — AI Q&A scoped to a protocol | ⬜ |
 | `Refine a protocol` (magic wand) | ⬜ |
 | AI comment summarisation + auto topic tagging | ⬜ |

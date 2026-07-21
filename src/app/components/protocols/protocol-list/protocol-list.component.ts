@@ -24,6 +24,15 @@ export class ProtocolListComponent implements OnInit {
   newTitle = '';
   newDescription = '';
 
+  // Import modal
+  showImport = false;
+  importTab: 'paste' | 'file' = 'paste';
+  importTitle = '';
+  importText = '';
+  importMode = 'numbered';
+  importFile: File | null = null;
+  importing = false;
+
   private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   constructor(
@@ -66,6 +75,54 @@ export class ProtocolListComponent implements OnInit {
 
   open(p: Protocol): void {
     this.router.navigate(['/protocols', p.id]);
+  }
+
+  // ── Import ──
+
+  openImport(): void {
+    this.showImport = true;
+    this.importTab = 'paste';
+    this.importTitle = '';
+    this.importText = '';
+    this.importMode = 'numbered';
+    this.importFile = null;
+    this.errorMessage = '';
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.importFile = input.files && input.files.length ? input.files[0] : null;
+    if (this.importFile && !this.importTitle.trim()) {
+      this.importTitle = this.importFile.name.replace(/\.[^.]+$/, '').replace(/_/g, ' ');
+    }
+  }
+
+  runImport(): void {
+    if (!this.activeAccount) return;
+    const acc = this.activeAccount.id;
+    this.importing = true;
+    this.errorMessage = '';
+
+    const done = (res: { protocol: Protocol }) => {
+      this.importing = false;
+      this.showImport = false;
+      this.router.navigate(['/protocols', res.protocol.id]);
+    };
+    const fail = (err: Error) => { this.errorMessage = err.message; this.importing = false; };
+
+    if (this.importTab === 'file') {
+      if (!this.importFile) { this.importing = false; return; }
+      const form = new FormData();
+      form.append('file', this.importFile);
+      form.append('mode', this.importMode);
+      if (this.importTitle.trim()) form.append('title', this.importTitle.trim());
+      this.protocolService.importFromFile(acc, form).subscribe({ next: done, error: fail });
+    } else {
+      if (!this.importText.trim()) { this.importing = false; return; }
+      this.protocolService.importFromText(acc, {
+        title: this.importTitle.trim() || undefined, text: this.importText, mode: this.importMode,
+      }).subscribe({ next: done, error: fail });
+    }
   }
 
   formatDate(iso: string | null | undefined): string {

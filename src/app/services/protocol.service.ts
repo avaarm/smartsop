@@ -123,6 +123,18 @@ export class ProtocolService {
       .pipe(timeout(15000), catchError(this.handleError));
   }
 
+  importFromText(accountId: number, body: { title?: string; text: string; mode: string }):
+    Observable<{ success: boolean; protocol: Protocol; mode: string; step_count: number }> {
+    return this.http.post<any>(`${this.base(accountId)}/import`, body)
+      .pipe(timeout(90000), catchError(this.handleError));
+  }
+
+  importFromFile(accountId: number, form: FormData):
+    Observable<{ success: boolean; protocol: Protocol; mode: string; step_count: number }> {
+    return this.http.post<any>(`${this.base(accountId)}/import`, form)
+      .pipe(timeout(90000), catchError(this.handleError));
+  }
+
   updateProtocol(accountId: number, id: number,
                  patch: Partial<Pick<Protocol, 'title' | 'description' | 'protocol_type' | 'sop_number' | 'department' | 'review_date'>>):
     Observable<{ success: boolean; protocol: Protocol }> {
