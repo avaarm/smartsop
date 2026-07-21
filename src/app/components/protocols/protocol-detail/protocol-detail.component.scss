@@ -206,3 +206,23 @@ button { font-family: inherit; }
   input, textarea { padding: 8px 11px; font-size: 13px; border: 1px solid var(--border); border-radius: 7px; font-family: inherit;
     &:focus { outline: none; border-color: hsl(217 91% 60%); } } }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+
+/* Typed component blocks */
+.components-block { border-top: 1px dashed var(--border); padding-top: 10px; margin-top: 10px; }
+.comp-picker {
+  display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; margin-bottom: 8px;
+  background: hsl(240 4.8% 98%); border: 1px solid var(--border); border-radius: 8px;
+  .comp-opt {
+    font-size: 12px; padding: 5px 9px; background: #fff; border: 1px solid var(--border);
+    border-radius: 6px; cursor: pointer;
+    &:hover { border-color: hsl(217 91% 60%); background: hsl(217 91% 98%); }
+  }
+}
+.comp-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 5px;
+  .comp-tag { font-size: 12px; font-weight: 500; white-space: nowrap; }
+  input { flex: 1; padding: 5px 8px; font-size: 12.5px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit;
+    &:focus { outline: none; border-color: hsl(217 91% 60%); } }
+  .comp-flag { flex: 1; font-size: 12px; color: hsl(263 55% 45%); font-style: italic; }
+}
+.rs-tag.comp { background: hsl(263 60% 96%); color: hsl(263 45% 38%); em { color: hsl(263 45% 30%); } }
