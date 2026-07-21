@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import { ProtocolService, Protocol, ProtocolStep } from '../../../services/protocol.service';
 import { AccountService, Account } from '../../../services/account.service';
+import { AuthService } from '../../../services/auth.service';
 
 @Component({
   selector: 'app-protocol-detail',
@@ -22,16 +23,43 @@ export class ProtocolDetailComponent implements OnInit {
   loading = false;
   errorMessage = '';
   successMessage = '';
-  editingMeta = false;
+  busy = false;
+
+  // Sign modal
+  showSign = false;
+  signRole: 'reviewer' | 'approver' = 'reviewer';
+  signDecision: 'approved' | 'rejected' = 'approved';
+  signPassword = '';
+  signMeaning = '';
+  signComment = '';
 
   private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   constructor(
     private protocolService: ProtocolService,
     private accountService: AccountService,
+    private auth: AuthService,
     private route: ActivatedRoute,
     public router: Router,
   ) {}
+
+  /** Owner/admin of the active account (or superadmin) — may approve/release. */
+  get isManager(): boolean {
+    const user = this.auth.currentUser$.value;
+    if (!user || !this.account) return false;
+    if (user.is_superadmin) return true;
+    const m = user.memberships.find(x => x.account_id === this.account!.id);
+    return !!m && (m.role === 'owner' || m.role === 'admin');
+  }
+
+  /** Content is only editable while the document is a draft (or was rejected). */
+  get canEdit(): boolean {
+    return !!this.protocol && (this.protocol.status === 'draft' || this.protocol.status === 'rejected');
+  }
+
+  get isSop(): boolean {
+    return !!this.protocol && this.protocol.protocol_type !== 'protocol';
+  }
 
   ngOnInit(): void {
     this.protocolId = Number(this.route.snapshot.paramMap.get('id'));
@@ -64,21 +92,98 @@ export class ProtocolDetailComponent implements OnInit {
 
   saveMeta(): void {
     if (!this.account || !this.protocol || !this.protocol.title.trim()) return;
+    const p = this.protocol;
     this.protocolService.updateProtocol(this.account.id, this.protocolId, {
-      title: this.protocol.title,
-      description: this.protocol.description,
+      title: p.title, description: p.description, protocol_type: p.protocol_type,
+      sop_number: p.sop_number, department: p.department, review_date: p.review_date,
     }).subscribe({
-      next: (res) => { this.protocol = { ...res.protocol, steps: this.steps }; this.editingMeta = false; this.flash('Saved'); },
+      next: (res) => { this.applyProtocol(res.protocol); this.flash('Saved'); },
       error: (err) => (this.errorMessage = err.message),
     });
   }
 
-  togglePublish(): void {
-    if (!this.account || !this.protocol) return;
-    const next = this.protocol.status === 'published' ? 'draft' : 'published';
-    this.protocolService.updateProtocol(this.account.id, this.protocolId, { status: next }).subscribe({
-      next: (res) => { this.protocol!.status = res.protocol.status; this.flash(next === 'published' ? 'Published' : 'Moved to draft'); },
+  private applyProtocol(p: Protocol): void {
+    // Preserve loaded steps (lifecycle responses may not re-send them in order).
+    this.protocol = { ...p, steps: this.steps };
+  }
+
+  // ── Controlled-document lifecycle ──
+
+  submit(): void {
+    if (!this.account) return;
+    this.busy = true;
+    this.protocolService.submitProtocol(this.account.id, this.protocolId).subscribe({
+      next: (res) => { this.applyProtocol(res.protocol); this.busy = false; this.flash('Submitted for review'); },
+      error: (err) => { this.errorMessage = err.message; this.busy = false; },
+    });
+  }
+
+  openSign(role: 'reviewer' | 'approver', decision: 'approved' | 'rejected' = 'approved'): void {
+    this.signRole = role;
+    this.signDecision = decision;
+    this.signPassword = '';
+    this.signMeaning = '';
+    this.signComment = '';
+    this.errorMessage = '';
+    this.showSign = true;
+  }
+
+  submitSign(): void {
+    if (!this.account || !this.signPassword) return;
+    this.busy = true;
+    this.protocolService.signProtocol(this.account.id, this.protocolId, {
+      role: this.signRole, decision: this.signDecision, password: this.signPassword,
+      meaning: this.signMeaning || undefined, comment: this.signComment || undefined,
+    }).subscribe({
+      next: (res) => {
+        this.applyProtocol(res.protocol);
+        this.showSign = false; this.busy = false;
+        this.flash(this.signDecision === 'approved' ? 'Signature applied' : 'Marked rejected');
+      },
+      error: (err) => { this.errorMessage = err.message; this.busy = false; },
+    });
+  }
+
+  makeEffective(): void {
+    if (!this.account) return;
+    this.busy = true;
+    this.protocolService.makeEffective(this.account.id, this.protocolId,
+      { review_date: this.protocol?.review_date || undefined }).subscribe({
+      next: (res) => { this.applyProtocol(res.protocol); this.busy = false; this.flash('Released — now effective'); },
+      error: (err) => { this.errorMessage = err.message; this.busy = false; },
+    });
+  }
+
+  retire(): void {
+    if (!this.account) return;
+    if (this.isBrowser && !confirm('Retire this SOP? It will no longer be the effective version.')) return;
+    this.protocolService.retireProtocol(this.account.id, this.protocolId).subscribe({
+      next: (res) => { this.applyProtocol(res.protocol); this.flash('Retired'); },
       error: (err) => (this.errorMessage = err.message),
+    });
+  }
+
+  createNewVersion(): void {
+    if (!this.account) return;
+    this.protocolService.newVersion(this.account.id, this.protocolId).subscribe({
+      next: (res) => this.router.navigate(['/protocols', res.protocol.id]),
+      error: (err) => (this.errorMessage = err.message),
+    });
+  }
+
+  statusLabel(s: string): string {
+    return ({ draft: 'Draft', in_review: 'In review', approved: 'Approved',
+              effective: 'Effective', retired: 'Retired', rejected: 'Rejected' } as any)[s] || s;
+  }
+
+  typeLabel(t: string): string {
+    return ({ protocol: 'Protocol', sop: 'SOP', gmp_sop: 'GMP SOP' } as any)[t] || t;
+  }
+
+  formatDate(iso: string | null | undefined): string {
+    if (!iso) return '';
+    return new Date(iso).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
     });
   }
 

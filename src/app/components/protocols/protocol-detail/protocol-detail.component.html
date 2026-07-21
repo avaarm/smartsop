@@ -3,71 +3,133 @@
 
   <div class="toast toast-error" *ngIf="errorMessage">{{ errorMessage }}</div>
   <div class="toast toast-success" *ngIf="successMessage">{{ successMessage }}</div>
-
   <div class="loading" *ngIf="loading">Loading…</div>
 
   <ng-container *ngIf="protocol">
     <!-- Header -->
     <header class="proto-head">
       <div class="head-main">
-        <input class="title-input" [(ngModel)]="protocol.title" name="title"
-               (blur)="saveMeta()" placeholder="Untitled protocol" />
-        <textarea class="desc-input" [(ngModel)]="protocol.description" name="description"
-                  (blur)="saveMeta()" rows="2" placeholder="Add a description / abstract…"></textarea>
-        <div class="head-meta">
-          <span class="pill" [class.published]="protocol.status === 'published'">{{ protocol.status }}</span>
-          <span>v{{ protocol.version }}</span>
-          <span class="sep">·</span>
-          <span *ngIf="protocol.created_by">by {{ protocol.created_by }}</span>
+        <div class="badges">
+          <span class="type-badge" [class.gmp]="protocol.protocol_type === 'gmp_sop'">{{ typeLabel(protocol.protocol_type) }}</span>
+          <span class="status-badge" [ngClass]="'st-' + protocol.status">{{ statusLabel(protocol.status) }}</span>
+          <span class="ver">v{{ protocol.version }}</span>
+          <span *ngIf="protocol.supersedes_id" class="supersedes">supersedes v{{ protocol.version - 1 }}</span>
         </div>
+        <input class="title-input" [(ngModel)]="protocol.title" name="title" [readonly]="!canEdit"
+               (blur)="saveMeta()" placeholder="Untitled" />
+        <textarea class="desc-input" [(ngModel)]="protocol.description" name="description" [readonly]="!canEdit"
+                  (blur)="saveMeta()" rows="2" placeholder="Add a description / abstract…"></textarea>
       </div>
-      <div class="head-actions">
+      <div class="head-side">
         <button class="btn-primary" (click)="runProtocol()" [disabled]="steps.length === 0" title="Run this protocol">▶ Run</button>
-        <button class="btn-ghost" (click)="togglePublish()">{{ protocol.status === 'published' ? 'Unpublish' : 'Publish' }}</button>
-        <button class="btn-danger" (click)="deleteProtocol()">Delete</button>
+        <button class="btn-danger sm" *ngIf="protocol.status === 'draft'" (click)="deleteProtocol()">Delete</button>
       </div>
     </header>
 
+    <!-- SOP control metadata -->
+    <section class="sop-meta">
+      <label class="mf">
+        <span>Document type</span>
+        <select [(ngModel)]="protocol.protocol_type" name="ptype" [disabled]="!canEdit" (ngModelChange)="saveMeta()">
+          <option value="protocol">Protocol</option>
+          <option value="sop">SOP</option>
+          <option value="gmp_sop">GMP SOP</option>
+        </select>
+      </label>
+      <label class="mf" *ngIf="isSop">
+        <span>SOP number</span>
+        <input type="text" [(ngModel)]="protocol.sop_number" name="sopnum" [readonly]="!canEdit" (blur)="saveMeta()" placeholder="SOP-001" />
+      </label>
+      <label class="mf" *ngIf="isSop">
+        <span>Department</span>
+        <input type="text" [(ngModel)]="protocol.department" name="dept" [readonly]="!canEdit" (blur)="saveMeta()" placeholder="e.g. QA" />
+      </label>
+      <label class="mf" *ngIf="isSop">
+        <span>Next review</span>
+        <input type="date" [(ngModel)]="protocol.review_date" name="revdate" [readonly]="!canEdit" (blur)="saveMeta()" />
+      </label>
+      <div class="mf" *ngIf="protocol.effective_date">
+        <span>Effective</span>
+        <div class="mf-static">{{ protocol.effective_date }}</div>
+      </div>
+    </section>
+
+    <!-- Lifecycle action bar -->
+    <section class="lifecycle">
+      <div class="lc-state">
+        <strong>{{ statusLabel(protocol.status) }}</strong>
+        <span class="lc-hint" [ngSwitch]="protocol.status">
+          <ng-container *ngSwitchCase="'draft'">Edit the steps, then submit for review.</ng-container>
+          <ng-container *ngSwitchCase="'rejected'">Address the feedback below, then re-submit.</ng-container>
+          <ng-container *ngSwitchCase="'in_review'">Awaiting reviewer &amp; approver signatures.</ng-container>
+          <ng-container *ngSwitchCase="'approved'">Approved — release it to make it effective.</ng-container>
+          <ng-container *ngSwitchCase="'effective'">This is the current controlled version.</ng-container>
+          <ng-container *ngSwitchCase="'retired'">Superseded by a newer version.</ng-container>
+        </span>
+      </div>
+      <div class="lc-actions">
+        <button class="btn-primary" *ngIf="protocol.status === 'draft' || protocol.status === 'rejected'"
+                (click)="submit()" [disabled]="busy || steps.length === 0">Submit for review</button>
+
+        <button class="btn-ghost" *ngIf="protocol.status === 'in_review'" (click)="openSign('reviewer')">✍ Sign as reviewer</button>
+        <button class="btn-primary" *ngIf="protocol.status === 'in_review' && isManager" (click)="openSign('approver', 'approved')">Approve &amp; sign</button>
+        <button class="btn-danger" *ngIf="protocol.status === 'in_review' && isManager" (click)="openSign('approver', 'rejected')">Reject</button>
+
+        <button class="btn-primary" *ngIf="protocol.status === 'approved' && isManager" (click)="makeEffective()" [disabled]="busy">Make effective</button>
+
+        <button class="btn-ghost" *ngIf="protocol.status === 'effective' || protocol.status === 'approved' || protocol.status === 'retired'" (click)="createNewVersion()">+ New version</button>
+        <button class="btn-danger sm" *ngIf="protocol.status === 'effective' && isManager" (click)="retire()">Retire</button>
+      </div>
+    </section>
+
+    <!-- Signature / audit trail -->
+    <section class="signoffs" *ngIf="protocol.signoffs.length">
+      <h3>Signatures</h3>
+      <div class="signoff" *ngFor="let s of protocol.signoffs">
+        <span class="so-icon" [class.rejected]="s.decision === 'rejected'">{{ s.decision === 'approved' ? '✓' : '✕' }}</span>
+        <div class="so-body">
+          <div class="so-line"><strong>{{ s.role }}</strong> · {{ s.decision }} · {{ s.signed_by }}</div>
+          <div class="so-meaning">{{ s.meaning }}<span *ngIf="s.comment"> — “{{ s.comment }}”</span></div>
+          <div class="so-time">{{ formatDate(s.signed_at) }}</div>
+        </div>
+      </div>
+    </section>
+
     <!-- Steps -->
+    <h3 class="steps-h">Steps</h3>
     <div class="steps">
       <div class="step-card" *ngFor="let step of steps; let i = index">
         <div class="step-num">{{ i + 1 }}</div>
         <div class="step-body">
-          <input class="step-title" [(ngModel)]="step.title" [name]="'st-' + step.id"
-                 (blur)="saveStep(step)" placeholder="Step title (optional)" />
-          <textarea class="step-desc" [(ngModel)]="step.description" [name]="'sd-' + step.id"
-                    (blur)="saveStep(step)" rows="2" placeholder="Describe what to do in this step…"></textarea>
-
-          <!-- Components -->
-          <div class="components">
-            <label class="comp">
-              <span>⏱ Duration (min)</span>
-              <input type="number" min="0" [ngModel]="durationMinutes(step)" [name]="'dur-' + step.id"
-                     (ngModelChange)="setDurationMinutes(step, $event)" placeholder="—" />
-            </label>
-            <label class="comp warn">
-              <span>⚠ Safety / caution</span>
-              <input type="text" [(ngModel)]="step.warning" [name]="'wn-' + step.id"
-                     (blur)="saveStep(step)" placeholder="e.g. Wear PPE, work in BSC" />
-            </label>
-          </div>
-
-          <!-- Reagents -->
-          <div class="reagents">
-            <div class="reagents-head">
-              <span>Reagents &amp; materials</span>
-              <button class="link" (click)="addReagent(step)">+ Add</button>
+          <ng-container *ngIf="canEdit; else readStep">
+            <input class="step-title" [(ngModel)]="step.title" [name]="'st-' + step.id" (blur)="saveStep(step)" placeholder="Step title (optional)" />
+            <textarea class="step-desc" [(ngModel)]="step.description" [name]="'sd-' + step.id" (blur)="saveStep(step)" rows="2" placeholder="Describe what to do in this step…"></textarea>
+            <div class="components">
+              <label class="comp"><span>⏱ Duration (min)</span>
+                <input type="number" min="0" [ngModel]="durationMinutes(step)" [name]="'dur-' + step.id" (ngModelChange)="setDurationMinutes(step, $event)" placeholder="—" /></label>
+              <label class="comp warn"><span>⚠ Safety / caution</span>
+                <input type="text" [(ngModel)]="step.warning" [name]="'wn-' + step.id" (blur)="saveStep(step)" placeholder="e.g. Wear PPE" /></label>
             </div>
-            <div class="reagent-row" *ngFor="let r of step.reagents; let ri = index">
-              <input type="text" [(ngModel)]="r.name" [name]="'rn-' + step.id + '-' + ri"
-                     (blur)="saveStep(step)" placeholder="Reagent" />
-              <input type="text" [(ngModel)]="r.amount" [name]="'ra-' + step.id + '-' + ri"
-                     (blur)="saveStep(step)" placeholder="Amount" />
-              <button class="reagent-del" (click)="removeReagent(step, ri)" title="Remove">✕</button>
+            <div class="reagents">
+              <div class="reagents-head"><span>Reagents &amp; materials</span><button class="link" (click)="addReagent(step)">+ Add</button></div>
+              <div class="reagent-row" *ngFor="let r of step.reagents; let ri = index">
+                <input type="text" [(ngModel)]="r.name" [name]="'rn-' + step.id + '-' + ri" (blur)="saveStep(step)" placeholder="Reagent" />
+                <input type="text" [(ngModel)]="r.amount" [name]="'ra-' + step.id + '-' + ri" (blur)="saveStep(step)" placeholder="Amount" />
+                <button class="reagent-del" (click)="removeReagent(step, ri)" title="Remove">✕</button>
+              </div>
             </div>
-          </div>
+          </ng-container>
+          <ng-template #readStep>
+            <div class="rs-title" *ngIf="step.title">{{ step.title }}</div>
+            <div class="rs-desc" *ngIf="step.description">{{ step.description }}</div>
+            <div class="rs-tags">
+              <span *ngIf="step.duration_seconds != null" class="rs-tag">⏱ {{ durationMinutes(step) }} min</span>
+              <span *ngIf="step.warning" class="rs-tag warn">⚠ {{ step.warning }}</span>
+              <span *ngFor="let r of step.reagents" class="rs-tag">{{ r.name }}<em *ngIf="r.amount"> — {{ r.amount }}</em></span>
+            </div>
+          </ng-template>
         </div>
-        <div class="step-actions">
+        <div class="step-actions" *ngIf="canEdit">
           <button (click)="moveStep(i, -1)" [disabled]="i === 0" title="Move up">↑</button>
           <button (click)="moveStep(i, 1)" [disabled]="i === steps.length - 1" title="Move down">↓</button>
           <button class="del" (click)="deleteStep(step)" title="Delete step">✕</button>
@@ -75,6 +137,30 @@
       </div>
     </div>
 
-    <button class="add-step" (click)="addStep()">+ Add step</button>
+    <button class="add-step" *ngIf="canEdit" (click)="addStep()">+ Add step</button>
   </ng-container>
+
+  <!-- E-signature modal -->
+  <div class="modal-overlay" *ngIf="showSign" (click)="showSign = false">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h3>{{ signDecision === 'rejected' ? 'Reject document' : 'Electronic signature' }}</h3>
+      <p class="modal-sub">
+        Signing as <strong>{{ signRole }}</strong>. Your signature is recorded with your name, the time, and its meaning — an auditable record.
+      </p>
+      <label class="ml"><span>Meaning of signature</span>
+        <input type="text" [(ngModel)]="signMeaning" name="signMeaning"
+               [placeholder]="signRole === 'approver' ? 'Approved for use' : 'Reviewed for accuracy'" /></label>
+      <label class="ml"><span>Comment (optional)</span>
+        <textarea [(ngModel)]="signComment" name="signComment" rows="2" placeholder="Notes…"></textarea></label>
+      <label class="ml"><span>Confirm your password *</span>
+        <input type="password" [(ngModel)]="signPassword" name="signPassword" placeholder="••••••••" (keyup.enter)="submitSign()" /></label>
+      <div class="modal-actions">
+        <button class="btn-ghost" (click)="showSign = false">Cancel</button>
+        <button [class.btn-primary]="signDecision === 'approved'" [class.btn-danger]="signDecision === 'rejected'"
+                (click)="submitSign()" [disabled]="busy || !signPassword">
+          {{ signDecision === 'rejected' ? 'Reject &amp; sign' : 'Sign' }}
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
