@@ -118,6 +118,14 @@ export interface ProtocolRun {
   steps?: ProtocolRunStep[];
 }
 
+export interface Analytics {
+  totals: { protocols: number; effective_sops: number; runs: number; completed_runs: number };
+  outcomes: { done: number; failed: number; skipped: number; pending: number };
+  avg_run_duration_seconds: number;
+  runs_by_week: { week_ending: string; runs: number }[];
+  top_protocols: { title: string; runs: number }[];
+}
+
 export interface StepInput {
   section?: string;
   title?: string;
@@ -257,6 +265,11 @@ export class ProtocolService {
 
   finishRun(accountId: number, runId: number): Observable<{ success: boolean; run: ProtocolRun }> {
     return this.http.post<any>(`/api/accounts/${accountId}/runs/${runId}/finish`, {})
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  getAnalytics(accountId: number): Observable<{ success: boolean } & Analytics> {
+    return this.http.get<any>(`/api/accounts/${accountId}/analytics`)
       .pipe(timeout(15000), catchError(this.handleError));
   }
 

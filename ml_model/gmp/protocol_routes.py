@@ -5,7 +5,7 @@ All routes are account-scoped and require membership (require_account_access).
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Blueprint, request, jsonify, g
 from sqlalchemy import func
@@ -425,6 +425,80 @@ def finish_run(account_id, run_id):
     run.completed_at = datetime.utcnow()
     db.session.commit()
     return jsonify({"success": True, "run": run.to_dict(include_steps=True)})
+
+
+# ── Analytics ──
+
+@protocol_bp.route("/<int:account_id>/analytics", methods=["GET"])
+@require_account_access
+def analytics(account_id):
+    """Aggregate protocol + run metrics for a dashboard."""
+    protocols = Protocol.query.filter_by(account_id=account_id).count()
+    effective = Protocol.query.filter_by(account_id=account_id, status="effective").count()
+
+    runs_q = ProtocolRun.query.filter_by(account_id=account_id)
+    total_runs = runs_q.count()
+    completed_runs = runs_q.filter_by(status="completed").count()
+
+    # Run-step outcomes across the account (deviations = failed).
+    outcome_rows = (
+        db.session.query(ProtocolRunStep.status, func.count(ProtocolRunStep.id))
+        .join(ProtocolRun, ProtocolRunStep.run_id == ProtocolRun.id)
+        .filter(ProtocolRun.account_id == account_id)
+        .group_by(ProtocolRunStep.status)
+        .all()
+    )
+    outcomes = {s: n for s, n in outcome_rows}
+
+    # Average duration of completed runs.
+    completed = runs_q.filter(
+        ProtocolRun.status == "completed", ProtocolRun.completed_at.isnot(None)
+    ).all()
+    durations = [
+        (r.completed_at - r.started_at).total_seconds()
+        for r in completed if r.started_at and r.completed_at
+    ]
+    avg_dur = int(sum(durations) / len(durations)) if durations else 0
+
+    # Runs per week for the last 8 weeks.
+    now = datetime.utcnow()
+    weeks = []
+    for w in range(7, -1, -1):
+        start = now - timedelta(days=(w + 1) * 7)
+        end = now - timedelta(days=w * 7)
+        weeks.append({
+            "week_ending": end.date().isoformat(),
+            "runs": runs_q.filter(ProtocolRun.started_at >= start,
+                                  ProtocolRun.started_at < end).count(),
+        })
+
+    top = (
+        db.session.query(ProtocolRun.protocol_title, func.count(ProtocolRun.id))
+        .filter(ProtocolRun.account_id == account_id)
+        .group_by(ProtocolRun.protocol_title)
+        .order_by(func.count(ProtocolRun.id).desc())
+        .limit(5)
+        .all()
+    )
+
+    return jsonify({
+        "success": True,
+        "totals": {
+            "protocols": protocols,
+            "effective_sops": effective,
+            "runs": total_runs,
+            "completed_runs": completed_runs,
+        },
+        "outcomes": {
+            "done": outcomes.get("done", 0),
+            "failed": outcomes.get("failed", 0),
+            "skipped": outcomes.get("skipped", 0),
+            "pending": outcomes.get("pending", 0),
+        },
+        "avg_run_duration_seconds": avg_dur,
+        "runs_by_week": weeks,
+        "top_protocols": [{"title": t, "runs": n} for t, n in top],
+    })
 
 
 # ── Controlled-document lifecycle (SOP review / approval) ──
