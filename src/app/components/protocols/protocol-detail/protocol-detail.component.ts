@@ -221,10 +221,36 @@ export class ProtocolDetailComponent implements OnInit {
       duration_seconds: step.duration_seconds,
       reagents: step.reagents,
       components: step.components,
+      branch: step.branch,
     }).subscribe({
       next: () => this.flash('Saved'),
       error: (err) => (this.errorMessage = err.message),
     });
+  }
+
+  // ── Decision / branch ──
+
+  enableBranch(step: ProtocolStep): void {
+    step.branch = { question: '', options: [{ label: 'Yes', action: 'continue', target: null }] };
+  }
+
+  disableBranch(step: ProtocolStep): void {
+    step.branch = null;
+    this.saveStep(step);
+  }
+
+  addBranchOption(step: ProtocolStep): void {
+    step.branch?.options.push({ label: '', action: 'continue', target: null });
+  }
+
+  removeBranchOption(step: ProtocolStep, i: number): void {
+    step.branch?.options.splice(i, 1);
+    this.saveStep(step);
+  }
+
+  onBranchActionChange(step: ProtocolStep, opt: { action: string; target: number | null }): void {
+    if (opt.action !== 'goto') opt.target = null;
+    this.saveStep(step);
   }
 
   // ── Typed components ──

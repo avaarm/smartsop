@@ -27,6 +27,8 @@ COMPONENT_TYPES = (
 )
 COMPONENT_FLAG_TYPES = ("verification_photo", "second_signature")
 MAX_COMPONENTS = 30
+BRANCH_ACTIONS = ("continue", "goto", "halt")
+MAX_BRANCH_OPTIONS = 8
 MANAGER_ROLES = ("owner", "admin")
 DEFAULT_MEANING = {
     "reviewer": "Reviewed for accuracy and completeness",
@@ -60,6 +62,31 @@ def _apply_step_fields(step, data):
         step.reagents_json = json.dumps(reagents if isinstance(reagents, list) else [])
     if "components" in data:
         step.components_json = json.dumps(_clean_components(data.get("components")))
+    if "branch" in data:
+        step.branch_json = _clean_branch(data.get("branch"))
+
+
+def _clean_branch(raw):
+    """Validate a decision/branch → JSON string, or '' to clear."""
+    if not isinstance(raw, dict):
+        return ""
+    question = str(raw.get("question", "")).strip()[:300]
+    options = []
+    for o in (raw.get("options") or [])[:MAX_BRANCH_OPTIONS]:
+        if not isinstance(o, dict):
+            continue
+        action = str(o.get("action", "continue")).lower()
+        if action not in BRANCH_ACTIONS:
+            action = "continue"
+        target = o.get("target")
+        options.append({
+            "label": str(o.get("label", "")).strip()[:120],
+            "action": action,
+            "target": int(target) if isinstance(target, (int, float)) and action == "goto" else None,
+        })
+    if not question and not options:
+        return ""
+    return json.dumps({"question": question, "options": options})
 
 
 def _clean_components(raw):
@@ -336,6 +363,7 @@ def start_run(account_id, protocol_id):
             warning=step.warning,
             reagents_json=step.reagents_json,
             components_json=step.components_json,
+            branch_json=step.branch_json,
         ))
     db.session.commit()
     return jsonify({"success": True, "run": run.to_dict(include_steps=True)}), 201
@@ -649,6 +677,7 @@ def new_version(account_id, protocol_id):
             warning=step.warning,
             reagents_json=step.reagents_json,
             components_json=step.components_json,
+            branch_json=step.branch_json,
         ))
     db.session.commit()
     return jsonify({"success": True, "protocol": clone.to_dict(include_steps=True)}), 201

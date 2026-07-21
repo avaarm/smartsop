@@ -486,6 +486,7 @@ class ProtocolRunStep(db.Model):
     warning = db.Column(db.Text, default="")
     reagents_json = db.Column(db.Text, default="[]")
     components_json = db.Column(db.Text, default="[]")
+    branch_json = db.Column(db.Text, default="")
 
     # Outcome — protocols.io offers Done / Fail / Skip, not a binary checkbox.
     status = db.Column(db.String(50), default="pending")   # pending, done, failed, skipped
@@ -503,6 +504,10 @@ class ProtocolRunStep(db.Model):
             components = _json.loads(self.components_json or "[]")
         except ValueError:
             components = []
+        try:
+            branch = _json.loads(self.branch_json) if self.branch_json else None
+        except ValueError:
+            branch = None
         return {
             "id": self.id,
             "run_id": self.run_id,
@@ -514,6 +519,7 @@ class ProtocolRunStep(db.Model):
             "warning": self.warning,
             "reagents": reagents,
             "components": components,
+            "branch": branch,
             "status": self.status,
             "note": self.note,
             "completed_by": self.completed_by,
@@ -540,6 +546,8 @@ class ProtocolStep(db.Model):
     reagents_json = db.Column(db.Text, default="[]")          # [{name, amount, vendor}]
     # Typed LOTO/safety blocks: [{type, value}] e.g. {type:"ppe", value:"Arc suit"}
     components_json = db.Column(db.Text, default="[]")
+    # Optional decision/branch: {"question","options":[{label,action,target}]}
+    branch_json = db.Column(db.Text, default="")
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -553,6 +561,10 @@ class ProtocolStep(db.Model):
             components = _json.loads(self.components_json or "[]")
         except ValueError:
             components = []
+        try:
+            branch = _json.loads(self.branch_json) if self.branch_json else None
+        except ValueError:
+            branch = None
         return {
             "id": self.id,
             "protocol_id": self.protocol_id,
@@ -564,5 +576,6 @@ class ProtocolStep(db.Model):
             "warning": self.warning,
             "reagents": reagents,
             "components": components,
+            "branch": branch,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }

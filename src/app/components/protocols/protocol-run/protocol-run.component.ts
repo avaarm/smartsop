@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import {
-  ProtocolService, ProtocolRun, ProtocolRunStep, RunStepStatus, componentMeta,
+  ProtocolService, ProtocolRun, ProtocolRunStep, RunStepStatus, BranchOption, componentMeta,
 } from '../../../services/protocol.service';
 import { AccountService, Account } from '../../../services/account.service';
 
@@ -104,6 +104,30 @@ export class ProtocolRunComponent implements OnInit, OnDestroy {
   }
 
   meta(type: string) { return componentMeta(type); }
+
+  // ── Branch decisions ──
+  halted: { question: string; label: string } | null = null;
+  highlightIndex: number | null = null;
+
+  chooseBranch(step: ProtocolRunStep, option: BranchOption): void {
+    const note = `Decision: ${step.branch?.question} → ${option.label}`;
+    step.note = step.note ? `${step.note}\n${note}` : note;
+    this.saveNote(step);
+
+    if (option.action === 'halt') {
+      this.halted = { question: step.branch?.question || '', label: option.label };
+      if (this.isBrowser) window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (option.action === 'goto' && option.target) {
+      this.scrollToStep(option.target - 1);
+    }
+  }
+
+  private scrollToStep(index: number): void {
+    if (!this.isBrowser || index < 0 || index >= this.steps.length) return;
+    document.getElementById('run-step-' + index)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    this.highlightIndex = index;
+    setTimeout(() => (this.highlightIndex = null), 2200);
+  }
 
   formatClock(seconds: number | null | undefined): string {
     if (seconds == null) return '';

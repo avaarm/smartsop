@@ -29,6 +29,10 @@
       </div>
     </header>
 
+    <div class="halt-banner" *ngIf="halted">
+      ⛔ <strong>Run halted</strong> — “{{ halted.question }}” → {{ halted.label }}. Stop work and notify your supervisor.
+    </div>
+
     <!-- Progress -->
     <div class="progress-bar">
       <div class="progress-track"><div class="progress-fill" [style.width.%]="progressPercent"></div></div>
@@ -41,7 +45,8 @@
 
     <!-- Steps -->
     <div class="steps">
-      <div class="run-step" *ngFor="let step of steps; let i = index" [attr.data-status]="step.status">
+      <div class="run-step" *ngFor="let step of steps; let i = index" [attr.data-status]="step.status"
+           [id]="'run-step-' + i" [class.highlight]="highlightIndex === i">
         <div class="step-num" [class.done]="step.status === 'done'" [class.failed]="step.status === 'failed'" [class.skipped]="step.status === 'skipped'">
           <span *ngIf="step.status === 'done'">✓</span>
           <span *ngIf="step.status === 'failed'">✕</span>
@@ -81,6 +86,17 @@
           <!-- Completion stamp -->
           <div class="stamp" *ngIf="step.completed_at">
             {{ step.status }} · {{ formatStamp(step.completed_at) }} · by {{ step.completed_by }}
+          </div>
+
+          <!-- Decision / branch -->
+          <div class="branch" *ngIf="step.branch?.question">
+            <div class="branch-q">⑂ {{ step.branch?.question }}</div>
+            <div class="branch-opts">
+              <button *ngFor="let o of step.branch?.options" (click)="chooseBranch(step, o)" [class.halt]="o.action === 'halt'">
+                {{ o.label }}
+                <em>{{ o.action === 'goto' ? '→ step ' + o.target : (o.action === 'halt' ? '✕ halt' : '→ continue') }}</em>
+              </button>
+            </div>
           </div>
         </div>
         <!-- Outcome buttons -->

@@ -86,3 +86,18 @@ h1 { font-size: 21px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 6px
   strong { font-weight: 600; }
   &.flag { background: hsl(263 60% 95%); border-color: hsl(263 50% 88%); color: hsl(263 45% 38%); }
 }
+
+/* Branch decisions */
+.halt-banner { padding: 12px 16px; margin-bottom: 16px; border-radius: 10px; font-size: 14px;
+  background: hsl(0 80% 96%); border: 1px solid hsl(0 70% 85%); color: hsl(0 70% 38%); strong { font-weight: 700; } }
+.run-step.highlight { border-color: hsl(217 91% 60%); box-shadow: 0 0 0 3px hsl(217 91% 60% / 0.15); }
+.branch { margin-top: 10px; padding: 10px 12px; border: 1px solid hsl(217 70% 90%); border-radius: 8px; background: hsl(217 91% 98.5%); }
+.branch-q { font-size: 13px; font-weight: 600; color: hsl(217 60% 35%); margin-bottom: 8px; }
+.branch-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.branch-opts button {
+  font-size: 12.5px; padding: 6px 12px; border: 1px solid hsl(217 70% 80%); border-radius: 7px;
+  background: #fff; cursor: pointer; color: var(--primary);
+  em { font-style: normal; color: var(--muted-fg); font-size: 11px; }
+  &:hover { background: hsl(217 91% 96%); border-color: hsl(217 91% 60%); }
+  &.halt { border-color: hsl(0 70% 82%); em { color: hsl(0 65% 50%); } &:hover { background: hsl(0 75% 97%); border-color: hsl(0 70% 60%); } }
+}
