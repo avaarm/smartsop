@@ -4,9 +4,10 @@
       <h1>Protocols</h1>
       <p class="subtitle">Create and run step-by-step lab protocols.</p>
     </div>
-    <button class="btn-primary" (click)="showNewForm = !showNewForm" *ngIf="activeAccount">
-      + New protocol
-    </button>
+    <div class="head-actions" *ngIf="activeAccount">
+      <button class="btn-ghost" (click)="openImport()">↥ Import</button>
+      <button class="btn-primary" (click)="showNewForm = !showNewForm">+ New protocol</button>
+    </div>
   </header>
 
   <div class="toast toast-error" *ngIf="errorMessage">{{ errorMessage }}</div>
@@ -51,4 +52,47 @@
       </button>
     </div>
   </ng-container>
+
+  <!-- Import modal -->
+  <div class="modal-overlay" *ngIf="showImport" (click)="showImport = false">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h3>Import a protocol</h3>
+      <p class="modal-sub">Turn an existing procedure into structured steps — paste the text or upload a Word / PDF / text file.</p>
+
+      <div class="tabs">
+        <button [class.active]="importTab === 'paste'" (click)="importTab = 'paste'">Paste text</button>
+        <button [class.active]="importTab === 'file'" (click)="importTab = 'file'">Upload file</button>
+      </div>
+
+      <label class="ml"><span>Title</span>
+        <input type="text" [(ngModel)]="importTitle" name="importTitle" placeholder="Protocol title (optional)" /></label>
+
+      <ng-container *ngIf="importTab === 'paste'">
+        <label class="ml"><span>Procedure text</span>
+          <textarea [(ngModel)]="importText" name="importText" rows="7"
+            placeholder="1. Retrieve the vial&#10;2. Warm to 37 °C&#10;3. Transfer to the biosafety cabinet"></textarea></label>
+      </ng-container>
+      <ng-container *ngIf="importTab === 'file'">
+        <label class="ml"><span>File (.docx, .pdf, .txt, .md)</span>
+          <input type="file" accept=".docx,.pdf,.txt,.md" (change)="onFileSelected($event)" /></label>
+        <p class="file-name" *ngIf="importFile">Selected: {{ importFile.name }}</p>
+      </ng-container>
+
+      <label class="ml"><span>How to split into steps</span>
+        <select [(ngModel)]="importMode" name="importMode">
+          <option value="numbered">Each number is a step (1. / 2) / Step 3:)</option>
+          <option value="lines">Each line is a step</option>
+          <option value="markdown">Markdown (headings become steps)</option>
+          <option value="ai">AI-assisted (structure the text automatically)</option>
+        </select></label>
+
+      <div class="modal-actions">
+        <button class="btn-ghost" (click)="showImport = false">Cancel</button>
+        <button class="btn-primary" (click)="runImport()"
+                [disabled]="importing || (importTab === 'paste' ? !importText.trim() : !importFile)">
+          {{ importing ? 'Importing…' : 'Import' }}
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
