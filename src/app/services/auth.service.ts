@@ -1,7 +1,7 @@
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, BehaviorSubject, catchError, throwError, tap, timeout } from 'rxjs';
+import { Observable, BehaviorSubject, catchError, throwError, tap, timeout, map, of } from 'rxjs';
 
 export interface Membership {
   id: number;
@@ -52,6 +52,23 @@ export class AuthService {
 
   get token(): string | null {
     return this.isBrowser ? localStorage.getItem(TOKEN_KEY) : null;
+  }
+
+  ssoConfig(): Observable<{ enabled: boolean; provider: string }> {
+    return this.http.get<{ enabled: boolean; provider: string }>(`${this.baseUrl}/sso/config`)
+      .pipe(catchError(() => of({ enabled: false, provider: 'SSO' })));
+  }
+
+  /** Complete an SSO login: store the JWT handed back in the URL fragment, load the user. */
+  completeSsoLogin(token: string): Observable<AuthUser> {
+    if (this.isBrowser) localStorage.setItem(TOKEN_KEY, token);
+    return this.http.get<{ user: AuthUser }>(`${this.baseUrl}/me`).pipe(
+      map(res => res.user),
+      tap(user => {
+        this.currentUser$.next(user);
+        if (this.isBrowser) localStorage.setItem(USER_KEY, JSON.stringify(user));
+      }),
+    );
   }
 
   isAuthenticated(): boolean {

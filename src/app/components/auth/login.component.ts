@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, PLATFORM_ID, inject } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 
@@ -62,6 +62,11 @@ import { AuthService } from '../../services/auth.service';
             {{ loading ? 'Please wait…' : (mode === 'login' ? 'Sign in' : 'Create account') }}
           </button>
         </form>
+
+        <div class="sso" *ngIf="ssoEnabled">
+          <div class="divider"><span>or</span></div>
+          <button type="button" class="btn-sso" (click)="ssoLogin()">Sign in with {{ ssoProvider }}</button>
+        </div>
 
         <div class="switch">
           <ng-container *ngIf="mode === 'login'; else toLogin">
@@ -205,6 +210,16 @@ import { AuthService } from '../../services/auth.service';
     }
 
     .link:hover { text-decoration: underline; }
+
+    .sso { margin-top: 16px; }
+    .divider { display: flex; align-items: center; gap: 10px; margin: 4px 0 14px; color: hsl(0 0% 60%); font-size: 12px;
+      &::before, &::after { content: ''; flex: 1; height: 1px; background: hsl(0 0% 90%); } }
+    .btn-sso {
+      width: 100%; padding: 10px 14px; font-size: 13px; font-weight: 500;
+      color: hsl(0 0% 12%); background: #fff; border: 1px solid hsl(0 0% 85%);
+      border-radius: 7px; cursor: pointer;
+      &:hover { background: hsl(0 0% 97%); border-color: hsl(0 0% 75%); }
+    }
   `]
 })
 export class LoginComponent implements OnInit {
@@ -216,7 +231,11 @@ export class LoginComponent implements OnInit {
   loading = false;
   error = '';
 
+  ssoEnabled = false;
+  ssoProvider = 'SSO';
+
   private returnUrl = '/gmp';
+  private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   constructor(
     private auth: AuthService,
@@ -229,6 +248,28 @@ export class LoginComponent implements OnInit {
     if (this.route.snapshot.queryParamMap.get('mode') === 'register') {
       this.mode = 'register';
     }
+    if (!this.isBrowser) return;
+
+    // The SSO callback redirects back here with the JWT in the URL fragment.
+    const hash = window.location.hash || '';
+    const match = hash.match(/sso_token=([^&]+)/);
+    if (match) {
+      this.loading = true;
+      this.auth.completeSsoLogin(decodeURIComponent(match[1])).subscribe({
+        next: () => { window.location.hash = ''; this.router.navigateByUrl(this.returnUrl); },
+        error: () => { this.loading = false; this.error = 'SSO sign-in failed.'; },
+      });
+      return;
+    }
+
+    this.auth.ssoConfig().subscribe(cfg => {
+      this.ssoEnabled = cfg.enabled;
+      this.ssoProvider = cfg.provider || 'SSO';
+    });
+  }
+
+  ssoLogin(): void {
+    if (this.isBrowser) window.location.href = '/api/auth/sso/login';
   }
 
   setMode(mode: 'login' | 'register'): void {
