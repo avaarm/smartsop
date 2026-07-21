@@ -16,13 +16,14 @@ Legend: ✅ built · 🚧 in progress · ⬜ planned
 | Protocol with title, abstract/description, author, version | ✅ |
 | Ordered steps with instruction text | ✅ |
 | Step components: Duration, Safety Information, Reagent | ✅ (basic) |
+| **Typed component library** (LOTO/GMP: 13 blocks — Duration, Temperature, Amount, Equipment, Reagent, Safety, PPE, Hazard, Verification, Critical Control, etc.) with icons + flags | ✅ |
 | Add / reorder / delete steps | ✅ |
 | **Sections** + **sub-steps** (`1`, `2`, `2.1`) with rolled-up durations | ⬜ |
 | **Full component set (28)**: `Amount`, `Sample`, `Concentration`, `Temperature`, `Duration`, `Protocol`, `Document`, `Equipment`, `Reagent`, `Command`, `Citation`, `Dataset`, `Software`, `Note`, `Safety Information`, `Expected Result`, `Geo. Coordinates`, `Centrifugation`, `Smart Component`, `Shaker`, `Spectral Data`, `Goto`, `PH`, `Cost`, `Pressure`, `Thickness`, `Relative Humidity`, `Well Plate Map` | ⬜ |
 | Components as **inline atoms** in step prose (`🧪 10 µL`, `⏱ 00:05:00`, `🌡 60 °C`) | ⬜ |
 | Reagent picker w/ vendor catalog, `Catalog #`, `CAS number`, `RRID`, `Home-made` | ⬜ |
 | Equipment card (`NAME` / `TYPE` / `BRAND`) | ⬜ |
-| **Step cases** (conditional branching: `Choose a case`) | ⬜ |
+| **Step cases** (conditional branching: `Choose a case` → jump / halt / continue) | ✅ |
 | Rich text toolbar (bold/italic/link/image/video/attachment/code/table/lists) | ⬜ |
 | Doc tabs: `Description`, `Guidelines & Warnings`, `References`, `Materials`, `Acknowledgements`, `Troubleshooting` | ⬜ |
 | Autosave (`Saving…` → `All changes saved`) | ✅ (save on blur) |
@@ -102,6 +103,15 @@ Legend: ✅ built · 🚧 in progress · ⬜ planned
 | _Existing: DOCX generation engine (reuse for protocol export)_ | ✅ |
 | Settings → `Apps` integration toggles | ⬜ |
 | Settings: `General`, `Security and Privacy`, `Email Notifications`, `Workspaces`, `Active sessions` | ⬜ (partial) |
+| **SSO** (OIDC/OAuth2 — Okta, Azure AD, Google, Auth0, Keycloak): login button, IdP redirect, callback, auto-provision users | ✅ |
+
+## 8. Analytics & reporting
+
+| Feature | Status |
+|---|---|
+| **Analytics dashboard**: total protocols/runs, completion rate, outcome breakdown (Done/Fail/Skip), avg run duration, runs-by-week trend, top protocols | ✅ |
+| Deviation / failure reporting drill-down | ⬜ |
+| Per-user / per-workspace activity reports | ⬜ |
 
 ---
 
