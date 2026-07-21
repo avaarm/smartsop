@@ -324,9 +324,27 @@ class Protocol(db.Model):
 
     title = db.Column(db.String(500), nullable=False)
     description = db.Column(db.Text, default="")   # abstract / overview
-    status = db.Column(db.String(50), default="draft")   # draft, published
+
+    # protocol | sop | gmp_sop — a GMP SOP is a controlled document with an
+    # enforced review/approval lifecycle and e-signatures.
+    protocol_type = db.Column(db.String(30), default="protocol")
+
+    # Controlled-document lifecycle: draft -> in_review -> approved -> effective
+    # -> retired. (Legacy "published" is treated as effective.)
+    status = db.Column(db.String(50), default="draft")
     version = db.Column(db.Integer, default=1, nullable=False)
     created_by = db.Column(db.String(255), default="")   # denormalized author name
+
+    # SOP control metadata
+    sop_number = db.Column(db.String(100), default="")
+    department = db.Column(db.String(200), default="")
+    effective_date = db.Column(db.String(30), default="")   # ISO date, set when made effective
+    review_date = db.Column(db.String(30), default="")      # next periodic review
+
+    # Versioning chain: a new version points at the id it supersedes. Kept as a
+    # plain integer (soft reference) to avoid a self-referential FK, which
+    # SQLite's batch ALTER can't add cleanly.
+    supersedes_id = db.Column(db.Integer, nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -335,6 +353,10 @@ class Protocol(db.Model):
         "ProtocolStep", backref="protocol", lazy="dynamic",
         cascade="all, delete-orphan", order_by="ProtocolStep.order_index",
     )
+    signoffs = db.relationship(
+        "ProtocolSignoff", backref="protocol", lazy="dynamic",
+        cascade="all, delete-orphan", order_by="ProtocolSignoff.signed_at",
+    )
 
     def to_dict(self, include_steps=False):
         d = {
@@ -342,16 +364,57 @@ class Protocol(db.Model):
             "account_id": self.account_id,
             "title": self.title,
             "description": self.description,
+            "protocol_type": self.protocol_type,
             "status": self.status,
             "version": self.version,
             "created_by": self.created_by,
+            "sop_number": self.sop_number,
+            "department": self.department,
+            "effective_date": self.effective_date,
+            "review_date": self.review_date,
+            "supersedes_id": self.supersedes_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "step_count": self.steps.count(),
+            "signoffs": [s.to_dict() for s in self.signoffs],
         }
         if include_steps:
             d["steps"] = [s.to_dict() for s in self.steps]
         return d
+
+
+class ProtocolSignoff(db.Model):
+    """An electronic signature on a protocol version (21 CFR Part 11 style).
+
+    Records who signed, when, in what role, the *meaning* of the signature, and
+    the decision — an immutable audit trail of the review/approval lifecycle.
+    """
+
+    __tablename__ = "protocol_signoffs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    protocol_id = db.Column(db.Integer, db.ForeignKey("protocols.id"), nullable=False)
+
+    role = db.Column(db.String(30), nullable=False)      # author, reviewer, approver
+    decision = db.Column(db.String(30), nullable=False)  # approved, rejected
+    meaning = db.Column(db.String(300), default="")      # meaning-of-signature statement
+    comment = db.Column(db.Text, default="")
+
+    signed_by = db.Column(db.String(255), default="")    # denormalized name at signing
+    signed_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    signed_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "protocol_id": self.protocol_id,
+            "role": self.role,
+            "decision": self.decision,
+            "meaning": self.meaning,
+            "comment": self.comment,
+            "signed_by": self.signed_by,
+            "signed_at": self.signed_at.isoformat() if self.signed_at else None,
+        }
 
 
 class ProtocolRun(db.Model):

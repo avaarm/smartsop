@@ -10,10 +10,16 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify, g
 from sqlalchemy import func
 
-from .database import db, Protocol, ProtocolStep, ProtocolRun, ProtocolRunStep
-from .auth import require_account_access
+from .database import db, Protocol, ProtocolStep, ProtocolRun, ProtocolRunStep, ProtocolSignoff
+from .auth import require_account_access, has_account_role
 
 RUN_STEP_STATUSES = ("pending", "done", "failed", "skipped")
+PROTOCOL_TYPES = ("protocol", "sop", "gmp_sop")
+MANAGER_ROLES = ("owner", "admin")
+DEFAULT_MEANING = {
+    "reviewer": "Reviewed for accuracy and completeness",
+    "approver": "Approved for use",
+}
 
 logger = logging.getLogger(__name__)
 
@@ -106,11 +112,14 @@ def update_protocol(account_id, protocol_id):
         protocol.title = title[:500]
     if "description" in data:
         protocol.description = data.get("description") or ""
-    if "status" in data:
-        status = (data.get("status") or "").lower()
-        if status not in ("draft", "published"):
-            return jsonify({"success": False, "error": "status must be draft or published"}), 400
-        protocol.status = status
+    if "protocol_type" in data:
+        ptype = (data.get("protocol_type") or "").lower()
+        if ptype not in PROTOCOL_TYPES:
+            return jsonify({"success": False, "error": f"protocol_type must be one of {', '.join(PROTOCOL_TYPES)}"}), 400
+        protocol.protocol_type = ptype
+    for field in ("sop_number", "department", "review_date"):
+        if field in data:
+            setattr(protocol, field, (data.get(field) or "")[:200])
     db.session.commit()
     return jsonify({"success": True, "protocol": protocol.to_dict(include_steps=True)})
 
@@ -325,3 +334,155 @@ def finish_run(account_id, run_id):
     run.completed_at = datetime.utcnow()
     db.session.commit()
     return jsonify({"success": True, "run": run.to_dict(include_steps=True)})
+
+
+# ── Controlled-document lifecycle (SOP review / approval) ──
+
+def _actor_name():
+    return (g.current_user.name or "").strip() or g.current_user.email
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/submit", methods=["POST"])
+@require_account_access
+def submit_protocol(account_id, protocol_id):
+    """Move a draft into review."""
+    protocol = _get_protocol(account_id, protocol_id)
+    if protocol is None:
+        return jsonify({"success": False, "error": "Protocol not found"}), 404
+    if protocol.status not in ("draft", "rejected"):
+        return jsonify({"success": False, "error": "Only a draft can be submitted for review"}), 400
+    if protocol.steps.count() == 0:
+        return jsonify({"success": False, "error": "Add at least one step before submitting"}), 400
+    protocol.status = "in_review"
+    db.session.commit()
+    return jsonify({"success": True, "protocol": protocol.to_dict(include_steps=True)})
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/sign", methods=["POST"])
+@require_account_access
+def sign_protocol(account_id, protocol_id):
+    """Apply an electronic signature (review or approval).
+
+    Identity is re-verified with the signer's password, and the signature
+    records who / when / role / meaning / decision — an immutable audit trail.
+    """
+    protocol = _get_protocol(account_id, protocol_id)
+    if protocol is None:
+        return jsonify({"success": False, "error": "Protocol not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    role = (data.get("role") or "").lower()
+    decision = (data.get("decision") or "approved").lower()
+    if role not in ("reviewer", "approver"):
+        return jsonify({"success": False, "error": "role must be reviewer or approver"}), 400
+    if decision not in ("approved", "rejected"):
+        return jsonify({"success": False, "error": "decision must be approved or rejected"}), 400
+    if protocol.status != "in_review":
+        return jsonify({"success": False, "error": "This protocol is not open for signing"}), 400
+    # Approval is a manager action.
+    if role == "approver" and not has_account_role(g.current_user, account_id, MANAGER_ROLES):
+        return jsonify({"success": False, "error": "Only owners or admins can approve"}), 403
+
+    # 21 CFR Part 11: confirm the signer's identity at the moment of signing.
+    password = data.get("password") or ""
+    if not g.current_user.check_password(password):
+        return jsonify({"success": False, "error": "Invalid password — e-signature not applied"}), 401
+
+    signoff = ProtocolSignoff(
+        protocol_id=protocol_id,
+        role=role,
+        decision=decision,
+        meaning=(data.get("meaning") or DEFAULT_MEANING.get(role, ""))[:300],
+        comment=data.get("comment") or "",
+        signed_by=_actor_name(),
+        signed_by_user_id=g.current_user.id,
+    )
+    db.session.add(signoff)
+
+    # An approver's decision moves the document.
+    if role == "approver":
+        protocol.status = "approved" if decision == "approved" else "rejected"
+
+    db.session.commit()
+    return jsonify({"success": True, "protocol": protocol.to_dict(include_steps=True)})
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/make-effective", methods=["POST"])
+@require_account_access
+def make_effective(account_id, protocol_id):
+    """Release an approved SOP as the effective (current) version."""
+    protocol = _get_protocol(account_id, protocol_id)
+    if protocol is None:
+        return jsonify({"success": False, "error": "Protocol not found"}), 404
+    if not has_account_role(g.current_user, account_id, MANAGER_ROLES):
+        return jsonify({"success": False, "error": "Only owners or admins can release an SOP"}), 403
+    if protocol.status != "approved":
+        return jsonify({"success": False, "error": "Only an approved protocol can be made effective"}), 400
+
+    data = request.get_json(silent=True) or {}
+    protocol.status = "effective"
+    protocol.effective_date = (data.get("effective_date") or datetime.utcnow().date().isoformat())[:30]
+    if data.get("review_date"):
+        protocol.review_date = data["review_date"][:30]
+
+    # A new effective version retires the one it supersedes.
+    if protocol.supersedes_id:
+        prior = Protocol.query.filter_by(id=protocol.supersedes_id, account_id=account_id).first()
+        if prior and prior.status == "effective":
+            prior.status = "retired"
+
+    db.session.commit()
+    return jsonify({"success": True, "protocol": protocol.to_dict(include_steps=True)})
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/retire", methods=["POST"])
+@require_account_access
+def retire_protocol(account_id, protocol_id):
+    protocol = _get_protocol(account_id, protocol_id)
+    if protocol is None:
+        return jsonify({"success": False, "error": "Protocol not found"}), 404
+    if not has_account_role(g.current_user, account_id, MANAGER_ROLES):
+        return jsonify({"success": False, "error": "Only owners or admins can retire an SOP"}), 403
+    if protocol.status not in ("effective", "approved"):
+        return jsonify({"success": False, "error": "Only an effective or approved protocol can be retired"}), 400
+    protocol.status = "retired"
+    db.session.commit()
+    return jsonify({"success": True, "protocol": protocol.to_dict(include_steps=True)})
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/new-version", methods=["POST"])
+@require_account_access
+def new_version(account_id, protocol_id):
+    """Draft a new version: clone the protocol + steps, bump version, supersede."""
+    source = _get_protocol(account_id, protocol_id)
+    if source is None:
+        return jsonify({"success": False, "error": "Protocol not found"}), 404
+
+    clone = Protocol(
+        account_id=account_id,
+        title=source.title,
+        description=source.description,
+        protocol_type=source.protocol_type,
+        status="draft",
+        version=source.version + 1,
+        created_by=_actor_name(),
+        sop_number=source.sop_number,
+        department=source.department,
+        review_date=source.review_date,
+        supersedes_id=source.id,
+    )
+    db.session.add(clone)
+    db.session.flush()
+    for step in source.steps:
+        db.session.add(ProtocolStep(
+            protocol_id=clone.id,
+            order_index=step.order_index,
+            section=step.section,
+            title=step.title,
+            description=step.description,
+            duration_seconds=step.duration_seconds,
+            warning=step.warning,
+            reagents_json=step.reagents_json,
+        ))
+    db.session.commit()
+    return jsonify({"success": True, "protocol": clone.to_dict(include_steps=True)}), 201

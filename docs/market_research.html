@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SmartSOP — Competitive Strategy & Feature Roadmap</title>
+<style>
+  :root{
+    --ink:#111827; --ink-2:#374151; --muted:#6b7280; --line:#e5e7eb;
+    --bg:#fbfbfd; --card:#ffffff; --accent:#0f766e; --accent-2:#0e7490;
+    --warn:#b45309; --good:#047857; --bad:#b91c1c;
+    --chip:#f1f5f9;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"Inter",sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 32px 96px}
+  h1{font-size:34px;line-height:1.15;margin:0 0 6px;letter-spacing:-.02em}
+  h2{font-size:24px;line-height:1.2;margin:56px 0 12px;letter-spacing:-.01em;
+     padding-bottom:8px;border-bottom:1px solid var(--line)}
+  h3{font-size:18px;line-height:1.25;margin:28px 0 8px;color:var(--ink)}
+  h4{font-size:15px;margin:18px 0 6px;color:var(--ink-2);text-transform:uppercase;letter-spacing:.06em}
+  p{margin:0 0 12px;color:var(--ink-2)}
+  ul,ol{margin:8px 0 12px 22px;padding:0;color:var(--ink-2)}
+  li{margin:4px 0}
+  .lede{font-size:17px;color:var(--ink-2);max-width:900px}
+  .meta{color:var(--muted);font-size:13px;margin:6px 0 28px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+        padding:22px 24px;margin:18px 0}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .chip{display:inline-block;background:var(--chip);color:var(--ink-2);
+        border-radius:999px;padding:3px 10px;font-size:12px;margin:2px 4px 2px 0}
+  .tag-must{background:#fee2e2;color:#7f1d1d}
+  .tag-should{background:#fef3c7;color:#78350f}
+  .tag-nice{background:#dcfce7;color:#065f46}
+  .tag-ai{background:#e0e7ff;color:#3730a3}
+  table{width:100%;border-collapse:collapse;margin:14px 0;background:var(--card);
+        border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:14px}
+  th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f8fafc;color:var(--ink);font-weight:600}
+  tr:last-child td{border-bottom:none}
+  .yes{color:var(--good);font-weight:600}
+  .no{color:var(--bad);font-weight:600}
+  .partial{color:var(--warn);font-weight:600}
+  .callout{border-left:4px solid var(--accent);background:#f0fdfa;
+           padding:12px 16px;margin:16px 0;border-radius:8px;color:var(--ink-2)}
+  .warn{border-left-color:var(--warn);background:#fffbeb}
+  .quote{border-left:3px solid var(--line);padding:6px 14px;color:var(--muted);
+         font-style:italic;margin:12px 0}
+  code{background:#f3f4f6;padding:1px 6px;border-radius:4px;font-size:.92em}
+  .kbd{display:inline-block;padding:1px 8px;border:1px solid var(--line);
+       border-bottom-width:2px;border-radius:6px;background:#fff;font-size:12px}
+  a{color:var(--accent-2)}
+  .hero{background:linear-gradient(135deg,#0f766e 0%,#0e7490 100%);
+        color:#fff;border-radius:18px;padding:28px 32px;margin-bottom:20px}
+  .hero h1{color:#fff}
+  .hero p{color:#e0f2fe;margin:0}
+  .num{font-size:34px;font-weight:700;color:var(--accent);line-height:1}
+  .num-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .row .stat{flex:1;min-width:180px}
+  .toc{background:#f8fafc;border:1px solid var(--line);border-radius:12px;
+       padding:16px 20px;margin:8px 0 24px;font-size:14px}
+  .toc a{text-decoration:none;color:var(--ink-2);display:block;padding:3px 0}
+  .toc a:hover{color:var(--accent)}
+  .foot{color:var(--muted);font-size:12px;margin-top:60px;padding-top:20px;border-top:1px solid var(--line)}
+  @media (max-width:720px){
+    .grid,.grid-3{grid-template-columns:1fr}
+    .wrap{padding:28px 18px 60px}
+    h1{font-size:26px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hero">
+  <h1>SmartSOP — Competitive Strategy & Feature Roadmap</h1>
+  <p>Market research + prioritized recommendations to close the gap with protocols.io and the wider SOP/procedure software landscape.</p>
+</div>
+<div class="meta">Prepared July 17, 2026 · scope: operational SOPs, LOTO, safety, industrial &amp; field procedures</div>
+
+<div class="toc">
+  <strong>Contents</strong>
+  <a href="#tldr">1. Executive summary (TL;DR)</a>
+  <a href="#landscape">2. The market SmartSOP is actually in</a>
+  <a href="#protocols">3. Deep dive — protocols.io (primary comp)</a>
+  <a href="#others">4. The rest of the competitive set</a>
+  <a href="#matrix">5. Feature parity matrix</a>
+  <a href="#winlose">6. Where SmartSOP wins today &amp; where it loses</a>
+  <a href="#roadmap">7. Prioritized feature roadmap</a>
+  <a href="#ui">8. UI / UX recommendations</a>
+  <a href="#ai">9. AI capabilities to ship</a>
+  <a href="#compliance">10. Compliance &amp; enterprise readiness</a>
+  <a href="#positioning">11. Positioning &amp; go-to-market angle</a>
+  <a href="#risks">12. Risks &amp; things to validate</a>
+</div>
+
+<h2 id="tldr">1. Executive summary (TL;DR)</h2>
+<p>SmartSOP already ships the right <em>foundational</em> product for its niche: a mobile-first SOP builder for industrial and safety-critical work, with photo/video capture, QR codes for equipment, LOTO-specific templates, JHA (Job Hazard Analysis), and simple team pricing. The site says as much — LOTO templates, mobile lockout log, photo/video per step, QR generation, PDF export, in-app messaging, and role-based dev/review. That's a legitimate wedge and it maps cleanly to the "operational SOP" audience that most competitors underserve.</p>
+<p>The problem is that four categories are converging on that same buyer and each brings something SmartSOP doesn't yet have:</p>
+<div class="grid">
+  <div class="card">
+    <h4>What's converging</h4>
+    <ul>
+      <li><strong>protocols.io</strong> — an editor with rich <em>components</em> (typed steps, timers, reagents, safety icons), a proper <em>Run mode</em>, versioning with rollback, a task manager tied to the calendar, and an increasingly aggressive AI layer (importer, troubleshooter, translator, discussion summarizer).</li>
+      <li><strong>SafetyCulture / iAuditor</strong> — mobile inspections, offline mode, corrective actions, QR-triggered issue reporting, and enterprise integrations (Tableau, PowerBI, SAP).</li>
+      <li><strong>MaintainX</strong> — dynamic SOPs with <em>nested logic</em>, procedure-score targets, mobile work-order execution, and 24/7 chat support.</li>
+      <li><strong>Whale / Scribe / Tango / Vidocu / Trupeer / Guidde</strong> — AI capture of screen or video that automatically generates step-by-step SOPs.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>What SmartSOP must add to compete</h4>
+    <ul>
+      <li>A real <strong>Run mode</strong> with progress state, timers, e-signature, and immutable run records — not just "PDF export of the doc."</li>
+      <li><strong>Dynamic / conditional steps</strong> (branching by hazard, equipment, or answer).</li>
+      <li><strong>AI SOP generation</strong> — from a phone video, an existing PDF, or a spoken narration.</li>
+      <li><strong>Offline mobile execution</strong> (the SafetyCulture standard).</li>
+      <li><strong>Approval workflow + audit trail</strong> that maps to 21 CFR Part 11, ISO 9001, and OSHA docs.</li>
+      <li><strong>Reagent / consumables / equipment library</strong> (call it "Assets") that SOP steps can reference by ID and QR.</li>
+      <li><strong>Analytics</strong> — who completed which SOP, avg. run time, deviations, expiring competencies.</li>
+    </ul>
+  </div>
+</div>
+<div class="callout">
+<strong>Strategic bet.</strong> Don't try to out-notebook Benchling and don't try to out-audit iAuditor. Own the "<em>execute a hazardous or high-consequence field procedure and prove you did it right</em>" wedge. That is a defensible position: protocols.io is science-lab shaped, iAuditor is inspection-shaped, MaintainX is work-order-shaped, Scribe/Whale are desk-shaped. Nobody credibly owns "the mobile app you hand to the tech who is about to lock out a switchgear." That is SmartSOP's opening.
+</div>
+
+<h2 id="landscape">2. The market SmartSOP is actually in</h2>
+<p>The SOP-adjacent software market is not one market — it's four overlapping ones. Understanding which one you're playing in tells you which features are table stakes and which are decorative.</p>
+
+<table>
+  <thead>
+    <tr><th>Segment</th><th>What it optimizes for</th><th>Representative tools</th><th>SmartSOP fit</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Scientific / lab protocols</strong></td>
+      <td>Reproducibility of experimental methods, DOI-published methods, ELN integration.</td>
+      <td>protocols.io, Benchling, LabArchives, SciNote, eLabFTW, Colabra, Labguru</td>
+      <td>Adjacent — SmartSOP could compete in <em>industrial biotech &amp; pharma manufacturing</em> where science meets safety, but the core lab-notebook wedge is crowded and academic.</td>
+    </tr>
+    <tr>
+      <td><strong>Operational / field SOPs, LOTO, EHS</strong></td>
+      <td>Front-line workers executing hazardous or regulated procedures on shift.</td>
+      <td>SafetyCulture (iAuditor), MaintainX, Brady LINK360, VelocityEHS, Sphera, KPA EHS, Fabrico</td>
+      <td><strong>Core market.</strong> This is where SmartSOP sits today (LOTO, JHA, PPE, authorized persons, mobile capture).</td>
+    </tr>
+    <tr>
+      <td><strong>Office / knowledge-worker SOPs &amp; training</strong></td>
+      <td>Onboarding, cross-training, process handoff, quiz-based competency.</td>
+      <td>Trainual, SweetProcess, Whale, Process Street, SystemHUB, Waybook, Way We Do, Tallyfy, ProcedureFlow</td>
+      <td>Marginal — different buyer (Ops/HR/Franchise), but the UI patterns and the AI-authoring features are directly borrowable.</td>
+    </tr>
+    <tr>
+      <td><strong>AI SOP capture / video-to-doc</strong></td>
+      <td>Turning screen recordings, phone videos, or spoken walk-throughs into a formatted SOP with almost no typing.</td>
+      <td>Scribe, Tango, Guidde, Vidocu, Trupeer, MagicHow, Kommodo, Screenapp, Glitter, Clevera</td>
+      <td><strong>Existential.</strong> Every buyer in every segment now expects "record it once, get an SOP." SmartSOP must acquire this capability or partner for it.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="protocols">3. Deep dive — protocols.io (the primary competitor)</h2>
+<p>Even though protocols.io's origin story is scientific methods, they've quietly built the reference implementation of what a modern SOP platform looks like. Their product is the specific yardstick your engineer should measure SmartSOP against.</p>
+
+<h3>3.1 The three surfaces they lead with</h3>
+<p>Their marketing site organizes the product around three surfaces — <strong>Editor</strong>, <strong>Workspaces</strong>, and <strong>File Manager</strong>. That trichotomy is worth stealing verbatim: it forces a clean mental model for engineers and buyers.</p>
+<div class="grid-3">
+  <div class="card">
+    <h4>Editor</h4>
+    <ul>
+      <li>Create protocols, documents, or collections</li>
+      <li><strong>Advanced components</strong> for precision (typed step blocks: reagents, timers, tables, safety icons, section duration)</li>
+      <li>Concurrent (Google-Docs-style) editing</li>
+      <li>Inline commenting on any block; "pinned by author" comments</li>
+      <li>Detailed history &amp; rollback</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Workspaces</h4>
+    <ul>
+      <li>Shared reagent / file library across teammates</li>
+      <li>Workspace-level commenting</li>
+      <li><strong>Fully integrated task manager</strong> (calendar-based)</li>
+      <li>Granular sharing (private → workspace → public)</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>File Manager</h4>
+    <ul>
+      <li>Any file type, granular permissions</li>
+      <li>Archiving, auditing, exporting</li>
+      <li>Native connectors to <strong>Dropbox, OneDrive, Box</strong></li>
+      <li>Enterprise backup</li>
+    </ul>
+  </div>
+</div>
+
+<h3>3.2 Run mode — the feature SmartSOP most needs</h3>
+<p>protocols.io's Run mode is the concept that unlocks everything else. Every published protocol can be "run" as an interactive checklist. When the run finishes, the changes and observations captured during the run are recorded in the File Manager as a <strong>run record</strong> — an immutable artifact tied to a specific version of the SOP, a specific user, and a specific timestamp. In an industrial SmartSOP context, that run record <em>is</em> your OSHA / ISO / audit evidence. Without it, SmartSOP is a document editor; with it, SmartSOP becomes a system of record.</p>
+
+<h3>3.3 The Publish surface</h3>
+<p>Publishing on protocols.io mints a DOI and archives the document with CLOCKSS and the Internet Archive. You don't need DOIs, but the pattern is worth copying — publishing a <strong>signed, versioned, controlled SOP</strong> that supersedes the previous version and preserves the previous version for audit is exactly what quality/regulatory buyers look for.</p>
+
+<h3>3.4 Advanced AI (their current AI stack, verbatim from the product page)</h3>
+<table>
+  <thead><tr><th>Feature</th><th>What it does</th><th>Implication for SmartSOP</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Protocol Importer</strong></td>
+      <td>Ingests Word / PDF and outputs a structured protocol with typed step blocks. Preserves formatting; slots into version history.</td>
+      <td><strong>Highest priority AI feature.</strong> Every prospect has a filing cabinet of Word/PDF SOPs. The vendor who imports them cleanly wins the sale.</td>
+    </tr>
+    <tr>
+      <td><strong>Protocol Troubleshooter</strong></td>
+      <td>AI suggests fixes for failed runs / unexpected results, based on community insights.</td>
+      <td>SmartSOP's version = "AI Deviation Assistant" that helps a tech decide what to do when the step failed (log deviation, retry, escalate, halt).</td>
+    </tr>
+    <tr>
+      <td><strong>Public Protocol Translator</strong></td>
+      <td>All public protocols auto-available in EN, ZH, FR, DE, JA, ES.</td>
+      <td>Bilingual/EN-ES is close to <em>required</em> for US industrial, agriculture, hospitality, and construction crews. Ship this.</td>
+    </tr>
+    <tr>
+      <td><strong>Multilingual Protocol Translator</strong></td>
+      <td>Translate any <em>private</em> protocol into 36 languages.</td>
+      <td>Enterprise multi-site play. Ship after EN-ES v1.</td>
+    </tr>
+    <tr>
+      <td><strong>Protocol Discoverer</strong></td>
+      <td>Semantic search that interprets intent, not just keywords.</td>
+      <td>Immediately useful — "find the lockout procedure for the west-plant compressor" should return the right SOP even if the doc says "reciprocating air unit."</td>
+    </tr>
+    <tr>
+      <td><strong>Protocol Discussion Summarizer</strong></td>
+      <td>Condenses comment threads into "here's the current thinking + open questions."</td>
+      <td>Nice-to-have; useful once you have real collaborative editing volume.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>3.5 Editor "advanced components" — the block library</h3>
+<p>protocols.io calls out these purpose-built blocks that most Word docs cannot express: reagents (with concentration/CAS), timers (with countdown at run time), section durations, temperature ranges, safety icons (toxic, biohazard), tables, expected results. When someone runs the protocol, timers actually count down and reagents actually appear as a materials list at the top of the run.</p>
+<div class="callout">
+For SmartSOP the equivalent block library should include: <strong>PPE required</strong>, <strong>Energy source</strong>, <strong>Isolation device</strong>, <strong>Authorized person(s)</strong>, <strong>Torque / pressure / temperature spec</strong>, <strong>Verification photo required</strong>, <strong>Second-signature required</strong>, <strong>Lockout tag ID</strong>, <strong>Hazard class</strong>, <strong>Return-to-service check</strong>. Turning these from "text in a paragraph" into first-class typed blocks is the single biggest UX and value leap you can make.
+</div>
+
+<h3>3.6 The commercial packaging</h3>
+<p>Three tiers, and the pattern is worth copying almost verbatim.</p>
+<div class="grid-3">
+  <div class="stat">
+    <div class="num-label">Free</div>
+    <div style="margin:6px 0"><strong>Open Research</strong></div>
+    <p style="font-size:13px;margin:0">Up to 2 private protocols · unlimited public with DOIs · long-term preservation · publishing use case only.</p>
+  </div>
+  <div class="stat">
+    <div class="num-label">Team</div>
+    <div style="margin:6px 0"><strong>Premium (Contact sales)</strong></div>
+    <p style="font-size:13px;margin:0">Unlimited private protocols · private workspace · shared run records · calendar task manager · reagent manager · training · export/backup.</p>
+  </div>
+  <div class="stat">
+    <div class="num-label">Enterprise</div>
+    <div style="margin:6px 0"><strong>Enterprise (Contact sales)</strong></div>
+    <p style="font-size:13px;margin:0">Everything above + dedicated CSM · protocol import service · SAML SSO · VPC · HIPAA · <strong>21 CFR Part 11 audit trail + e-signature</strong> · 4 training webinars/yr.</p>
+  </div>
+</div>
+<p>Your current pricing (Individual $49 → XL $399 with published per-seat pricing) is <em>friendlier</em> than protocols.io's, which is a real advantage for SMB acquisition. The gap is the <strong>enterprise SKU</strong>: the moment a prospect asks about SSO, VPC, audit trail, or 21 CFR Part 11, you need a credible answer or you lose the deal.</p>
+
+<h3>3.7 What the webinar screenshots likely covered (best-guess based on their known 2025-2026 releases)</h3>
+<div class="callout warn">
+Your webinar screenshots are on iCloud and my session cannot force them to download. The title of protocols.io's recent feature webinar is <em>"'Pinned by author' comments, group reagent manager, toxic icon, sections duration, and more."</em> Based on that title alone, the deck almost certainly walks through: (1) pinning canonical answers inside comment threads; (2) a <strong>group-scope reagent manager</strong> (shared inventory across the workspace); (3) new safety icons (toxic, biohazard); (4) per-section duration estimates for planning; (5) probably Advanced AI updates. Once you open the folder in Finder and let iCloud download the images, I can transcribe them slide-by-slide and update this report with the specifics.
+</div>
+
+<h2 id="others">4. The rest of the competitive set</h2>
+
+<h3>4.1 SafetyCulture / iAuditor — the incumbent in your buyer's pocket</h3>
+<p>iAuditor is likely already installed on your target buyer's phone. It nails the mobile inspection form pattern with <strong>offline mode</strong>, drag-and-drop template builder, photo/video evidence, corrective-action assignment with due dates and priorities, QR-code-triggered issue reporting from anyone (even non-users), and real-time analytics dashboards. Enterprise integrations reach Tableau, PowerBI, and SAP. iAuditor calls its cross-team comms feature "Heads Up" (video messaging). For SmartSOP the takeaway is that <strong>offline execution</strong>, <strong>corrective actions</strong>, and <strong>QR-scan-to-report</strong> are table stakes in this segment, not differentiators.</p>
+<p>Where iAuditor is weak (per third-party LOTO reviews): it is described as "an audit tool, not an execution tool" — it documents compliance after work has started, rather than gating unsafe starts. That is <em>exactly</em> where SmartSOP can win.</p>
+
+<h3>4.2 MaintainX — the CMMS that ate SOPs</h3>
+<p>MaintainX now bundles SOPs into work-order execution with <strong>nested logic fields</strong> (conditional steps that appear based on user input), <strong>Procedure Score</strong> targets so you can benchmark how well SOPs are being executed, and a mobile-first UI with 24/7 in-app chat support. Their positioning is "SOPs live inside work orders." SmartSOP should ship conditional/branching steps to close this gap — a lockout procedure for a 480V panel and a 4160V panel diverge, and forcing a single linear SOP is a bug, not a feature.</p>
+
+<h3>4.3 SweetProcess, Trainual, Whale, Process Street, Waybook, SystemHUB, Way We Do</h3>
+<p>These are the office-SOP tools. The features they've normalized that SmartSOP should assume are expected: <strong>role-based access with real-time collaborative editing</strong>, <strong>version control with change tracking</strong>, <strong>process maps / visual flowcharts</strong>, <strong>quiz-based competency verification with pass/fail tracking</strong>, <strong>completion analytics</strong> (who read it, who acknowledged it, how long they took), <strong>reminders + notifications</strong>, and <strong>customizable dashboards</strong>. Whale specifically emphasizes <strong>AI-assisted writing</strong> and <strong>auto-generated quizzes from a doc</strong>. Way We Do popularized the phrase "activated checklist" for a policy that has been turned into a runnable procedure — exactly SmartSOP's product story.</p>
+
+<h3>4.4 Video-to-SOP tools — Scribe, Tango, Vidocu, Trupeer, Guidde, MagicHow, Kommodo, Screenapp</h3>
+<p>This is the fastest-moving segment and the one most likely to reshape user expectations for SmartSOP in the next 12 months. Scribe and Tango pioneered "install extension → do the task → get a formatted SOP with annotated screenshots." Vidocu goes further: upload any video (screen, Zoom, phone), get back both a written SOP <em>and</em> a polished tutorial video with AI voiceover in 30+ languages and translated subtitles. Trupeer generates presenter-style training videos with AI avatars from a screen recording. Guidde produces narrated how-to videos. IT Glue's "Smart SOP Generator" (Cooper Copilot) already brands its capture-and-generate flow with the "Smart SOP" name — a namespace collision worth noting.</p>
+<div class="callout warn">
+<strong>Name collision.</strong> "Smart SOP" is used by at least three products in this category (Kaseya IT Glue's Smart SOP Generator; a Microsoft AppSource app; the smartsop.com you own). If the app is early enough, consider whether the brand is defensible in your target vertical, or whether a modifier ("SmartSOP for Safety," "SmartSOP Field," "SmartSOP LOTO") sharpens positioning.
+</div>
+
+<h3>4.5 The scientific ELN adjacency — Benchling, LabArchives, SciNote, Colabra, eLabFTW, Labguru</h3>
+<p>Not directly comparable, but two takeaways matter. First, Benchling's product design principle — that data logging from instruments should be automatic and the notebook is where science gets <em>kept</em>, not where it gets <em>done</em> — is a warning: don't build SmartSOP as a mode the tech has to reinvent every shift. Second, none of these ELNs seriously address <strong>mobile bench execution</strong>, <strong>21 CFR Part 11 e-signature at the point of work</strong>, or <strong>offline runs</strong>. That is <em>the same gap</em> operational tools like iAuditor leave open. SmartSOP owns the intersection.</p>
+
+<h2 id="matrix">5. Feature parity matrix</h2>
+<p>Columns are the six most relevant comps. Rows are the features I'd have your engineer scope. <span class="yes">●</span> = has it, <span class="partial">◐</span> = partial, <span class="no">○</span> = missing.</p>
+
+<table>
+<thead><tr>
+<th>Feature</th>
+<th>SmartSOP <em>today</em></th>
+<th>protocols.io</th>
+<th>iAuditor</th>
+<th>MaintainX</th>
+<th>SweetProcess</th>
+<th>Whale / Scribe</th>
+</tr></thead>
+<tbody>
+<tr><td>Mobile app (iOS/Android)</td><td class="yes">●</td><td class="partial">◐</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="partial">◐</td></tr>
+<tr><td>Offline execution</td><td class="no">○</td><td class="no">○</td><td class="yes">●</td><td class="yes">●</td><td class="no">○</td><td class="no">○</td></tr>
+<tr><td>Photo / video capture per step</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="partial">◐</td><td class="yes">●</td></tr>
+<tr><td>QR codes for equipment / SOP</td><td class="yes">●</td><td class="no">○</td><td class="yes">●</td><td class="yes">●</td><td class="no">○</td><td class="no">○</td></tr>
+<tr><td>LOTO-specific templates &amp; JHA</td><td class="yes">●</td><td class="no">○</td><td class="partial">◐</td><td class="partial">◐</td><td class="no">○</td><td class="no">○</td></tr>
+<tr><td>Version control + rollback</td><td class="partial">◐</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td></tr>
+<tr><td>Concurrent real-time editing</td><td class="no">○</td><td class="yes">●</td><td class="partial">◐</td><td class="partial">◐</td><td class="yes">●</td><td class="yes">●</td></tr>
+<tr><td>Inline commenting / discussion</td><td class="partial">◐</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td></tr>
+<tr><td>Approval / review workflow</td><td class="partial">◐</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td></tr>
+<tr><td>Immutable "run record" (evidence)</td><td class="no">○</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="no">○</td><td class="no">○</td></tr>
+<tr><td>Typed step components (timers, PPE, torque, etc.)</td><td class="no">○</td><td class="yes">●</td><td class="partial">◐</td><td class="partial">◐</td><td class="no">○</td><td class="no">○</td></tr>
+<tr><td>Conditional / branching steps</td><td class="no">○</td><td class="partial">◐</td><td class="yes">●</td><td class="yes">●</td><td class="partial">◐</td><td class="no">○</td></tr>
+<tr><td>E-signature (21 CFR Part 11)</td><td class="no">○</td><td class="yes">●</td><td class="partial">◐</td><td class="no">○</td><td class="no">○</td><td class="no">○</td></tr>
+<tr><td>Reagent / consumable / asset library</td><td class="no">○</td><td class="yes">●</td><td class="partial">◐</td><td class="yes">●</td><td class="no">○</td><td class="no">○</td></tr>
+<tr><td>Task manager / calendar / scheduling</td><td class="no">○</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="partial">◐</td><td class="no">○</td></tr>
+<tr><td>Corrective-action / issue capture</td><td class="no">○</td><td class="no">○</td><td class="yes">●</td><td class="yes">●</td><td class="no">○</td><td class="no">○</td></tr>
+<tr><td>Training tracking + quizzes</td><td class="no">○</td><td class="partial">◐</td><td class="partial">◐</td><td class="partial">◐</td><td class="yes">●</td><td class="yes">●</td></tr>
+<tr><td>Analytics / dashboards</td><td class="no">○</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td></tr>
+<tr><td>SSO / SAML</td><td class="no">○</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="partial">◐</td><td class="partial">◐</td></tr>
+<tr><td>VPC / private tenancy / HIPAA</td><td class="no">○</td><td class="yes">●</td><td class="yes">●</td><td class="partial">◐</td><td class="no">○</td><td class="no">○</td></tr>
+<tr><td>Storage integrations (Drive/Box/OneDrive)</td><td class="no">○</td><td class="yes">●</td><td class="partial">◐</td><td class="partial">◐</td><td class="partial">◐</td><td class="partial">◐</td></tr>
+<tr><td>Public API / webhooks</td><td class="no">○</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="partial">◐</td><td class="partial">◐</td></tr>
+<tr><td>AI: import from Word/PDF</td><td class="no">○</td><td class="yes">●</td><td class="partial">◐</td><td class="partial">◐</td><td class="partial">◐</td><td class="yes">●</td></tr>
+<tr><td>AI: video / voice → SOP</td><td class="no">○</td><td class="no">○</td><td class="no">○</td><td class="no">○</td><td class="no">○</td><td class="yes">●</td></tr>
+<tr><td>AI: multilingual (EN-ES table stakes)</td><td class="no">○</td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td><td class="partial">◐</td><td class="yes">●</td></tr>
+<tr><td>AI: semantic search / "Discoverer"</td><td class="no">○</td><td class="yes">●</td><td class="partial">◐</td><td class="partial">◐</td><td class="partial">◐</td><td class="yes">●</td></tr>
+<tr><td>AI: troubleshoot / deviation assistant</td><td class="no">○</td><td class="yes">●</td><td class="no">○</td><td class="no">○</td><td class="no">○</td><td class="no">○</td></tr>
+</tbody>
+</table>
+
+<h2 id="winlose">6. Where SmartSOP wins today &amp; where it loses</h2>
+<div class="grid">
+<div class="card">
+<h4 style="color:var(--good)">Where SmartSOP wins</h4>
+<ul>
+<li><strong>LOTO + JHA + PPE are first-class concepts</strong>, not generic form fields. protocols.io doesn't touch this; iAuditor treats it as one form template among thousands.</li>
+<li><strong>Prefilled LOTO templates</strong> and <strong>authorized-person identification</strong> put a competent skeleton in front of a customer on day one.</li>
+<li><strong>Mobile Lockout Log with entry linked to procedure</strong> — this is a specific execution artifact the incumbents don't produce as cleanly.</li>
+<li><strong>Per-seat pricing at the low end ($1.99-$5/seat)</strong> is dramatically friendlier for SMB acquisition than iAuditor, Trainual ($249/mo), or protocols.io Premium (sales-gated).</li>
+<li><strong>Industry-specific onboarding language</strong> across nine sectors gives the marketing site clear-buyer resonance in a category that mostly sells to "everyone."</li>
+</ul>
+</div>
+<div class="card">
+<h4 style="color:var(--bad)">Where SmartSOP loses</h4>
+<ul>
+<li><strong>No real Run mode / run record.</strong> The output today is a PDF of the doc — not a signed, versioned artifact of "who executed which version, when, with what evidence."</li>
+<li><strong>No conditional steps.</strong> A 480V lockout and a 4160V lockout aren't the same procedure and shouldn't share a linear SOP.</li>
+<li><strong>No AI capture.</strong> Every prospect will demo a competitor that lets them shoot a phone video and get a formatted SOP back. SmartSOP without this in 2026 reads as "old."</li>
+<li><strong>No offline mode.</strong> iAuditor's offline story is a huge trust builder for underground, remote-site, and refinery-floor work; SmartSOP's absence is a losable-deal item.</li>
+<li><strong>No enterprise controls</strong> (SSO, audit trail, e-signature, HIPAA, VPC). The moment a real quality/regulatory buyer asks, the deal stalls.</li>
+<li><strong>No integrations.</strong> The product page mentions none. iAuditor connects to SAP; protocols.io to Dropbox/OneDrive/Box; MaintainX is a CMMS bridge. Isolation kills expansion revenue.</li>
+<li><strong>No analytics.</strong> Buyers pay for dashboards more readily than for documentation.</li>
+<li><strong>Version control is described as "SOP history documentation"</strong> — that reads like "we save old files," not like "you can compare v3 to v4, roll back, and audit who changed what."</li>
+</ul>
+</div>
+</div>
+
+<h2 id="roadmap">7. Prioritized feature roadmap</h2>
+<p>Tagged <span class="chip tag-must">MUST</span> = ship in the next release to remain credible; <span class="chip tag-should">SHOULD</span> = ship inside 6 months to be competitive; <span class="chip tag-nice">NICE</span> = defensible differentiator; <span class="chip tag-ai">AI</span> = AI-powered.</p>
+
+<h3>7.1 Phase 1 — Table stakes (next release)</h3>
+<div class="card">
+<ol>
+<li><span class="chip tag-must">MUST</span> <strong>Run mode.</strong> A published SOP can be launched as an interactive session. State per step is one of <em>pending / in-progress / complete / skipped / deviation</em>. Each step captures who did it, when, and any evidence (photo/video/reading). The completed session produces an immutable, versioned <strong>Run Record</strong> tied to (SOP version, user, timestamp, org). This one feature does more than any other to turn SmartSOP from a document tool into a system of record.</li>
+<li><span class="chip tag-must">MUST</span> <strong>Typed step blocks</strong> (see §3.5). Ship the LOTO-specific block library first: <em>PPE required, Energy source, Isolation device, Authorized person, Verification photo, Second signature, Torque/pressure/temperature spec, Lockout tag ID, Hazard class, Return-to-service check.</em> A step block should render differently in the editor (a form) and at run time (an actionable widget).</li>
+<li><span class="chip tag-must">MUST</span> <strong>Version control with diff and rollback.</strong> Users need to see "what changed between v3 and v4," roll back to a prior version, and know which version was live when a run was executed.</li>
+<li><span class="chip tag-must">MUST</span> <strong>Approval workflow.</strong> Author → Reviewer → Approver → Published. Each transition captures user, timestamp, and comment. This is what quality and safety directors actually buy.</li>
+<li><span class="chip tag-must">MUST</span> <strong>Concurrent editing + inline comments.</strong> Two authors, one document. Comments anchored to blocks, resolvable, with a "pinned by author" answer pattern borrowed from protocols.io.</li>
+<li><span class="chip tag-must">MUST</span> <strong>Offline mobile execution.</strong> The tech in a substation basement has no LTE. Local cache of assigned SOPs, evidence capture stored locally, sync-on-reconnect with conflict resolution. This is table stakes in your segment.</li>
+</ol>
+</div>
+
+<h3>7.2 Phase 2 — Competitive parity (6 months)</h3>
+<div class="card">
+<ol>
+<li><span class="chip tag-should">SHOULD</span> <span class="chip tag-ai">AI</span> <strong>Import from Word/PDF.</strong> Drag a legacy SOP in; get a structured SmartSOP back with typed blocks inferred (PPE list, hazard callouts, step numbering). This is the single feature that unblocks migration and closes sales.</li>
+<li><span class="chip tag-should">SHOULD</span> <span class="chip tag-ai">AI</span> <strong>Video/voice → SOP.</strong> The competency floor for authoring in 2026. A supervisor shoots a 4-minute phone video walking through a lockout on the CNC machine and speaks the steps aloud; SmartSOP returns a draft SOP with steps, timestamps, extracted key frames as step photos, and a machine-generated title. Even a rough first pass wins deals.</li>
+<li><span class="chip tag-should">SHOULD</span> <strong>Conditional / branching steps.</strong> "If voltage &gt; 600V, execute steps 12-18. Else skip to 20." Or "if answer to Step 4 = No, halt and notify supervisor." Every step gets a rule engine.</li>
+<li><span class="chip tag-should">SHOULD</span> <strong>Asset / equipment library.</strong> Every piece of equipment gets a record: id, location, hazard class, energy sources, associated SOPs, QR code. Scanning the QR from the phone opens the correct SOP for that specific asset (this is what makes the QR feature actually useful in the field, not just a link).</li>
+<li><span class="chip tag-should">SHOULD</span> <strong>Task manager / scheduling.</strong> Assign a run to a user or a role, on a schedule (monthly PM), with a due date; the run shows up on a calendar view and drives a to-do list. This is where protocols.io went, and it turns SmartSOP from a document library into an ops platform.</li>
+<li><span class="chip tag-should">SHOULD</span> <strong>Corrective actions / issue capture.</strong> During a run, "flag deviation" opens a mini-form (what happened, evidence, severity), creates a follow-up task, and routes to the right owner. iAuditor's version of this pattern is the reason enterprise buyers stay.</li>
+<li><span class="chip tag-should">SHOULD</span> <strong>Analytics dashboard.</strong> Completion rate by SOP, by shift, by user; average run duration; deviation count; expiring competencies. Ship 4 charts that a plant manager will screenshot for their weekly meeting.</li>
+<li><span class="chip tag-should">SHOULD</span> <strong>Storage integrations.</strong> Google Drive, OneDrive, Box, Dropbox for evidence backup and doc source-of-truth. The protocols.io pattern.</li>
+<li><span class="chip tag-should">SHOULD</span> <span class="chip tag-ai">AI</span> <strong>Semantic search ("SOP Finder").</strong> Natural-language queries that resolve past keyword mismatches. This is one of the highest-value / lowest-cost AI features to ship.</li>
+<li><span class="chip tag-should">SHOULD</span> <span class="chip tag-ai">AI</span> <strong>Bilingual EN-ES rendering.</strong> Every SOP gets an auto-translated Spanish view that the tech can toggle on the phone. Rendering-time, not authoring-time, so authors only maintain one source.</li>
+<li><span class="chip tag-should">SHOULD</span> <strong>Training + competency.</strong> Assign an SOP as a training module; require read + quiz + acknowledgment before the user is credentialed to run it. Track expirations (annual re-certification).</li>
+<li><span class="chip tag-should">SHOULD</span> <strong>SSO / SAML + role-based access.</strong> The moment you sell to a company &gt; 100 seats, this is non-negotiable.</li>
+</ol>
+</div>
+
+<h3>7.3 Phase 3 — Enterprise / regulated (9-12 months)</h3>
+<div class="card">
+<ol>
+<li><span class="chip tag-should">SHOULD</span> <strong>21 CFR Part 11 e-signature.</strong> Per-step or per-approval electronic signatures with two-factor verification, meaning-of-signature capture, and an immutable audit trail. Required to sell into pharma, medical device, food safety.</li>
+<li><span class="chip tag-should">SHOULD</span> <strong>Full audit trail.</strong> Every field change on every record, forever, exportable. Also required for CFR Part 11, ISO 9001, GxP.</li>
+<li><span class="chip tag-should">SHOULD</span> <strong>HIPAA-compliant deployment</strong> for healthcare-facing customers.</li>
+<li><span class="chip tag-should">SHOULD</span> <strong>Public REST API + webhooks.</strong> Read/write SOPs, runs, and assets. Webhooks for run-complete, deviation-flagged, SOP-published. Enables CMMS integration (MaintainX, UpKeep, Fiix), BI integration (Tableau, PowerBI), and iPaaS (Zapier, Make).</li>
+<li><span class="chip tag-nice">NICE</span> <strong>VPC / on-prem deployment</strong> for enterprise regulated customers who need data locality.</li>
+<li><span class="chip tag-nice">NICE</span> <strong>SCIM provisioning</strong> for Okta/Azure AD lifecycle.</li>
+</ol>
+</div>
+
+<h3>7.4 Phase 4 — Defensible differentiators</h3>
+<div class="card">
+<ol>
+<li><span class="chip tag-nice">NICE</span> <span class="chip tag-ai">AI</span> <strong>Deviation Assistant.</strong> When a tech marks a step as deviation, the AI proposes: known root causes, recommended follow-up steps, whether to escalate to supervisor, and which past deviations match. Trained on the org's own run-record history.</li>
+<li><span class="chip tag-nice">NICE</span> <strong>Regulatory pack templates.</strong> Prebuilt SOP templates aligned to OSHA 1910.147 (LOTO), OSHA 1910.146 (confined space), NFPA 70E (arc flash), ISO 45001, HACCP, HAZWOPER, GxP. Shipping these as opinionated starting points wins categorical trust.</li>
+<li><span class="chip tag-nice">NICE</span> <span class="chip tag-ai">AI</span> <strong>Compliance drift alerts.</strong> Ingest a customer's OSHA / ISO reference doc; SmartSOP flags where their SOPs no longer conform.</li>
+<li><span class="chip tag-nice">NICE</span> <strong>Photo-of-lockout verification.</strong> Second worker takes a photo of the applied lock/tag; the run cannot advance until a peer signs off. This is a real operational moat.</li>
+<li><span class="chip tag-nice">NICE</span> <strong>Voice-first execution.</strong> Hands-free run mode: read the step aloud, capture verbal confirmation, allow "next" / "flag" voice commands. Enormous in gloved-and-goggled environments.</li>
+<li><span class="chip tag-nice">NICE</span> <strong>Wearable / hard-hat camera integration.</strong> RealWear, Vuzix, etc. — the front-line workflow market is starting to standardize here.</li>
+<li><span class="chip tag-nice">NICE</span> <span class="chip tag-ai">AI</span> <strong>AI SOP Auditor.</strong> Uploads a customer's existing SOP library and returns a gap report: missing PPE, missing energy sources, ambiguous steps, stale references. Immediately valuable during a sales cycle.</li>
+</ol>
+</div>
+
+<h2 id="ui">8. UI / UX recommendations</h2>
+
+<h3>8.1 Three-surface information architecture</h3>
+<p>Adopt protocols.io's mental model but rename for your buyer: <strong>Library</strong> (your SOPs), <strong>Workspace</strong> (people, roles, assets, tasks), <strong>Records</strong> (runs, evidence, exports, audit). Every screen should always answer "am I authoring, am I executing, or am I auditing?" — three modes, three visual treatments.</p>
+
+<h3>8.2 The editor</h3>
+<p>Notion / Google-Docs block model. Slash-command insertion of typed step blocks (<code>/ppe</code>, <code>/timer</code>, <code>/lockout</code>, <code>/photo-required</code>). Left rail = section outline with per-section duration estimate. Right rail = comments + version history. Top status pill = current state (Draft / In Review / Approved / Published) and the version number. Save is autosave. "Publish" is an explicit gated action that runs the approval workflow.</p>
+
+<h3>8.3 Run mode — the most important screen in the product</h3>
+<p>Full-screen on mobile, one step per screen, giant tap targets, thumb-reachable action buttons. Persistent top bar shows SOP name, current step / total, and a big red <strong>HALT</strong> button that captures reason and notifies. Persistent bottom bar has three actions: <strong>Next</strong>, <strong>Add Evidence</strong>, <strong>Flag Deviation</strong>. Step content is designed for a gloved hand at arm's length: 20pt+ type, single primary CTA, no accidental swipes. If offline, a subtle banner shows "Working offline — 3 items pending sync." If the SOP requires a second signature at this step, the Next button is disabled until a second user authenticates.</p>
+
+<h3>8.4 Design language for the industrial user</h3>
+<ul>
+<li><strong>Legibility over polish.</strong> Assume bright sun, oily gloves, prescription safety glasses, and possibly cold hands. Minimum body font 16pt on mobile, 20pt in run mode. All CTAs at least 48×48pt tap area.</li>
+<li><strong>Colored status is a vocabulary, not decoration.</strong> Pending gray, in-progress amber, complete green, deviation red, skipped hatched-gray. Consistent everywhere. Avoid using red for anything else.</li>
+<li><strong>Photo/video capture is one tap</strong> from any step. The camera opens with the step name as an overlay on the frame so the resulting photo is self-documenting.</li>
+<li><strong>Timers count down in the corner</strong>, buzz on completion, and cannot be skipped without a "override with reason" confirmation.</li>
+<li><strong>QR scanner is on the home screen</strong> — the workflow "scan the equipment → the correct SOP opens" is the marquee moment, not buried three levels down.</li>
+<li><strong>Bilingual toggle in the top bar.</strong> One tap flips English ↔ Spanish for the entire run.</li>
+</ul>
+
+<h3>8.5 Empty states as onboarding</h3>
+<p>The empty Library should not be empty — pre-load 6-10 opinionated LOTO/JHA/safety templates by industry, so a new tenant sees value in the first 30 seconds. Include a clearly labeled "import your existing PDF/Word SOPs" upload target with the AI importer wired in.</p>
+
+<h3>8.6 Admin console</h3>
+<p>Buyers who evaluate SmartSOP will demo the admin as much as the user experience. Ensure the admin console can: manage users / roles / groups; assign SOPs to roles; view completion analytics; export records; configure SSO; set retention policies; brand the tenant (logo, colors, PDF export template). The PDF export template is under-loved — customers will run reports for OSHA, and a branded, compliant PDF is often the artifact they're actually paying for.</p>
+
+<h2 id="ai">9. AI capabilities to ship</h2>
+<p>Ordered by ROI, not by feasibility.</p>
+<table>
+<thead><tr><th>#</th><th>Feature</th><th>Why it matters</th><th>Approximate effort</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><strong>Import from Word / PDF → structured SOP</strong></td><td>Removes migration friction — the #1 objection during sales cycles. Every customer has legacy SOPs.</td><td>Medium. Vision + LLM to parse doc → typed blocks. Ship v1 that produces 70% correct output with easy human cleanup.</td></tr>
+<tr><td>2</td><td><strong>Video → SOP</strong> (screen or phone)</td><td>Matches the Scribe/Vidocu/Guidde category expectation. Turns your supervisor's tribal knowledge into documentation without typing.</td><td>Medium-high. Frame sampling + Whisper (transcription) + LLM (step segmentation) + key-frame selection. Well-scoped.</td></tr>
+<tr><td>3</td><td><strong>Semantic search ("SOP Finder")</strong></td><td>Solves the "we have 400 SOPs and can't find the right one" problem for every mid-size customer.</td><td>Low. Embed all SOPs, add a search endpoint. Cheap and immediately visible.</td></tr>
+<tr><td>4</td><td><strong>Bilingual EN-ES render</strong></td><td>Table stakes for US industrial + hospitality + agriculture crews. Also foundation for 20+ languages later.</td><td>Low. Cache translation at publish; render side.</td></tr>
+<tr><td>5</td><td><strong>AI SOP Auditor / gap report</strong></td><td>Powerful sales-cycle asset. "Upload your library, we'll tell you what's missing" is a demo that closes deals.</td><td>Medium. Rule + LLM pipeline against a checklist per regulation (OSHA 1910.147 etc.).</td></tr>
+<tr><td>6</td><td><strong>Deviation Assistant</strong> (run-time)</td><td>Category-defining feature. Turns the moment a tech marks "deviation" into a coached, safer decision.</td><td>Medium. Retrieval over past deviations + LLM synthesis. Guardrail: never auto-clear.</td></tr>
+<tr><td>7</td><td><strong>Auto-generated quizzes</strong> from an SOP</td><td>Whale's proven pattern for training rollout. Cheap to add once you have SOPs in structured form.</td><td>Low. LLM given the SOP content.</td></tr>
+<tr><td>8</td><td><strong>Discussion Summarizer</strong> for comment threads</td><td>Only useful once you have collaborative editing volume. Add later.</td><td>Low. Add when comment volume justifies it.</td></tr>
+<tr><td>9</td><td><strong>AI voiceover for training videos</strong></td><td>Optional differentiator — competes with Vidocu/Trupeer for orgs that want a video output.</td><td>Medium. Requires TTS pipeline + video assembly.</td></tr>
+</tbody>
+</table>
+
+<h2 id="compliance">10. Compliance &amp; enterprise readiness</h2>
+<p>SmartSOP's target verticals (energy, manufacturing, healthcare, construction, public works) all have regulated buyers. Ignoring compliance closes the ceiling on deal size and shortens the sales cycle for competitors.</p>
+<ul>
+<li><strong>OSHA 1910.147 (LOTO).</strong> Already implicit in your product; make it explicit. Ship a certification / template pack labeled with the standard.</li>
+<li><strong>OSHA 1910.146 (Confined Space).</strong> Adjacent template pack — same buyer.</li>
+<li><strong>NFPA 70E (Arc Flash / Electrical Safety).</strong> Utilities and industrial buyers care intensely.</li>
+<li><strong>ISO 9001 / ISO 45001.</strong> Controlled document workflow, audit trail, approval history.</li>
+<li><strong>21 CFR Part 11.</strong> E-signature, meaning-of-signature, immutable audit trail. Required for pharma / medical device / clinical. This is the single most valuable compliance certification you can pursue.</li>
+<li><strong>GxP / GMP.</strong> Comes with CFR Part 11 investment.</li>
+<li><strong>HIPAA.</strong> For any healthcare-adjacent customer.</li>
+<li><strong>HACCP.</strong> For food safety and hospitality — a template pack + a "critical control point" typed block is enough to open the food-processing market.</li>
+<li><strong>SOC 2 Type II.</strong> Non-negotiable for any deal above SMB. Start the audit now if it hasn't started.</li>
+<li><strong>Data residency.</strong> US-primary, EU option (Frankfurt or Dublin) for pharma multinational deals.</li>
+</ul>
+
+<h2 id="positioning">11. Positioning &amp; go-to-market angle</h2>
+
+<h3>11.1 The one-sentence pitch</h3>
+<div class="callout">
+<em>SmartSOP is the mobile-first SOP platform for safety-critical field work — the app you hand to the tech who's about to lock out a switchgear, and the system of record you hand to your OSHA auditor.</em>
+</div>
+
+<h3>11.2 What that positioning implies</h3>
+<ul>
+<li><strong>Lead with LOTO / JHA.</strong> Don't try to sell "SOPs for everything." Own a category, then expand.</li>
+<li><strong>The hero demo is Run mode on a phone, not the editor on a laptop.</strong> Every competitor's marketing site shows a laptop editor. Showing a gloved hand tapping a phone in a substation is instantly differentiated.</li>
+<li><strong>The hero artifact is the audit-ready run record.</strong> Sell to safety directors and quality directors, not IT.</li>
+<li><strong>Bilingual EN-ES is a wedge, not a feature.</strong> A single line on the homepage — "Every SOP in English and Spanish, automatically" — resonates with US construction, agriculture, hospitality, and food-processing buyers.</li>
+<li><strong>Sell industry packs, not generic seats.</strong> "SmartSOP for Electrical Utilities," "SmartSOP for Food Processing," each with a preloaded template library and the right typed blocks.</li>
+</ul>
+
+<h3>11.3 Pricing tune-up</h3>
+<p>Your published tiers are attractive at SMB. Add two things:</p>
+<ul>
+<li>A <strong>free tier</strong> (single user, up to 5 SOPs, watermarked PDFs). protocols.io shows how much virality comes from a real free plan; you don't need to be as generous, but "free forever, 1 user, 5 SOPs" is powerful.</li>
+<li>An <strong>Enterprise plan</strong> that gates SSO, audit trail, e-signature, API, VPC, and dedicated CSM. Contact-sales pricing is fine. This is the plan that lets a $50k ACV deal close.</li>
+</ul>
+
+<h3>11.4 Integrations to prioritize (roughly in this order)</h3>
+<p>MaintainX (CMMS), UpKeep (CMMS), Fiix (CMMS), ServiceNow (ITSM), Microsoft Teams (notifications), Slack (notifications), Google Drive / OneDrive / Box / Dropbox (evidence backup), Okta / Azure AD (SSO), Tableau / PowerBI (analytics export), Zapier / Make (long-tail).</p>
+
+<h2 id="risks">12. Risks &amp; things to validate</h2>
+<div class="grid">
+<div class="card">
+<h4>Risks</h4>
+<ul>
+<li><strong>Name collision.</strong> "Smart SOP" is used by IT Glue and by other apps. Weakens SEO and defensibility. Consider a distinctive product name or a modifier tied to a vertical.</li>
+<li><strong>Feature scope creep.</strong> Everything above is temptation. The disciplined move is Phase 1 in full, then Phase 2, then earn Phase 3 with revenue.</li>
+<li><strong>Compliance certification cost.</strong> SOC 2 + 21 CFR Part 11 is a real budget line. Sequence carefully.</li>
+<li><strong>Video/AI infra cost.</strong> Video-to-SOP is compute-heavy. Cap monthly minutes per plan; charge overages.</li>
+<li><strong>Competitor bundling.</strong> MaintainX is likely to bundle SOP + work order for free as their moat. Your defense is depth in safety-critical, not breadth in maintenance.</li>
+</ul>
+</div>
+<div class="card">
+<h4>Things I recommend you validate with 5 customer interviews</h4>
+<ul>
+<li>Is Run mode + Run Record actually the artifact your safety director wants for OSHA — or do they want a specific PDF format your current export already produces?</li>
+<li>Which typed step blocks are the top 5 they'd use? (Ship those, then the rest.)</li>
+<li>How often do they need offline execution — daily, weekly, exceptional?</li>
+<li>What's the migration story — how many legacy Word/PDF SOPs, and is AI import worth paying for?</li>
+<li>Is 21 CFR Part 11 an actual buying requirement or a nice-to-have? (Answers vary wildly by vertical.)</li>
+</ul>
+</div>
+</div>
+
+<h2>Sources &amp; references</h2>
+<ul style="font-size:13px">
+<li><a href="https://www.protocols.io/">protocols.io — homepage</a></li>
+<li><a href="https://www.protocols.io/features">protocols.io — Features (Editor, Workspaces, File Manager, Run, Publish)</a></li>
+<li><a href="https://www.protocols.io/plans/industry">protocols.io — Plans (Free, Premium, Enterprise; SAML, VPC, HIPAA, 21 CFR Part 11)</a></li>
+<li><a href="https://www.protocols.io/advanced-ai">protocols.io — Advanced AI (Importer, Troubleshooter, Translators, Discoverer, Discussion Summarizer)</a></li>
+<li><a href="https://www.protocols.io/webinars/new-protocolsio-features-pinned-by-author-comments">protocols.io — webinar page (pinned comments, group reagent manager, safety icons, section duration)</a></li>
+<li><a href="https://smartsop.com/">smartsop.com — current product surface</a></li>
+<li><a href="https://www.g2.com/products/smart-sop/reviews">G2 — Smart SOP product page</a></li>
+<li><a href="https://www.itglue.com/blog/automate-sops-with-smart-sop-generator/">IT Glue — Smart SOP Generator (name collision)</a></li>
+<li><a href="https://safetyculture.com/iauditor">SafetyCulture / iAuditor — features</a></li>
+<li><a href="https://www.fabrico.io/blog/best-loto-software-manufacturing/">Fabrico — 7 best LOTO software (2026)</a></li>
+<li><a href="https://software.getmaintainx.com/meet-mx">MaintainX — product page (nested-logic SOPs, Procedure Score)</a></li>
+<li><a href="https://www.sweetprocess.com/sop-management-software/">SweetProcess — SOP management software comparison</a></li>
+<li><a href="https://thedigitalprojectmanager.com/tools/best-standard-operating-procedure-software/">Digital Project Manager — Best SOP software 2026</a></li>
+<li><a href="https://vidocu.ai/blog/best-video-sop-software-turn-screen-recordings-into-sops-automatically-2026">Vidocu — best video-to-SOP tools (Scribe, Tango, Trupeer, Guidde, Vidocu, Loom)</a></li>
+<li><a href="https://www.37degrees.io/resources/eln-landscape-2026/">37degrees — ELN landscape 2026 (Benchling, LabArchives, Colabra, etc.)</a></li>
+<li><a href="https://scientistinprogress.com/blog/benchling-review/">Scientist in Progress — Benchling review 2026</a></li>
+</ul>
+
+<div class="foot">
+SmartSOP competitive strategy · drafted July 17, 2026 · webinar-screenshot transcription pending (files are iCloud placeholders — download them in Finder and re-run to layer the specifics into §3.7).
+</div>
+
+</div>
+</body>
+</html>
