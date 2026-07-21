@@ -53,17 +53,20 @@ def test_update_protocol_meta(owner):
     client, token, acc_id = owner
     pid = _create(client, token, acc_id).get_json()["protocol"]["id"]
     res = client.put(f"/api/accounts/{acc_id}/protocols/{pid}", headers=auth(token),
-                     json={"title": "Renamed", "status": "published"})
+                     json={"title": "Renamed", "description": "new"})
     assert res.status_code == 200
     p = res.get_json()["protocol"]
-    assert p["title"] == "Renamed" and p["status"] == "published"
+    assert p["title"] == "Renamed" and p["description"] == "new"
 
 
-def test_invalid_status_rejected(owner):
+def test_status_not_set_via_put(owner):
+    # Status is controlled by the lifecycle endpoints, not the plain update.
     client, token, acc_id = owner
     pid = _create(client, token, acc_id).get_json()["protocol"]["id"]
-    assert client.put(f"/api/accounts/{acc_id}/protocols/{pid}", headers=auth(token),
-                      json={"status": "bogus"}).status_code == 400
+    res = client.put(f"/api/accounts/{acc_id}/protocols/{pid}", headers=auth(token),
+                     json={"status": "effective"})
+    assert res.status_code == 200
+    assert res.get_json()["protocol"]["status"] == "draft"
 
 
 def test_add_update_delete_step(owner):
