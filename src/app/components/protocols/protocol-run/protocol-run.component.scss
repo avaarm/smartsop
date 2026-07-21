@@ -77,3 +77,12 @@ h1 { font-size: 21px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 6px
   &.fail.active { background: var(--fail); border-color: var(--fail); color: #fff; }
   &.skip.active { background: var(--skip); border-color: var(--skip); color: #fff; }
 }
+
+/* Typed component blocks in run mode */
+.components { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.comp-block {
+  font-size: 12.5px; padding: 4px 10px; border-radius: 7px;
+  background: hsl(240 5% 96%); color: hsl(240 4% 25%); border: 1px solid hsl(240 5% 90%);
+  strong { font-weight: 600; }
+  &.flag { background: hsl(263 60% 95%); border-color: hsl(263 50% 88%); color: hsl(263 45% 38%); }
+}

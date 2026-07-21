@@ -8,6 +8,33 @@ export interface Reagent {
   vendor?: string;
 }
 
+export interface StepComponent {
+  type: string;
+  value: string | boolean;
+}
+
+/** Typed LOTO/safety component library — label, icon, and whether it's a flag. */
+export const COMPONENT_LIBRARY: { type: string; label: string; icon: string; flag?: boolean }[] = [
+  { type: 'ppe', label: 'PPE required', icon: '🥽' },
+  { type: 'energy_source', label: 'Energy source', icon: '⚡' },
+  { type: 'isolation_device', label: 'Isolation device', icon: '🔒' },
+  { type: 'lockout_tag', label: 'Lockout tag ID', icon: '🏷️' },
+  { type: 'authorized_person', label: 'Authorized person', icon: '👤' },
+  { type: 'hazard_class', label: 'Hazard class', icon: '☣️' },
+  { type: 'torque', label: 'Torque spec', icon: '🔧' },
+  { type: 'pressure', label: 'Pressure spec', icon: '🎚️' },
+  { type: 'temperature', label: 'Temperature', icon: '🌡️' },
+  { type: 'expected_result', label: 'Expected result', icon: '✅' },
+  { type: 'return_to_service', label: 'Return-to-service check', icon: '🔄' },
+  { type: 'verification_photo', label: 'Verification photo required', icon: '📷', flag: true },
+  { type: 'second_signature', label: 'Second signature required', icon: '✍️', flag: true },
+];
+
+export function componentMeta(type: string) {
+  return COMPONENT_LIBRARY.find(c => c.type === type)
+    || { type, label: type, icon: '•', flag: false };
+}
+
 export interface ProtocolStep {
   id: number;
   protocol_id: number;
@@ -18,6 +45,7 @@ export interface ProtocolStep {
   duration_seconds: number | null;
   warning: string;
   reagents: Reagent[];
+  components: StepComponent[];
   created_at: string;
 }
 
@@ -67,6 +95,7 @@ export interface ProtocolRunStep {
   duration_seconds: number | null;
   warning: string;
   reagents: Reagent[];
+  components: StepComponent[];
   status: RunStepStatus;
   note: string;
   completed_by: string;
@@ -96,6 +125,7 @@ export interface StepInput {
   duration_seconds?: number | null;
   warning?: string;
   reagents?: Reagent[];
+  components?: StepComponent[];
 }
 
 @Injectable({ providedIn: 'root' })

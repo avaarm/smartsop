@@ -17,6 +17,16 @@ from .generator_provider import get_generator
 
 RUN_STEP_STATUSES = ("pending", "done", "failed", "skipped")
 PROTOCOL_TYPES = ("protocol", "sop", "gmp_sop")
+
+# Typed step components (LOTO / safety block library). Flag types render as a
+# required action at run time; the rest carry a text value.
+COMPONENT_TYPES = (
+    "ppe", "energy_source", "isolation_device", "lockout_tag", "authorized_person",
+    "hazard_class", "torque", "pressure", "temperature", "expected_result",
+    "return_to_service", "verification_photo", "second_signature",
+)
+COMPONENT_FLAG_TYPES = ("verification_photo", "second_signature")
+MAX_COMPONENTS = 30
 MANAGER_ROLES = ("owner", "admin")
 DEFAULT_MEANING = {
     "reviewer": "Reviewed for accuracy and completeness",
@@ -48,6 +58,26 @@ def _apply_step_fields(step, data):
     if "reagents" in data:
         reagents = data.get("reagents") or []
         step.reagents_json = json.dumps(reagents if isinstance(reagents, list) else [])
+    if "components" in data:
+        step.components_json = json.dumps(_clean_components(data.get("components")))
+
+
+def _clean_components(raw):
+    """Validate/normalize typed components to [{type, value}]."""
+    if not isinstance(raw, list):
+        return []
+    out = []
+    for c in raw[:MAX_COMPONENTS]:
+        if not isinstance(c, dict):
+            continue
+        ctype = str(c.get("type", "")).lower()
+        if ctype not in COMPONENT_TYPES:
+            continue
+        if ctype in COMPONENT_FLAG_TYPES:
+            out.append({"type": ctype, "value": bool(c.get("value", True))})
+        else:
+            out.append({"type": ctype, "value": str(c.get("value", ""))[:500]})
+    return out
 
 
 # ── Protocols ──
@@ -305,6 +335,7 @@ def start_run(account_id, protocol_id):
             duration_seconds=step.duration_seconds,
             warning=step.warning,
             reagents_json=step.reagents_json,
+            components_json=step.components_json,
         ))
     db.session.commit()
     return jsonify({"success": True, "run": run.to_dict(include_steps=True)}), 201
@@ -543,6 +574,7 @@ def new_version(account_id, protocol_id):
             duration_seconds=step.duration_seconds,
             warning=step.warning,
             reagents_json=step.reagents_json,
+            components_json=step.components_json,
         ))
     db.session.commit()
     return jsonify({"success": True, "protocol": clone.to_dict(include_steps=True)}), 201

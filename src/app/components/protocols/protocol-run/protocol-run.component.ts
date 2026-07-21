@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import {
-  ProtocolService, ProtocolRun, ProtocolRunStep, RunStepStatus,
+  ProtocolService, ProtocolRun, ProtocolRunStep, RunStepStatus, componentMeta,
 } from '../../../services/protocol.service';
 import { AccountService, Account } from '../../../services/account.service';
 
@@ -102,6 +102,8 @@ export class ProtocolRunComponent implements OnInit, OnDestroy {
   timerRunning(step: ProtocolRunStep): boolean {
     return this.remaining[step.id] != null;
   }
+
+  meta(type: string) { return componentMeta(type); }
 
   formatClock(seconds: number | null | undefined): string {
     if (seconds == null) return '';

@@ -118,6 +118,24 @@
                 <button class="reagent-del" (click)="removeReagent(step, ri)" title="Remove">✕</button>
               </div>
             </div>
+
+            <!-- Typed safety/LOTO components -->
+            <div class="components-block">
+              <div class="reagents-head"><span>Safety &amp; control blocks</span>
+                <button class="link" (click)="toggleComponentPicker(step)">+ Add block</button></div>
+              <div class="comp-picker" *ngIf="addingComponentFor === step.id">
+                <button class="comp-opt" *ngFor="let c of componentLibrary" (click)="addComponent(step, c.type)">
+                  {{ c.icon }} {{ c.label }}
+                </button>
+              </div>
+              <div class="comp-row" *ngFor="let c of step.components; let ci = index">
+                <span class="comp-tag">{{ meta(c.type).icon }} {{ meta(c.type).label }}</span>
+                <input *ngIf="!meta(c.type).flag" type="text" [(ngModel)]="c.value" [name]="'cv-' + step.id + '-' + ci"
+                       (blur)="saveStep(step)" placeholder="value…" />
+                <span *ngIf="meta(c.type).flag" class="comp-flag">required at run time</span>
+                <button class="reagent-del" (click)="removeComponent(step, ci)" title="Remove">✕</button>
+              </div>
+            </div>
           </ng-container>
           <ng-template #readStep>
             <div class="rs-title" *ngIf="step.title">{{ step.title }}</div>
@@ -125,6 +143,7 @@
             <div class="rs-tags">
               <span *ngIf="step.duration_seconds != null" class="rs-tag">⏱ {{ durationMinutes(step) }} min</span>
               <span *ngIf="step.warning" class="rs-tag warn">⚠ {{ step.warning }}</span>
+              <span *ngFor="let c of step.components" class="rs-tag comp">{{ meta(c.type).icon }} {{ meta(c.type).label }}<em *ngIf="c.value !== true && c.value"> — {{ c.value }}</em></span>
               <span *ngFor="let r of step.reagents" class="rs-tag">{{ r.name }}<em *ngIf="r.amount"> — {{ r.amount }}</em></span>
             </div>
           </ng-template>

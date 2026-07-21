@@ -3,7 +3,9 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 
-import { ProtocolService, Protocol, ProtocolStep } from '../../../services/protocol.service';
+import {
+  ProtocolService, Protocol, ProtocolStep, StepComponent, COMPONENT_LIBRARY, componentMeta,
+} from '../../../services/protocol.service';
 import { AccountService, Account } from '../../../services/account.service';
 import { AuthService } from '../../../services/auth.service';
 
@@ -218,10 +220,33 @@ export class ProtocolDetailComponent implements OnInit {
       warning: step.warning,
       duration_seconds: step.duration_seconds,
       reagents: step.reagents,
+      components: step.components,
     }).subscribe({
       next: () => this.flash('Saved'),
       error: (err) => (this.errorMessage = err.message),
     });
+  }
+
+  // ── Typed components ──
+  readonly componentLibrary = COMPONENT_LIBRARY;
+  addingComponentFor: number | null = null;   // step id whose picker is open
+
+  meta(type: string) { return componentMeta(type); }
+
+  toggleComponentPicker(step: ProtocolStep): void {
+    this.addingComponentFor = this.addingComponentFor === step.id ? null : step.id;
+  }
+
+  addComponent(step: ProtocolStep, type: string): void {
+    const m = componentMeta(type);
+    step.components = [...(step.components || []), { type, value: m.flag ? true : '' }];
+    this.addingComponentFor = null;
+    this.saveStep(step);
+  }
+
+  removeComponent(step: ProtocolStep, i: number): void {
+    step.components.splice(i, 1);
+    this.saveStep(step);
   }
 
   deleteStep(step: ProtocolStep): void {

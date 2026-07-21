@@ -54,6 +54,13 @@
 
           <div class="warn" *ngIf="step.warning">⚠ {{ step.warning }}</div>
 
+          <div class="components" *ngIf="step.components?.length">
+            <span class="comp-block" *ngFor="let c of step.components"
+                  [class.flag]="meta(c.type).flag">
+              {{ meta(c.type).icon }} <strong>{{ meta(c.type).label }}</strong><span *ngIf="c.value !== true && c.value">: {{ c.value }}</span>
+            </span>
+          </div>
+
           <div class="reagents" *ngIf="step.reagents.length">
             <span class="rlabel">Reagents:</span>
             <span class="reagent" *ngFor="let r of step.reagents">{{ r.name }}<em *ngIf="r.amount"> — {{ r.amount }}</em></span>
