@@ -12,6 +12,8 @@ from sqlalchemy import func
 
 from .database import db, Protocol, ProtocolStep, ProtocolRun, ProtocolRunStep, ProtocolSignoff
 from .auth import require_account_access, has_account_role
+from .protocol_import import extract_text, split_into_steps, ai_structure
+from .generator_provider import get_generator
 
 RUN_STEP_STATUSES = ("pending", "done", "failed", "skipped")
 PROTOCOL_TYPES = ("protocol", "sop", "gmp_sop")
@@ -87,6 +89,64 @@ def create_protocol(account_id):
     db.session.add(protocol)
     db.session.commit()
     return jsonify({"success": True, "protocol": protocol.to_dict(include_steps=True)}), 201
+
+
+@protocol_bp.route("/<int:account_id>/protocols/import", methods=["POST"])
+@require_account_access
+def import_protocol(account_id):
+    """Create a protocol from pasted text or an uploaded Word/PDF/text file.
+
+    mode: numbered | lines | markdown | ai  (ai falls back to numbered when the
+    LLM is unavailable). Returns the created protocol and the mode actually used.
+    """
+    upload = request.files.get("file")
+    if upload is not None:
+        text = extract_text(upload.filename, upload.read())
+        title = (request.form.get("title") or "").strip()
+        mode = (request.form.get("mode") or "numbered").lower()
+        if not title:
+            base = (upload.filename or "").rsplit(".", 1)[0].replace("_", " ").strip()
+            title = base[:500] or "Imported protocol"
+    else:
+        data = request.get_json(silent=True) or {}
+        text = data.get("text") or ""
+        title = (data.get("title") or "").strip() or "Imported protocol"
+        mode = (data.get("mode") or "numbered").lower()
+
+    if not text.strip():
+        return jsonify({"success": False, "error": "No text to import"}), 400
+
+    used = mode
+    if mode == "ai":
+        steps = ai_structure(text, getattr(get_generator(), "ollama", None))
+        if steps is None:
+            steps = split_into_steps(text, "numbered")
+            used = "numbered (AI unavailable)"
+    else:
+        if mode not in ("numbered", "lines", "markdown"):
+            mode = used = "numbered"
+        steps = split_into_steps(text, mode)
+
+    if not steps:
+        return jsonify({"success": False, "error": "Could not extract any steps from the input"}), 400
+
+    author = (g.current_user.name or "").strip() or g.current_user.email
+    protocol = Protocol(account_id=account_id, title=title[:500], created_by=author)
+    db.session.add(protocol)
+    db.session.flush()
+    for i, s in enumerate(steps):
+        db.session.add(ProtocolStep(
+            protocol_id=protocol.id, order_index=i,
+            title=s.get("title", ""), description=s.get("description", ""),
+            duration_seconds=s.get("duration_seconds"), warning=s.get("warning", ""),
+        ))
+    db.session.commit()
+    return jsonify({
+        "success": True,
+        "protocol": protocol.to_dict(include_steps=True),
+        "mode": used,
+        "step_count": len(steps),
+    }), 201
 
 
 @protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>", methods=["GET"])
