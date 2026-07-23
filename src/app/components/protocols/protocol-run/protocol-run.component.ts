@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import {
   ProtocolService, ProtocolRun, ProtocolRunStep, RunStepStatus, BranchOption, componentMeta,
+  Deviation, DeviationSeverity,
 } from '../../../services/protocol.service';
 import { AccountService, Account } from '../../../services/account.service';
 
@@ -80,6 +81,55 @@ export class ProtocolRunComponent implements OnInit, OnDestroy {
     this.run = run;
     this.steps = run.steps || [];
     this.loading = false;
+    this.loadDeviations();
+  }
+
+  // ── Deviations / corrective actions ──
+  deviations: Deviation[] = [];
+  deviationStep: ProtocolRunStep | null = null;
+  deviationForm: { title: string; description: string; severity: DeviationSeverity } =
+    { title: '', description: '', severity: 'minor' };
+  flagBusy = false;
+
+  private loadDeviations(): void {
+    if (!this.account || !this.run) return;
+    this.protocolService.listDeviations(this.account.id, { run_id: this.run.id })
+      .subscribe({ next: (res) => (this.deviations = res.deviations), error: () => {} });
+  }
+
+  deviationsForStep(step: ProtocolRunStep): Deviation[] {
+    return this.deviations.filter(d => d.run_step_id === step.id);
+  }
+
+  /** Open the flag-deviation modal, defaulting the title to the step name. */
+  openDeviation(step: ProtocolRunStep): void {
+    this.deviationStep = step;
+    this.deviationForm = { title: '', description: '', severity: 'minor' };
+  }
+
+  closeDeviation(): void {
+    this.deviationStep = null;
+  }
+
+  submitDeviation(): void {
+    if (!this.account || !this.run || !this.deviationStep) return;
+    const title = this.deviationForm.title.trim();
+    if (!title) return;
+    this.flagBusy = true;
+    this.protocolService.flagDeviation(this.account.id, {
+      title,
+      description: this.deviationForm.description,
+      severity: this.deviationForm.severity,
+      run_id: this.run.id,
+      run_step_id: this.deviationStep.id,
+    }).subscribe({
+      next: (res) => {
+        this.deviations = [res.deviation, ...this.deviations];
+        this.flagBusy = false;
+        this.deviationStep = null;
+      },
+      error: (err) => { this.flagBusy = false; this.errorMessage = err.message; },
+    });
   }
 
   // ── Timers ──

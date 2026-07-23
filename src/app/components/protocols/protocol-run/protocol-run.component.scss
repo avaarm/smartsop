@@ -101,3 +101,46 @@ h1 { font-size: 21px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 6px
   &:hover { background: hsl(217 91% 96%); border-color: hsl(217 91% 60%); }
   &.halt { border-color: hsl(0 70% 82%); em { color: hsl(0 65% 50%); } &:hover { background: hsl(0 75% 97%); border-color: hsl(0 70% 60%); } }
 }
+
+/* Deviations / corrective actions */
+.oc.flag { &:hover { background: hsl(28 90% 96%); border-color: hsl(28 80% 80%); color: hsl(28 80% 38%); } }
+.dev-list { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+.dev-item {
+  display: flex; align-items: center; gap: 8px; font-size: 12.5px;
+  padding: 6px 10px; border-radius: 7px;
+  background: hsl(28 90% 97%); border: 1px solid hsl(28 80% 88%);
+}
+.dev-title { flex: 1; color: hsl(28 50% 28%); }
+.dev-status { font-size: 11px; text-transform: capitalize; color: var(--muted-fg); }
+.sev {
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+  padding: 2px 7px; border-radius: 5px; color: #fff;
+  &.minor { background: hsl(45 90% 45%); }
+  &.major { background: hsl(28 85% 50%); }
+  &.critical { background: hsl(0 72% 51%); }
+}
+
+/* Flag-deviation modal */
+.modal-overlay { position: fixed; inset: 0; background: hsl(0 0% 0% / 0.4); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+.modal {
+  width: 100%; max-width: 440px; background: #fff; border-radius: 14px; padding: 24px;
+  box-shadow: 0 10px 40px hsl(0 0% 0% / 0.2);
+  h3 { margin: 0 0 4px; font-size: 17px; }
+  label { display: block; font-size: 12px; font-weight: 500; color: var(--muted-fg); margin: 14px 0 5px; }
+  input[type="text"], textarea {
+    width: 100%; box-sizing: border-box; font-size: 13px; font-family: inherit;
+    padding: 8px 11px; border: 1px solid var(--border); border-radius: 7px;
+    &:focus { outline: none; border-color: hsl(217 91% 60%); }
+  }
+}
+.modal-sub { font-size: 13px; color: var(--muted-fg); margin: 0 0 4px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+.sev-picker { display: flex; gap: 6px; }
+.sev-opt {
+  flex: 1; padding: 7px 10px; font-size: 12px; font-weight: 600; text-transform: capitalize;
+  background: #fff; border: 1px solid var(--border); border-radius: 7px; cursor: pointer; color: var(--muted-fg);
+  &:hover { background: hsl(240 4.8% 97%); }
+  &.minor.active { background: hsl(45 90% 45%); border-color: hsl(45 90% 45%); color: #fff; }
+  &.major.active { background: hsl(28 85% 50%); border-color: hsl(28 85% 50%); color: #fff; }
+  &.critical.active { background: hsl(0 72% 51%); border-color: hsl(0 72% 51%); color: #fff; }
+}

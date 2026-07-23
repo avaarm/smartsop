@@ -1,0 +1,102 @@
+<div class="page">
+  <header class="page-head">
+    <h1>Deviations</h1>
+    <p class="subtitle">Off-nominal events raised during runs, tracked to corrective action.</p>
+  </header>
+
+  <div class="toast toast-error" *ngIf="errorMessage">{{ errorMessage }}</div>
+  <div class="empty" *ngIf="!account">Select an account to view deviations.</div>
+
+  <ng-container *ngIf="account">
+    <div class="tiles">
+      <div class="tile" [class.alert]="openCount > 0">
+        <div class="tile-num">{{ openCount }}</div><div class="tile-label">Open / investigating</div>
+      </div>
+      <div class="tile" [class.alert]="criticalCount > 0">
+        <div class="tile-num">{{ criticalCount }}</div><div class="tile-label">Critical</div>
+      </div>
+      <div class="tile">
+        <div class="tile-num">{{ deviations.length }}</div><div class="tile-label">Shown</div>
+      </div>
+    </div>
+
+    <div class="filters">
+      <select [(ngModel)]="statusFilter" (change)="load()" name="status">
+        <option value="">All statuses</option>
+        <option value="open">Open (unresolved)</option>
+        <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+      </select>
+      <select [(ngModel)]="severityFilter" (change)="load()" name="severity">
+        <option value="">All severities</option>
+        <option *ngFor="let s of severities" [value]="s">{{ s }}</option>
+      </select>
+    </div>
+
+    <div class="loading" *ngIf="loading">Loading…</div>
+
+    <div class="empty" *ngIf="!loading && !deviations.length">
+      No deviations match this filter. Flag one from a run when a step doesn't go to plan.
+    </div>
+
+    <table class="dev-table" *ngIf="!loading && deviations.length">
+      <thead>
+        <tr>
+          <th>Severity</th><th>What happened</th><th>Step</th>
+          <th>Status</th><th>Reported</th><th>Owner</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let d of deviations" (click)="select(d)">
+          <td><span class="sev" [class]="d.severity">{{ d.severity }}</span></td>
+          <td class="t-title">
+            {{ d.title }}
+            <span class="t-desc" *ngIf="d.description">{{ d.description }}</span>
+          </td>
+          <td class="t-step">{{ d.step_title || '—' }}</td>
+          <td><span class="status" [class]="d.status">{{ d.status }}</span></td>
+          <td class="t-meta">{{ formatStamp(d.created_at) }}<br /><span>{{ d.reported_by }}</span></td>
+          <td class="t-meta">{{ d.assigned_to || '—' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </ng-container>
+</div>
+
+<!-- Triage drawer -->
+<div class="modal-overlay" *ngIf="selected" (click)="close()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <h3>{{ selected.title }}</h3>
+    <p class="modal-sub">
+      Reported by {{ selected.reported_by }} · {{ formatStamp(selected.created_at) }}
+      <ng-container *ngIf="selected.step_title"> · Step: {{ selected.step_title }}</ng-container>
+    </p>
+
+    <p class="desc" *ngIf="selected.description">{{ selected.description }}</p>
+
+    <label>Severity</label>
+    <div class="sev-picker">
+      <button *ngFor="let s of severities" type="button" [class]="'sev-opt ' + s"
+              [class.active]="selected.severity === s" (click)="selected.severity = s">{{ s }}</button>
+    </div>
+
+    <label>Status</label>
+    <select [(ngModel)]="selected.status" name="sel-status">
+      <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+    </select>
+
+    <label>Assigned to</label>
+    <input type="text" [(ngModel)]="selected.assigned_to" name="sel-owner"
+           placeholder="Who owns closing this out?" />
+
+    <label>Corrective action</label>
+    <textarea rows="3" [(ngModel)]="selected.corrective_action" name="sel-capa"
+              placeholder="What was done to correct and prevent recurrence…"></textarea>
+
+    <div class="modal-actions">
+      <button class="btn-ghost" (click)="close()">Cancel</button>
+      <button class="btn-primary" (click)="save()" [disabled]="saving">
+        {{ saving ? 'Saving…' : 'Save' }}
+      </button>
+    </div>
+  </div>
+</div>

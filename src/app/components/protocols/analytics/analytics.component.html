@@ -14,7 +14,8 @@
       <div class="tile"><div class="tile-num">{{ data.totals.runs }}</div><div class="tile-label">Total runs</div></div>
       <div class="tile"><div class="tile-num">{{ completionRate }}%</div><div class="tile-label">Completion rate</div></div>
       <div class="tile"><div class="tile-num">{{ avgDuration() }}</div><div class="tile-label">Avg run time</div></div>
-      <div class="tile" [class.alert]="data.outcomes.failed > 0"><div class="tile-num">{{ data.outcomes.failed }}</div><div class="tile-label">Deviations (failed steps)</div></div>
+      <div class="tile" [class.alert]="data.totals.open_deviations > 0"><div class="tile-num">{{ data.totals.open_deviations }}</div><div class="tile-label">Open deviations</div></div>
+      <div class="tile" [class.alert]="data.outcomes.failed > 0"><div class="tile-num">{{ data.outcomes.failed }}</div><div class="tile-label">Failed steps</div></div>
       <div class="tile"><div class="tile-num">{{ data.totals.effective_sops }}</div><div class="tile-label">Effective SOPs</div></div>
       <div class="tile"><div class="tile-num">{{ data.totals.protocols }}</div><div class="tile-label">Protocols</div></div>
     </div>

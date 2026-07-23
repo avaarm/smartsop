@@ -98,14 +98,55 @@
               </button>
             </div>
           </div>
+          <!-- Deviations raised against this step -->
+          <div class="dev-list" *ngIf="deviationsForStep(step).length">
+            <div class="dev-item" *ngFor="let d of deviationsForStep(step)">
+              <span class="sev" [class]="d.severity">{{ d.severity }}</span>
+              <span class="dev-title">{{ d.title }}</span>
+              <span class="dev-status">{{ d.status }}</span>
+            </div>
+          </div>
         </div>
         <!-- Outcome buttons -->
         <div class="outcomes">
           <button class="oc done" [class.active]="step.status === 'done'" (click)="setStatus(step, 'done')" title="Done">✓ Done</button>
           <button class="oc fail" [class.active]="step.status === 'failed'" (click)="setStatus(step, 'failed')" title="Fail">✕ Fail</button>
           <button class="oc skip" [class.active]="step.status === 'skipped'" (click)="setStatus(step, 'skipped')" title="Skip">» Skip</button>
+          <button class="oc flag" (click)="openDeviation(step)" title="Flag a deviation">⚑ Flag</button>
         </div>
       </div>
     </div>
   </ng-container>
+</div>
+
+<!-- Flag-deviation modal -->
+<div class="modal-overlay" *ngIf="deviationStep" (click)="closeDeviation()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <h3>Flag a deviation</h3>
+    <p class="modal-sub">Step {{ deviationStep.order_index + 1 }} · {{ deviationStep.title }}</p>
+
+    <label>What happened?</label>
+    <input type="text" [(ngModel)]="deviationForm.title" name="dev-title"
+           placeholder="e.g. Breaker would not open" />
+
+    <label>Details</label>
+    <textarea rows="3" [(ngModel)]="deviationForm.description" name="dev-desc"
+              placeholder="What was observed, what was done…"></textarea>
+
+    <label>Severity</label>
+    <div class="sev-picker">
+      <button *ngFor="let s of ['minor', 'major', 'critical']"
+              type="button" [class]="'sev-opt ' + s"
+              [class.active]="deviationForm.severity === s"
+              (click)="deviationForm.severity = $any(s)">{{ s }}</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-ghost" (click)="closeDeviation()">Cancel</button>
+      <button class="btn-primary" (click)="submitDeviation()"
+              [disabled]="flagBusy || !deviationForm.title.trim()">
+        {{ flagBusy ? 'Saving…' : 'Flag deviation' }}
+      </button>
+    </div>
+  </div>
 </div>

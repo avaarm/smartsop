@@ -131,11 +131,48 @@ export interface ProtocolRun {
 }
 
 export interface Analytics {
-  totals: { protocols: number; effective_sops: number; runs: number; completed_runs: number };
+  totals: {
+    protocols: number; effective_sops: number; runs: number; completed_runs: number;
+    deviations: number; open_deviations: number;
+  };
   outcomes: { done: number; failed: number; skipped: number; pending: number };
+  deviation_severity: { minor: number; major: number; critical: number };
   avg_run_duration_seconds: number;
   runs_by_week: { week_ending: string; runs: number }[];
   top_protocols: { title: string; runs: number }[];
+}
+
+export type DeviationSeverity = 'minor' | 'major' | 'critical';
+export type DeviationStatus = 'open' | 'investigating' | 'resolved' | 'closed';
+
+export interface Deviation {
+  id: number;
+  account_id: number;
+  protocol_id: number | null;
+  run_id: number | null;
+  run_step_id: number | null;
+  step_title: string;
+  title: string;
+  description: string;
+  severity: DeviationSeverity;
+  status: DeviationStatus;
+  corrective_action: string;
+  reported_by: string;
+  assigned_to: string;
+  created_at: string;
+  updated_at: string;
+  resolved_at: string | null;
+}
+
+export interface DeviationInput {
+  title: string;
+  description?: string;
+  severity?: DeviationSeverity;
+  run_id?: number;
+  run_step_id?: number;
+  protocol_id?: number;
+  step_title?: string;
+  assigned_to?: string;
 }
 
 export interface StepInput {
@@ -283,6 +320,31 @@ export class ProtocolService {
 
   getAnalytics(accountId: number): Observable<{ success: boolean } & Analytics> {
     return this.http.get<any>(`/api/accounts/${accountId}/analytics`)
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  // ── Deviations / corrective actions (CAPA) ──
+
+  listDeviations(accountId: number, filters: { status?: string; severity?: string; run_id?: number } = {}):
+    Observable<{ success: boolean; deviations: Deviation[]; total: number }> {
+    const params = new URLSearchParams({ per_page: '100' });
+    if (filters.status) params.set('status', filters.status);
+    if (filters.severity) params.set('severity', filters.severity);
+    if (filters.run_id) params.set('run_id', String(filters.run_id));
+    return this.http.get<any>(`/api/accounts/${accountId}/deviations?${params.toString()}`)
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  flagDeviation(accountId: number, body: DeviationInput):
+    Observable<{ success: boolean; deviation: Deviation }> {
+    return this.http.post<any>(`/api/accounts/${accountId}/deviations`, body)
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  updateDeviation(accountId: number, id: number,
+                  patch: Partial<Pick<Deviation, 'status' | 'severity' | 'corrective_action' | 'assigned_to' | 'title' | 'description'>>):
+    Observable<{ success: boolean; deviation: Deviation }> {
+    return this.http.patch<any>(`/api/accounts/${accountId}/deviations/${id}`, patch)
       .pipe(timeout(15000), catchError(this.handleError));
   }
 

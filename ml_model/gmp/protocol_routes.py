@@ -10,7 +10,9 @@ from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify, g
 from sqlalchemy import func
 
-from .database import db, Protocol, ProtocolStep, ProtocolRun, ProtocolRunStep, ProtocolSignoff
+from .database import (
+    db, Protocol, ProtocolStep, ProtocolRun, ProtocolRunStep, ProtocolSignoff, Deviation,
+)
 from .auth import require_account_access, has_account_role
 from .protocol_import import extract_text, split_into_steps, ai_structure
 from .generator_provider import get_generator
@@ -30,6 +32,11 @@ MAX_COMPONENTS = 30
 BRANCH_ACTIONS = ("continue", "goto", "halt")
 MAX_BRANCH_OPTIONS = 8
 MANAGER_ROLES = ("owner", "admin")
+
+# Deviation / corrective-action (CAPA) tracking.
+DEVIATION_SEVERITIES = ("minor", "major", "critical")
+DEVIATION_STATUSES = ("open", "investigating", "resolved", "closed")
+DEVIATION_CLOSED_STATUSES = ("resolved", "closed")
 DEFAULT_MEANING = {
     "reviewer": "Reviewed for accuracy and completeness",
     "approver": "Approved for use",
@@ -509,6 +516,20 @@ def analytics(account_id):
         .all()
     )
 
+    # Deviation / CAPA rollup.
+    dev_q = Deviation.query.filter_by(account_id=account_id)
+    total_deviations = dev_q.count()
+    open_deviations = dev_q.filter(
+        Deviation.status.notin_(DEVIATION_CLOSED_STATUSES)
+    ).count()
+    sev_rows = (
+        db.session.query(Deviation.severity, func.count(Deviation.id))
+        .filter(Deviation.account_id == account_id)
+        .group_by(Deviation.severity)
+        .all()
+    )
+    sev = {s: n for s, n in sev_rows}
+
     return jsonify({
         "success": True,
         "totals": {
@@ -516,6 +537,8 @@ def analytics(account_id):
             "effective_sops": effective,
             "runs": total_runs,
             "completed_runs": completed_runs,
+            "deviations": total_deviations,
+            "open_deviations": open_deviations,
         },
         "outcomes": {
             "done": outcomes.get("done", 0),
@@ -523,10 +546,150 @@ def analytics(account_id):
             "skipped": outcomes.get("skipped", 0),
             "pending": outcomes.get("pending", 0),
         },
+        "deviation_severity": {
+            "minor": sev.get("minor", 0),
+            "major": sev.get("major", 0),
+            "critical": sev.get("critical", 0),
+        },
         "avg_run_duration_seconds": avg_dur,
         "runs_by_week": weeks,
         "top_protocols": [{"title": t, "runs": n} for t, n in top],
     })
+
+
+# ── Deviations / corrective actions (CAPA) ──
+
+@protocol_bp.route("/<int:account_id>/deviations", methods=["GET"])
+@require_account_access
+def list_deviations(account_id):
+    page = max(1, request.args.get("page", 1, type=int))
+    per_page = min(max(1, request.args.get("per_page", 20, type=int)), 100)
+    query = Deviation.query.filter_by(account_id=account_id)
+
+    status = request.args.get("status")
+    if status == "open":
+        query = query.filter(Deviation.status.notin_(DEVIATION_CLOSED_STATUSES))
+    elif status in DEVIATION_STATUSES:
+        query = query.filter_by(status=status)
+    severity = request.args.get("severity")
+    if severity in DEVIATION_SEVERITIES:
+        query = query.filter_by(severity=severity)
+    protocol_id = request.args.get("protocol_id", type=int)
+    if protocol_id:
+        query = query.filter_by(protocol_id=protocol_id)
+    run_id = request.args.get("run_id", type=int)
+    if run_id:
+        query = query.filter_by(run_id=run_id)
+
+    paginated = query.order_by(Deviation.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False)
+    return jsonify({
+        "success": True,
+        "deviations": [d.to_dict() for d in paginated.items],
+        "total": paginated.total,
+        "page": paginated.page,
+        "pages": paginated.pages,
+    })
+
+
+@protocol_bp.route("/<int:account_id>/deviations", methods=["POST"])
+@require_account_access
+def create_deviation(account_id):
+    """Flag a deviation. Usually raised mid-run against a step, but a standalone
+    deviation (no run/step) can also be logged."""
+    data = request.get_json(silent=True) or {}
+    title = (data.get("title") or "").strip()
+    if not title:
+        return jsonify({"success": False, "error": "A title is required"}), 400
+
+    severity = (data.get("severity") or "minor").lower()
+    if severity not in DEVIATION_SEVERITIES:
+        return jsonify({
+            "success": False,
+            "error": f"severity must be one of {', '.join(DEVIATION_SEVERITIES)}",
+        }), 400
+
+    # Resolve and validate the optional run / step context against this account.
+    run_id = data.get("run_id")
+    run = _get_run(account_id, run_id) if run_id else None
+    if run_id and run is None:
+        return jsonify({"success": False, "error": "Run not found"}), 404
+
+    protocol_id = data.get("protocol_id") or (run.protocol_id if run else None)
+    step_title = (data.get("step_title") or "")[:500]
+    run_step_id = data.get("run_step_id")
+    if run and run_step_id and not step_title:
+        rstep = ProtocolRunStep.query.filter_by(id=run_step_id, run_id=run.id).first()
+        if rstep is not None:
+            step_title = rstep.title
+
+    dev = Deviation(
+        account_id=account_id,
+        protocol_id=protocol_id,
+        run_id=run.id if run else None,
+        run_step_id=int(run_step_id) if isinstance(run_step_id, (int, float)) else None,
+        step_title=step_title,
+        title=title[:500],
+        description=data.get("description") or "",
+        severity=severity,
+        corrective_action=data.get("corrective_action") or "",
+        assigned_to=(data.get("assigned_to") or "")[:255],
+        reported_by=_actor_name(),
+        reported_by_user_id=g.current_user.id,
+    )
+    db.session.add(dev)
+    db.session.commit()
+    logger.info("Deviation flagged (account=%s, severity=%s)", account_id, severity)
+    return jsonify({"success": True, "deviation": dev.to_dict()}), 201
+
+
+@protocol_bp.route("/<int:account_id>/deviations/<int:deviation_id>", methods=["GET"])
+@require_account_access
+def get_deviation(account_id, deviation_id):
+    dev = Deviation.query.filter_by(id=deviation_id, account_id=account_id).first()
+    if dev is None:
+        return jsonify({"success": False, "error": "Deviation not found"}), 404
+    return jsonify({"success": True, "deviation": dev.to_dict()})
+
+
+@protocol_bp.route("/<int:account_id>/deviations/<int:deviation_id>", methods=["PATCH"])
+@require_account_access
+def update_deviation(account_id, deviation_id):
+    """Triage / resolve a deviation. Setting status to resolved/closed stamps
+    resolved_at; reopening clears it."""
+    dev = Deviation.query.filter_by(id=deviation_id, account_id=account_id).first()
+    if dev is None:
+        return jsonify({"success": False, "error": "Deviation not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    if "status" in data:
+        status = (data.get("status") or "").lower()
+        if status not in DEVIATION_STATUSES:
+            return jsonify({
+                "success": False,
+                "error": f"status must be one of {', '.join(DEVIATION_STATUSES)}",
+            }), 400
+        dev.status = status
+        dev.resolved_at = datetime.utcnow() if status in DEVIATION_CLOSED_STATUSES else None
+    if "severity" in data:
+        severity = (data.get("severity") or "").lower()
+        if severity not in DEVIATION_SEVERITIES:
+            return jsonify({
+                "success": False,
+                "error": f"severity must be one of {', '.join(DEVIATION_SEVERITIES)}",
+            }), 400
+        dev.severity = severity
+    if "corrective_action" in data:
+        dev.corrective_action = data.get("corrective_action") or ""
+    if "assigned_to" in data:
+        dev.assigned_to = (data.get("assigned_to") or "")[:255]
+    if "title" in data and (data.get("title") or "").strip():
+        dev.title = data["title"].strip()[:500]
+    if "description" in data:
+        dev.description = data.get("description") or ""
+
+    db.session.commit()
+    return jsonify({"success": True, "deviation": dev.to_dict()})
 
 
 # ── Controlled-document lifecycle (SOP review / approval) ──
