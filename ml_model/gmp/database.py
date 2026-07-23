@@ -579,3 +579,58 @@ class ProtocolStep(db.Model):
             "branch": branch,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class Deviation(db.Model):
+    """A recorded deviation / corrective action (CAPA) raised during a run.
+
+    When a step doesn't go to plan, the operator flags a deviation: what
+    happened, how severe, and what to do about it. The record is tracked to
+    resolution (open -> investigating -> resolved -> closed) so a quality or
+    safety director has an auditable trail of every off-nominal event — the
+    execution-time complement to the approval audit trail.
+    """
+
+    __tablename__ = "deviations"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False)
+    # Where it happened. All optional so a standalone deviation can be logged too.
+    protocol_id = db.Column(db.Integer, db.ForeignKey("protocols.id"), nullable=True)
+    run_id = db.Column(db.Integer, db.ForeignKey("protocol_runs.id"), nullable=True)
+    run_step_id = db.Column(db.Integer, nullable=True)
+    step_title = db.Column(db.String(500), default="")   # snapshot of the step
+
+    title = db.Column(db.String(500), nullable=False)
+    description = db.Column(db.Text, default="")          # what happened
+    severity = db.Column(db.String(20), default="minor")  # minor, major, critical
+    status = db.Column(db.String(20), default="open")     # open, investigating, resolved, closed
+    corrective_action = db.Column(db.Text, default="")    # the CAPA / resolution
+
+    reported_by = db.Column(db.String(255), default="")
+    reported_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    assigned_to = db.Column(db.String(255), default="")   # owner responsible for closing
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    resolved_at = db.Column(db.DateTime, nullable=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "account_id": self.account_id,
+            "protocol_id": self.protocol_id,
+            "run_id": self.run_id,
+            "run_step_id": self.run_step_id,
+            "step_title": self.step_title,
+            "title": self.title,
+            "description": self.description,
+            "severity": self.severity,
+            "status": self.status,
+            "corrective_action": self.corrective_action,
+            "reported_by": self.reported_by,
+            "assigned_to": self.assigned_to,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
+        }

@@ -20,7 +20,10 @@ def test_empty_analytics(client):
     burn_superadmin(client)
     token, acc_id, _ = make_owner(client, "o@x.com", "Acme")
     body = client.get(f"/api/accounts/{acc_id}/analytics", headers=auth(token)).get_json()
-    assert body["totals"] == {"protocols": 0, "effective_sops": 0, "runs": 0, "completed_runs": 0}
+    assert body["totals"] == {
+        "protocols": 0, "effective_sops": 0, "runs": 0, "completed_runs": 0,
+        "deviations": 0, "open_deviations": 0,
+    }
     assert body["avg_run_duration_seconds"] == 0
     assert len(body["runs_by_week"]) == 8
 

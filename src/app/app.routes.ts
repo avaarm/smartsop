@@ -39,6 +39,12 @@ export const routes: Routes = [
             .then(m => m.ProtocolRunComponent),
       },
       {
+        path: 'deviations',
+        loadComponent: () =>
+          import('./components/protocols/deviations/deviations.component')
+            .then(m => m.DeviationsComponent),
+      },
+      {
         path: 'analytics',
         loadComponent: () =>
           import('./components/protocols/analytics/analytics.component')
