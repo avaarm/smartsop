@@ -110,8 +110,32 @@ Legend: ✅ built · 🚧 in progress · ⬜ planned
 | Feature | Status |
 |---|---|
 | **Analytics dashboard**: total protocols/runs, completion rate, outcome breakdown (Done/Fail/Skip), avg run duration, runs-by-week trend, top protocols | ✅ |
-| Deviation / failure reporting drill-down | ⬜ |
+| Deviation / failure reporting drill-down | ✅ |
 | Per-user / per-workspace activity reports | ⬜ |
+
+## 9. Field execution & compliance (from the competitive-strategy research)
+
+See `docs/competitive_strategy.pdf`. Note its "SmartSOP today" scorecard predates
+the run-mode / typed-block / lifecycle / SSO work and is stale.
+
+| Feature | Status |
+|---|---|
+| **Deviation / corrective action (CAPA)**: flag mid-run, severity, triage to resolution | ✅ |
+| **Asset / equipment library**: hazard class, energy sources, linked SOPs | ✅ |
+| **QR tags**: printable per-asset QR → `/scan/<slug>` opens that asset's hazards + SOPs | ✅ |
+| **Regulatory template packs** (OSHA 1910.147 / 1910.146, NFPA 70E, HACCP) | ✅ |
+| **Empty-state onboarding** — new workspace opens on the template gallery | ✅ |
+| Responsive shell (sidebar collapses to a top bar on phones) | ✅ |
+| Offline mobile execution (local cache + sync-on-reconnect) | ⬜ |
+| Task manager / scheduling (assign a run, due dates, recurring PM) | ⬜ |
+| Version diff + rollback ("what changed between v3 and v4") | ⬜ |
+| Inline comments + concurrent editing | ⬜ |
+| Training & competency (assign SOP, quiz, expiry tracking) | ⬜ |
+| Public REST API + webhooks | ⬜ |
+| AI: video/voice → SOP | ⬜ |
+| AI: semantic search ("SOP Finder") | ⬜ |
+| AI: bilingual EN-ES rendering | ⬜ |
+| AI: deviation assistant (suggest root cause / next action) | ⬜ |
 
 ---
 
