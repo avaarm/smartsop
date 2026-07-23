@@ -142,6 +142,17 @@ export interface Analytics {
   top_protocols: { title: string; runs: number }[];
 }
 
+/** A prebuilt regulatory SOP a workspace can start from. */
+export interface ProtocolTemplate {
+  key: string;
+  name: string;
+  standard: string;
+  category: string;
+  description: string;
+  protocol_type: ProtocolType;
+  step_count: number;
+}
+
 export type DeviationSeverity = 'minor' | 'major' | 'critical';
 export type DeviationStatus = 'open' | 'investigating' | 'resolved' | 'closed';
 
@@ -209,6 +220,17 @@ export class ProtocolService {
   getProtocol(accountId: number, id: number): Observable<{ success: boolean; protocol: Protocol }> {
     return this.http.get<any>(`${this.base(accountId)}/${id}`)
       .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  listTemplates(accountId: number): Observable<{ success: boolean; templates: ProtocolTemplate[] }> {
+    return this.http.get<any>(`${this.base(accountId)}/templates`)
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  createFromTemplate(accountId: number, key: string, title?: string):
+    Observable<{ success: boolean; protocol: Protocol }> {
+    return this.http.post<any>(`${this.base(accountId)}/from-template`, { key, title })
+      .pipe(timeout(20000), catchError(this.handleError));
   }
 
   importFromText(accountId: number, body: { title?: string; text: string; mode: string }):

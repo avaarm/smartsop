@@ -15,6 +15,7 @@ from .database import (
 )
 from .auth import require_account_access, has_account_role
 from .protocol_import import extract_text, split_into_steps, ai_structure
+from .templates import template_summaries, get_template
 from .generator_provider import get_generator
 
 RUN_STEP_STATUSES = ("pending", "done", "failed", "skipped")
@@ -153,6 +154,57 @@ def create_protocol(account_id):
     db.session.add(protocol)
     db.session.commit()
     return jsonify({"success": True, "protocol": protocol.to_dict(include_steps=True)}), 201
+
+
+@protocol_bp.route("/<int:account_id>/protocols/templates", methods=["GET"])
+@require_account_access
+def list_templates(account_id):
+    """The regulatory template gallery — prebuilt SOPs a workspace can start from."""
+    return jsonify({"success": True, "templates": template_summaries()})
+
+
+@protocol_bp.route("/<int:account_id>/protocols/from-template", methods=["POST"])
+@require_account_access
+def create_from_template(account_id):
+    """Instantiate a regulatory template as a new draft protocol.
+
+    The copy is a normal draft: it still has to go through review and approval
+    before it can be made effective.
+    """
+    data = request.get_json(silent=True) or {}
+    template = get_template((data.get("key") or "").strip())
+    if template is None:
+        return jsonify({"success": False, "error": "Unknown template"}), 404
+
+    author = (g.current_user.name or "").strip() or g.current_user.email
+    protocol = Protocol(
+        account_id=account_id,
+        title=(data.get("title") or template["name"])[:500],
+        description=template["description"],
+        protocol_type=template["protocol_type"],
+        created_by=author,
+    )
+    db.session.add(protocol)
+    db.session.flush()
+
+    for i, step in enumerate(template["steps"]):
+        db.session.add(ProtocolStep(
+            protocol_id=protocol.id,
+            order_index=i,
+            title=step.get("title", "")[:500],
+            description=step.get("description", ""),
+            warning=step.get("warning", ""),
+            duration_seconds=step.get("duration_seconds"),
+            components_json=json.dumps(_clean_components(step.get("components"))),
+            branch_json=_clean_branch(step.get("branch")),
+        ))
+    db.session.commit()
+    logger.info("Protocol created from template %s (account=%s)", template["key"], account_id)
+    return jsonify({
+        "success": True,
+        "protocol": protocol.to_dict(include_steps=True),
+        "template": {"key": template["key"], "standard": template["standard"]},
+    }), 201
 
 
 @protocol_bp.route("/<int:account_id>/protocols/import", methods=["POST"])

@@ -86,3 +86,35 @@ h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 4px
   textarea { resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; } }
 .file-name { font-size: 12.5px; color: var(--muted-fg); margin: -6px 0 12px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+
+/* Regulatory template gallery */
+.modal.wide { max-width: 720px; }
+
+.onboard {
+  padding: 32px 28px; border: 1px dashed var(--border); border-radius: 12px;
+  h2 { font-size: 17px; font-weight: 600; margin: 0 0 4px; }
+  p { font-size: 13px; color: var(--muted-fg); margin: 0 0 18px; max-width: 560px; }
+}
+.onboard-alt { margin: 18px 0 0 !important; font-size: 13px; }
+.link-btn {
+  background: none; border: none; padding: 0; font: inherit; cursor: pointer;
+  color: hsl(217 91% 50%); text-decoration: underline;
+  &:hover { color: hsl(217 91% 40%); }
+}
+
+.tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.tpl-card {
+  display: flex; flex-direction: column; gap: 5px; text-align: left; cursor: pointer;
+  padding: 14px 16px; font-family: inherit; color: var(--primary);
+  background: #fff; border: 1px solid var(--border); border-radius: 10px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  &:hover:not(:disabled) { border-color: hsl(217 80% 70%); background: hsl(217 91% 99%); }
+  &:disabled { opacity: 0.55; cursor: default; }
+}
+.tpl-std {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: hsl(217 80% 45%);
+}
+.tpl-name { font-size: 14px; font-weight: 600; line-height: 1.3; }
+.tpl-desc { font-size: 12px; color: var(--muted-fg); line-height: 1.45; }
+.tpl-foot { font-size: 11.5px; color: var(--muted-fg); margin-top: 3px; }

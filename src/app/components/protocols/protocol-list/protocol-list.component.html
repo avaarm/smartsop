@@ -5,6 +5,7 @@
       <p class="subtitle">Create and run step-by-step lab protocols.</p>
     </div>
     <div class="head-actions" *ngIf="activeAccount">
+      <button class="btn-ghost" (click)="openTemplates()">◲ Templates</button>
       <button class="btn-ghost" (click)="openImport()">↥ Import</button>
       <button class="btn-primary" (click)="showNewForm = !showNewForm">+ New protocol</button>
     </div>
@@ -30,9 +31,27 @@
 
     <div class="loading" *ngIf="loading">Loading…</div>
 
-    <div class="empty" *ngIf="!loading && protocols.length === 0 && !showNewForm">
-      No protocols yet. Click <strong>+ New protocol</strong> to create your first one.
-    </div>
+    <!-- Empty state doubles as onboarding: a new workspace can start from a
+         regulatory template instead of a blank editor. -->
+    <section class="onboard" *ngIf="!loading && protocols.length === 0 && !showNewForm">
+      <h2>Start from a regulatory template</h2>
+      <p>Prebuilt SOPs with the safety blocks already filled in. Each lands as a draft you can edit and route for approval.</p>
+
+      <div class="tpl-grid" *ngIf="templates.length">
+        <button class="tpl-card" *ngFor="let t of templates"
+                (click)="useTemplate(t)" [disabled]="creatingFromTemplate">
+          <div class="tpl-std">{{ t.standard }}</div>
+          <div class="tpl-name">{{ t.name }}</div>
+          <div class="tpl-desc">{{ t.description }}</div>
+          <div class="tpl-foot">{{ t.step_count }} steps · {{ t.category }}</div>
+        </button>
+      </div>
+
+      <p class="onboard-alt">
+        Or <button class="link-btn" (click)="showNewForm = true">start from scratch</button>
+        · <button class="link-btn" (click)="openImport()">import an existing Word/PDF SOP</button>
+      </p>
+    </section>
 
     <div class="protocol-list" *ngIf="!loading">
       <button class="protocol-card" *ngFor="let p of protocols" (click)="open(p)">
@@ -93,6 +112,28 @@
           {{ importing ? 'Importing…' : 'Import' }}
         </button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Template gallery -->
+<div class="modal-overlay" *ngIf="showTemplates" (click)="showTemplates = false">
+  <div class="modal wide" (click)="$event.stopPropagation()">
+    <h3>Regulatory templates</h3>
+    <p class="modal-sub">Prebuilt SOPs with typed safety blocks. Each copy starts as a draft.</p>
+
+    <div class="tpl-grid">
+      <button class="tpl-card" *ngFor="let t of templates"
+              (click)="useTemplate(t)" [disabled]="creatingFromTemplate">
+        <div class="tpl-std">{{ t.standard }}</div>
+        <div class="tpl-name">{{ t.name }}</div>
+        <div class="tpl-desc">{{ t.description }}</div>
+        <div class="tpl-foot">{{ t.step_count }} steps · {{ t.category }}</div>
+      </button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-ghost" (click)="showTemplates = false">Close</button>
     </div>
   </div>
 </div>

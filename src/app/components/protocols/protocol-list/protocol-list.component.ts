@@ -3,7 +3,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
-import { ProtocolService, Protocol } from '../../../services/protocol.service';
+import { ProtocolService, Protocol, ProtocolTemplate } from '../../../services/protocol.service';
 import { AccountService, Account } from '../../../services/account.service';
 
 @Component({
@@ -23,6 +23,11 @@ export class ProtocolListComponent implements OnInit {
   showNewForm = false;
   newTitle = '';
   newDescription = '';
+
+  // Regulatory template gallery
+  templates: ProtocolTemplate[] = [];
+  showTemplates = false;
+  creatingFromTemplate = false;
 
   // Import modal
   showImport = false;
@@ -44,9 +49,35 @@ export class ProtocolListComponent implements OnInit {
   ngOnInit(): void {
     this.accountService.activeAccount$.subscribe(a => {
       this.activeAccount = a;
-      if (a && this.isBrowser) this.loadProtocols();
+      if (a && this.isBrowser) { this.loadProtocols(); this.loadTemplates(); }
     });
     if (this.isBrowser) this.accountService.loadSavedAccount();
+  }
+
+  // ── Regulatory templates ──
+
+  private loadTemplates(): void {
+    if (!this.activeAccount) return;
+    this.protocolService.listTemplates(this.activeAccount.id)
+      .subscribe({ next: (res) => (this.templates = res.templates), error: () => {} });
+  }
+
+  openTemplates(): void {
+    this.showTemplates = true;
+    this.errorMessage = '';
+  }
+
+  useTemplate(t: ProtocolTemplate): void {
+    if (!this.activeAccount || this.creatingFromTemplate) return;
+    this.creatingFromTemplate = true;
+    this.protocolService.createFromTemplate(this.activeAccount.id, t.key).subscribe({
+      next: (res) => {
+        this.creatingFromTemplate = false;
+        this.showTemplates = false;
+        this.router.navigate(['/protocols', res.protocol.id]);
+      },
+      error: (err) => { this.errorMessage = err.message; this.creatingFromTemplate = false; },
+    });
   }
 
   loadProtocols(): void {
