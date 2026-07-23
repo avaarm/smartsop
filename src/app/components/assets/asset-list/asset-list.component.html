@@ -1,0 +1,143 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>Assets</h1>
+      <p class="subtitle">Equipment your procedures are performed on. Scan an asset's QR tag to open its SOPs.</p>
+    </div>
+    <button class="btn-primary" (click)="newAsset()" *ngIf="account">+ New asset</button>
+  </header>
+
+  <div class="toast toast-error" *ngIf="errorMessage">{{ errorMessage }}</div>
+  <div class="empty" *ngIf="!account">Select an account to view assets.</div>
+
+  <ng-container *ngIf="account">
+    <div class="filters">
+      <input type="text" [(ngModel)]="search" (keyup.enter)="load()" name="q"
+             placeholder="Search by name, tag, or location…" />
+      <button class="btn-ghost" (click)="load()">Search</button>
+    </div>
+
+    <div class="loading" *ngIf="loading">Loading…</div>
+
+    <div class="empty" *ngIf="!loading && !assets.length">
+      No assets yet. Add the equipment you lock out or service, link its SOPs, then print the QR tag.
+    </div>
+
+    <div class="asset-grid" *ngIf="!loading && assets.length">
+      <div class="asset-card" *ngFor="let a of assets">
+        <div class="ac-head">
+          <div>
+            <h3>{{ a.name }}</h3>
+            <div class="ac-tag" *ngIf="a.asset_tag">{{ a.asset_tag }}</div>
+          </div>
+          <span class="hazard" *ngIf="a.hazard_class">{{ a.hazard_class }}</span>
+        </div>
+
+        <div class="ac-meta" *ngIf="a.location">📍 {{ a.location }}</div>
+        <div class="ac-meta" *ngIf="a.manufacturer || a.model">
+          🏭 {{ a.manufacturer }} <span *ngIf="a.model">· {{ a.model }}</span>
+        </div>
+
+        <div class="energy" *ngIf="a.energy_sources.length">
+          <span class="es" *ngFor="let e of a.energy_sources">⚡ {{ e }}</span>
+        </div>
+
+        <div class="ac-sops">
+          <span class="sop-count">{{ a.protocol_ids.length }} linked SOP{{ a.protocol_ids.length === 1 ? '' : 's' }}</span>
+        </div>
+
+        <div class="ac-actions">
+          <button class="btn-ghost sm" (click)="showQr(a)">QR tag</button>
+          <button class="btn-ghost sm" (click)="edit(a)">Edit</button>
+          <button class="btn-ghost sm danger" (click)="remove(a)">Delete</button>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>
+
+<!-- Editor drawer -->
+<div class="modal-overlay" *ngIf="editing" (click)="closeEditor()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <h3>{{ editing.id ? 'Edit asset' : 'New asset' }}</h3>
+
+    <label>Name</label>
+    <input type="text" [(ngModel)]="editing.name" name="a-name" placeholder="e.g. West Plant Switchgear" />
+
+    <div class="row">
+      <div>
+        <label>Asset tag</label>
+        <input type="text" [(ngModel)]="editing.asset_tag" name="a-tag" placeholder="SWG-4471" />
+      </div>
+      <div>
+        <label>Location</label>
+        <input type="text" [(ngModel)]="editing.location" name="a-loc" placeholder="Bldg 2 / Electrical Room" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Manufacturer</label>
+        <input type="text" [(ngModel)]="editing.manufacturer" name="a-mfr" placeholder="Square D" />
+      </div>
+      <div>
+        <label>Model</label>
+        <input type="text" [(ngModel)]="editing.model" name="a-model" placeholder="QED-2" />
+      </div>
+    </div>
+
+    <label>Hazard class</label>
+    <input type="text" [(ngModel)]="editing.hazard_class" name="a-haz" placeholder="Arc flash Cat 4" />
+
+    <label>Energy sources to isolate</label>
+    <div class="chips">
+      <span class="chip" *ngFor="let e of editing.energy_sources; let i = index">
+        ⚡ {{ e }} <button type="button" (click)="removeEnergySource(i)">×</button>
+      </span>
+    </div>
+    <div class="chip-add">
+      <input type="text" [(ngModel)]="energyInput" name="a-energy"
+             (keyup.enter)="addEnergySource()" placeholder="e.g. 480V AC — press Enter" />
+      <button class="btn-ghost sm" type="button" (click)="addEnergySource()">Add</button>
+    </div>
+
+    <label>Applicable SOPs</label>
+    <div class="empty-mini" *ngIf="!protocols.length">No protocols in this workspace yet.</div>
+    <div class="sop-picker" *ngIf="protocols.length">
+      <button *ngFor="let p of protocols" type="button" class="sop-opt"
+              [class.active]="isLinked(p.id)" (click)="toggleProtocol(p.id)">
+        <span class="sop-check">{{ isLinked(p.id) ? '✓' : '+' }}</span>
+        {{ p.title }}
+        <em>v{{ p.version }} · {{ p.status }}</em>
+      </button>
+    </div>
+
+    <label>Notes</label>
+    <textarea rows="2" [(ngModel)]="editing.notes" name="a-notes"
+              placeholder="Anything a tech should know before working on this asset…"></textarea>
+
+    <div class="modal-actions">
+      <button class="btn-ghost" (click)="closeEditor()">Cancel</button>
+      <button class="btn-primary" (click)="save()" [disabled]="saving || !editing.name?.trim()">
+        {{ saving ? 'Saving…' : 'Save asset' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- QR tag -->
+<div class="modal-overlay" *ngIf="qrAsset" (click)="closeQr()">
+  <div class="modal qr-modal" (click)="$event.stopPropagation()">
+    <div class="qr-print">
+      <h3>{{ qrAsset.name }}</h3>
+      <p class="modal-sub" *ngIf="qrAsset.asset_tag">{{ qrAsset.asset_tag }}</p>
+      <div class="qr-box" *ngIf="qrSvg" [innerHTML]="qrSvg"></div>
+      <div class="loading" *ngIf="!qrSvg">Generating…</div>
+      <p class="qr-url">{{ scanUrl(qrAsset) }}</p>
+    </div>
+    <div class="modal-actions no-print">
+      <button class="btn-ghost" (click)="closeQr()">Close</button>
+      <button class="btn-primary" (click)="printQr()">Print tag</button>
+    </div>
+  </div>
+</div>

@@ -18,6 +18,7 @@ from ml_model.gmp.routes import gmp_bp
 from ml_model.gmp.account_routes import account_bp
 from ml_model.gmp.auth_routes import auth_bp
 from ml_model.gmp.protocol_routes import protocol_bp
+from ml_model.gmp.asset_routes import asset_bp
 from ml_model.gmp.database import init_db, db
 from ml_model.gmp.storage import get_document_storage
 from ml_model.gmp.extensions import limiter
@@ -63,6 +64,7 @@ app.register_blueprint(gmp_bp)
 app.register_blueprint(account_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(protocol_bp)
+app.register_blueprint(asset_bp)
 
 
 @app.route('/api/download/<filename>')

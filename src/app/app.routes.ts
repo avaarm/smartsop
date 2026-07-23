@@ -39,6 +39,18 @@ export const routes: Routes = [
             .then(m => m.ProtocolRunComponent),
       },
       {
+        path: 'assets',
+        loadComponent: () =>
+          import('./components/assets/asset-list/asset-list.component')
+            .then(m => m.AssetListComponent),
+      },
+      {
+        path: 'scan/:slug',
+        loadComponent: () =>
+          import('./components/assets/asset-scan/asset-scan.component')
+            .then(m => m.AssetScanComponent),
+      },
+      {
         path: 'deviations',
         loadComponent: () =>
           import('./components/protocols/deviations/deviations.component')
