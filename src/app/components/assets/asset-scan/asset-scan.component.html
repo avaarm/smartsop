@@ -1,0 +1,53 @@
+<div class="scan">
+  <div class="loading" *ngIf="loading">Looking up asset…</div>
+
+  <div class="toast toast-error" *ngIf="errorMessage">
+    {{ errorMessage }}
+    <a routerLink="/assets">Back to assets</a>
+  </div>
+
+  <ng-container *ngIf="asset">
+    <div class="scanned-badge">Scanned asset</div>
+    <h1>{{ asset.name }}</h1>
+    <div class="tag" *ngIf="asset.asset_tag">{{ asset.asset_tag }}</div>
+
+    <div class="meta">
+      <div class="m-row" *ngIf="asset.location"><span>Location</span>{{ asset.location }}</div>
+      <div class="m-row" *ngIf="asset.manufacturer || asset.model">
+        <span>Equipment</span>{{ asset.manufacturer }} {{ asset.model }}
+      </div>
+    </div>
+
+    <!-- Hazards first: this is what a tech needs before touching anything. -->
+    <div class="hazard-card" *ngIf="asset.hazard_class || asset.energy_sources.length">
+      <h2>⚠ Before you start</h2>
+      <div class="hazard-class" *ngIf="asset.hazard_class">{{ asset.hazard_class }}</div>
+      <div class="energy" *ngIf="asset.energy_sources.length">
+        <div class="energy-label">Energy sources to isolate</div>
+        <span class="es" *ngFor="let e of asset.energy_sources">⚡ {{ e }}</span>
+      </div>
+    </div>
+
+    <p class="notes" *ngIf="asset.notes">{{ asset.notes }}</p>
+
+    <h2 class="sop-head">Procedures for this asset</h2>
+    <div class="empty" *ngIf="!asset.protocols?.length">
+      No SOPs are linked to this asset yet.
+    </div>
+    <div class="sop-list" *ngIf="asset.protocols?.length">
+      <div class="sop" *ngFor="let p of asset.protocols">
+        <div class="sop-info">
+          <div class="sop-title">{{ p.title }}</div>
+          <div class="sop-meta">
+            <span class="status" [class]="p.status">{{ p.status }}</span>
+            v{{ p.version }}
+            <span *ngIf="p.sop_number">· {{ p.sop_number }}</span>
+          </div>
+        </div>
+        <a class="btn-run" [routerLink]="['/protocols', p.id, 'run']">Start run →</a>
+      </div>
+    </div>
+
+    <a class="back" routerLink="/assets">← All assets</a>
+  </ng-container>
+</div>

@@ -16,3 +16,4 @@ sqlalchemy
 flask-sqlalchemy
 pydantic
 lxml
+segno

@@ -43,6 +43,13 @@ import { AuthService } from '../../services/auth.service';
               </svg>
               <span>Protocols</span>
             </a>
+            <a routerLink="/assets" routerLinkActive="active" class="nav-link">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+              </svg>
+              <span>Assets</span>
+            </a>
             <a routerLink="/deviations" routerLinkActive="active" class="nav-link">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
@@ -283,6 +290,38 @@ import { AuthService } from '../../services/auth.service';
     .sidebar::-webkit-scrollbar { width: 4px; }
     .sidebar::-webkit-scrollbar-track { background: transparent; }
     .sidebar::-webkit-scrollbar-thumb { background: hsl(0 0% 15%); border-radius: 2px; }
+
+    /* Phones: the sidebar becomes a compact top bar so the content column gets
+       the full width. Field work (scanning a tag, running an SOP) happens here. */
+    @media (max-width: 768px) {
+      .layout { flex-direction: column; height: 100dvh; }
+
+      .sidebar {
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        border-right: none;
+        border-bottom: 1px solid hsl(0 0% 12%);
+      }
+
+      .sidebar-header { padding: 10px 12px; border-bottom: none; flex-shrink: 0; }
+      .logo span { display: none; }
+
+      .sidebar-nav {
+        padding: 8px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+      }
+      .sidebar-nav::-webkit-scrollbar { display: none; }
+      .nav-section { display: flex; gap: 4px; }
+      .nav-section-title { display: none; }
+      .nav-link { margin-bottom: 0; white-space: nowrap; flex-shrink: 0; }
+
+      .sidebar-footer { padding: 8px 10px; border-top: none; flex-shrink: 0; margin-left: auto; }
+      .user-box { padding: 0; background: none; border: none; }
+      .user-meta, .footer-text { display: none; }
+    }
   `]
 })
 export class MainLayoutComponent {

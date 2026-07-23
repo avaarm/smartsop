@@ -581,6 +581,68 @@ class ProtocolStep(db.Model):
         }
 
 
+class Asset(db.Model):
+    """A piece of equipment a procedure is performed on.
+
+    Assets are what make QR codes useful in the field: scanning the tag on a
+    specific switchgear opens the SOPs for *that* asset, pre-loaded with its
+    hazard class and energy sources, instead of a generic document link.
+    """
+
+    __tablename__ = "assets"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False)
+
+    name = db.Column(db.String(300), nullable=False)
+    asset_tag = db.Column(db.String(100), default="")     # customer's own asset number
+    # Opaque, unguessable slug embedded in the QR code (not the sequential id).
+    qr_slug = db.Column(db.String(40), unique=True, nullable=False, index=True)
+
+    location = db.Column(db.String(300), default="")
+    manufacturer = db.Column(db.String(200), default="")
+    model = db.Column(db.String(200), default="")
+    hazard_class = db.Column(db.String(200), default="")
+    # Energy sources to isolate, e.g. ["480V AC", "Hydraulic 2000 psi"]
+    energy_sources_json = db.Column(db.Text, default="[]")
+    # SOPs that apply to this asset: [protocol_id, ...]
+    protocol_ids_json = db.Column(db.Text, default="[]")
+    notes = db.Column(db.Text, default="")
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self, protocols=None):
+        import json as _json
+        try:
+            energy = _json.loads(self.energy_sources_json or "[]")
+        except ValueError:
+            energy = []
+        try:
+            pids = _json.loads(self.protocol_ids_json or "[]")
+        except ValueError:
+            pids = []
+        d = {
+            "id": self.id,
+            "account_id": self.account_id,
+            "name": self.name,
+            "asset_tag": self.asset_tag,
+            "qr_slug": self.qr_slug,
+            "location": self.location,
+            "manufacturer": self.manufacturer,
+            "model": self.model,
+            "hazard_class": self.hazard_class,
+            "energy_sources": energy,
+            "protocol_ids": pids,
+            "notes": self.notes,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+        if protocols is not None:
+            d["protocols"] = protocols
+        return d
+
+
 class Deviation(db.Model):
     """A recorded deviation / corrective action (CAPA) raised during a run.
 
