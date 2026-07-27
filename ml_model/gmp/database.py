@@ -643,6 +643,61 @@ class Asset(db.Model):
         return d
 
 
+class TrainingRecord(db.Model):
+    """Proof that a person is trained on an SOP — the competency side of GxP.
+
+    A trainee is assigned an SOP as a training requirement, reads it, and
+    acknowledges (21 CFR Part 11 read-and-understood). The record captures the
+    version trained on and an expiry for annual re-certification, so a quality
+    manager can show who is current on which procedure.
+    """
+
+    __tablename__ = "training_records"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False)
+    protocol_id = db.Column(db.Integer, db.ForeignKey("protocols.id"), nullable=False)
+    protocol_title = db.Column(db.String(500), default="")   # snapshot
+    protocol_version = db.Column(db.Integer, default=1)       # version trained on
+
+    trainee = db.Column(db.String(255), default="")          # person to be trained
+    trainee_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    assigned_by = db.Column(db.String(255), default="")
+
+    status = db.Column(db.String(20), default="assigned")    # assigned, acknowledged
+    acknowledgement = db.Column(db.String(300), default="")  # meaning statement
+    acknowledged_at = db.Column(db.DateTime, nullable=True)
+    expires_at = db.Column(db.String(30), default="")        # ISO date (annual re-cert)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def is_expired(self):
+        if self.status != "acknowledged" or not self.expires_at:
+            return False
+        return self.expires_at < datetime.utcnow().date().isoformat()
+
+    def is_current(self):
+        return self.status == "acknowledged" and not self.is_expired()
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "account_id": self.account_id,
+            "protocol_id": self.protocol_id,
+            "protocol_title": self.protocol_title,
+            "protocol_version": self.protocol_version,
+            "trainee": self.trainee,
+            "assigned_by": self.assigned_by,
+            "status": self.status,
+            "acknowledgement": self.acknowledgement,
+            "acknowledged_at": self.acknowledged_at.isoformat() if self.acknowledged_at else None,
+            "expires_at": self.expires_at,
+            "is_expired": self.is_expired(),
+            "is_current": self.is_current(),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 class Assignment(db.Model):
     """A scheduled task: run this SOP, by this date, assigned to this person.
 

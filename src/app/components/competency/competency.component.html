@@ -1,0 +1,87 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>Competency</h1>
+      <p class="subtitle">Who is trained on which SOP, and when they need re-certifying.</p>
+    </div>
+    <button class="btn-primary" (click)="openForm()" *ngIf="account">+ Assign training</button>
+  </header>
+
+  <div class="toast toast-error" *ngIf="errorMessage">{{ errorMessage }}</div>
+  <div class="empty" *ngIf="!account">Select an account to view competency records.</div>
+
+  <ng-container *ngIf="account">
+    <div class="tiles">
+      <div class="tile"><div class="tile-num">{{ compliancePercent }}%</div><div class="tile-label">Currently trained</div></div>
+      <div class="tile" [class.alert]="assigned.length > 0"><div class="tile-num">{{ assigned.length }}</div><div class="tile-label">Awaiting acknowledgement</div></div>
+      <div class="tile" [class.alert]="expired.length > 0"><div class="tile-num">{{ expired.length }}</div><div class="tile-label">Expired / re-cert due</div></div>
+      <div class="tile"><div class="tile-num">{{ current.length }}</div><div class="tile-label">Current</div></div>
+    </div>
+
+    <div class="loading" *ngIf="loading">Loading…</div>
+
+    <div class="empty" *ngIf="!loading && !records.length">
+      No training assigned yet. Assign an SOP to a team member so they read and acknowledge it before working unsupervised.
+    </div>
+
+    <table class="rec-table" *ngIf="!loading && records.length">
+      <thead>
+        <tr><th>Trainee</th><th>SOP</th><th>Status</th><th>Acknowledged</th><th>Re-cert due</th><th></th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of records" [class.exp]="r.is_expired">
+          <td class="t-who">{{ r.trainee }}</td>
+          <td>
+            <a [routerLink]="['/protocols', r.protocol_id]">{{ r.protocol_title }}</a>
+            <span class="ver">v{{ r.protocol_version }}</span>
+          </td>
+          <td>
+            <span class="badge" [class.assigned]="r.status === 'assigned'"
+                  [class.current]="r.is_current" [class.expired]="r.is_expired">
+              {{ r.is_expired ? 'expired' : (r.status === 'assigned' ? 'assigned' : 'trained') }}
+            </span>
+          </td>
+          <td class="t-meta">{{ formatDate(r.acknowledged_at) }}</td>
+          <td class="t-meta" [class.overdue-text]="r.is_expired">{{ r.expires_at ? formatDate(r.expires_at) : '—' }}</td>
+          <td class="t-actions">
+            <button class="btn-ghost xs" *ngIf="r.status === 'assigned' || r.is_expired"
+                    (click)="acknowledge(r)">{{ r.is_expired ? 'Re-acknowledge' : 'Acknowledge' }}</button>
+            <button class="btn-ghost xs danger" (click)="remove(r)">✕</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </ng-container>
+</div>
+
+<!-- Assign training -->
+<div class="modal-overlay" *ngIf="showForm" (click)="showForm = false">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <h3>Assign training</h3>
+    <p class="modal-sub">The trainee reads the SOP and acknowledges it. Re-certification defaults to one year.</p>
+
+    <label>SOP / protocol</label>
+    <select [(ngModel)]="form.protocol_id" name="c-protocol">
+      <option [ngValue]="null" disabled>Choose a protocol…</option>
+      <option *ngFor="let p of protocols" [ngValue]="p.id">{{ p.title }} (v{{ p.version }})</option>
+    </select>
+
+    <div class="row">
+      <div>
+        <label>Trainee</label>
+        <input type="text" [(ngModel)]="form.trainee" name="c-who" placeholder="Person's name" />
+      </div>
+      <div>
+        <label>Re-cert date (optional)</label>
+        <input type="date" [(ngModel)]="form.expires_at" name="c-exp" />
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-ghost" (click)="showForm = false">Cancel</button>
+      <button class="btn-primary" (click)="save()" [disabled]="saving || !form.protocol_id || !form.trainee.trim()">
+        {{ saving ? 'Saving…' : 'Assign' }}
+      </button>
+    </div>
+  </div>
+</div>

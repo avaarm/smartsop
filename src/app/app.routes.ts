@@ -63,6 +63,12 @@ export const routes: Routes = [
             .then(m => m.DeviationsComponent),
       },
       {
+        path: 'competency',
+        loadComponent: () =>
+          import('./components/competency/competency.component')
+            .then(m => m.CompetencyComponent),
+      },
+      {
         path: 'analytics',
         loadComponent: () =>
           import('./components/protocols/analytics/analytics.component')

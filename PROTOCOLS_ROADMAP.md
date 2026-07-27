@@ -130,7 +130,7 @@ the run-mode / typed-block / lifecycle / SSO work and is stale.
 | **Task manager / scheduling** (assign a run, due dates, recurring PM, start→run) | ✅ |
 | Offline mobile execution (local cache + sync-on-reconnect) | ⬜ |
 | Inline comments + concurrent editing | ⬜ |
-| Training & competency (assign SOP, quiz, expiry tracking) | ⬜ |
+| **Training & competency** (assign SOP, read-and-acknowledge, annual re-cert expiry) | ✅ |
 | Public REST API + webhooks | ⬜ |
 | AI: video/voice → SOP | ⬜ |
 | AI: semantic search ("SOP Finder") | ⬜ |
