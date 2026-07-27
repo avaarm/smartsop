@@ -13,7 +13,7 @@ from sqlalchemy import func
 
 from .database import (
     db, Protocol, ProtocolStep, ProtocolRun, ProtocolRunStep, ProtocolSignoff, Deviation,
-    Assignment,
+    Assignment, TrainingRecord,
 )
 from .auth import require_account_access, has_account_role
 from .protocol_import import extract_text, split_into_steps, ai_structure
@@ -44,6 +44,10 @@ DEVIATION_CLOSED_STATUSES = ("resolved", "closed")
 # Scheduling / assignments.
 ASSIGNMENT_STATUSES = ("pending", "completed", "cancelled")
 ASSIGNMENT_RECURRENCES = ("none", "daily", "weekly", "monthly")
+
+# Training / competency.
+TRAINING_VALID_DAYS = 365          # default re-certification interval
+DEFAULT_ACK = "I have read and understood this procedure"
 DEFAULT_MEANING = {
     "reviewer": "Reviewed for accuracy and completeness",
     "approver": "Approved for use",
@@ -926,6 +930,86 @@ def start_assignment(account_id, assignment_id):
     db.session.commit()
     return jsonify({"success": True, "run": run.to_dict(include_steps=True),
                     "assignment": a.to_dict()}), 201
+
+
+# ── Training / competency ──
+
+@protocol_bp.route("/<int:account_id>/competency", methods=["GET"])
+@require_account_access
+def list_competency(account_id):
+    query = TrainingRecord.query.filter_by(account_id=account_id)
+    protocol_id = request.args.get("protocol_id", type=int)
+    if protocol_id:
+        query = query.filter_by(protocol_id=protocol_id)
+    trainee = request.args.get("trainee")
+    if trainee:
+        query = query.filter_by(trainee=trainee)
+
+    records = query.order_by(TrainingRecord.created_at.desc()).all()
+    if request.args.get("status") == "assigned":
+        records = [r for r in records if r.status == "assigned"]
+    elif request.args.get("status") == "current":
+        records = [r for r in records if r.is_current()]
+    elif request.args.get("status") == "expired":
+        records = [r for r in records if r.is_expired()]
+
+    return jsonify({"success": True, "training": [r.to_dict() for r in records]})
+
+
+@protocol_bp.route("/<int:account_id>/competency", methods=["POST"])
+@require_account_access
+def assign_competency(account_id):
+    data = request.get_json(silent=True) or {}
+    protocol = _get_protocol(account_id, data.get("protocol_id"))
+    if protocol is None:
+        return jsonify({"success": False, "error": "Protocol not found"}), 404
+    trainee = (data.get("trainee") or "").strip()
+    if not trainee:
+        return jsonify({"success": False, "error": "A trainee is required"}), 400
+
+    rec = TrainingRecord(
+        account_id=account_id,
+        protocol_id=protocol.id,
+        protocol_title=protocol.title,
+        protocol_version=protocol.version,
+        trainee=trainee[:255],
+        assigned_by=_actor_name(),
+        expires_at=(data.get("expires_at") or "")[:30],
+    )
+    db.session.add(rec)
+    db.session.commit()
+    return jsonify({"success": True, "training": rec.to_dict()}), 201
+
+
+@protocol_bp.route("/<int:account_id>/competency/<int:record_id>/acknowledge", methods=["POST"])
+@require_account_access
+def acknowledge_competency(account_id, record_id):
+    """Record read-and-understood. Sets the expiry to +1 year if not given."""
+    rec = TrainingRecord.query.filter_by(id=record_id, account_id=account_id).first()
+    if rec is None:
+        return jsonify({"success": False, "error": "Training record not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    now = datetime.utcnow()
+    rec.status = "acknowledged"
+    rec.acknowledged_at = now
+    rec.acknowledgement = (data.get("acknowledgement") or DEFAULT_ACK)[:300]
+    # Re-certification date: explicit, else one year out.
+    rec.expires_at = (data.get("expires_at")
+                      or (now.date() + timedelta(days=TRAINING_VALID_DAYS)).isoformat())[:30]
+    db.session.commit()
+    return jsonify({"success": True, "training": rec.to_dict()})
+
+
+@protocol_bp.route("/<int:account_id>/competency/<int:record_id>", methods=["DELETE"])
+@require_account_access
+def delete_competency(account_id, record_id):
+    rec = TrainingRecord.query.filter_by(id=record_id, account_id=account_id).first()
+    if rec is None:
+        return jsonify({"success": False, "error": "Training record not found"}), 404
+    db.session.delete(rec)
+    db.session.commit()
+    return jsonify({"success": True})
 
 
 # ── Controlled-document lifecycle (SOP review / approval) ──
