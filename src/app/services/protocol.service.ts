@@ -142,6 +142,33 @@ export interface Analytics {
   top_protocols: { title: string; runs: number }[];
 }
 
+export interface ProtocolVersion {
+  id: number;
+  version: number;
+  status: ProtocolStatus;
+  created_by: string;
+  created_at: string;
+  effective_date: string;
+  step_count: number;
+  is_current: boolean;
+}
+
+export interface StepDiff {
+  index: number;
+  change: 'unchanged' | 'added' | 'removed' | 'modified';
+  title: string;
+  fields?: string[];
+}
+export interface MetaChange {
+  field: string;
+  from: string;
+  to: string;
+}
+export interface VersionDiff {
+  meta_changes: MetaChange[];
+  steps: StepDiff[];
+}
+
 /** A prebuilt regulatory SOP a workspace can start from. */
 export interface ProtocolTemplate {
   key: string;
@@ -274,6 +301,30 @@ export class ProtocolService {
   retireProtocol(accountId: number, id: number) { return this.lifecycle(accountId, id, 'retire'); }
 
   newVersion(accountId: number, id: number) { return this.lifecycle(accountId, id, 'new-version'); }
+
+  // ── Version history / diff / rollback ──
+
+  listVersions(accountId: number, id: number):
+    Observable<{ success: boolean; versions: ProtocolVersion[] }> {
+    return this.http.get<any>(`${this.base(accountId)}/${id}/versions`)
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  diffVersions(accountId: number, id: number, fromId?: number, toId?: number):
+    Observable<{ success: boolean; from: ProtocolVersion; to: ProtocolVersion; diff: VersionDiff }> {
+    const params = new URLSearchParams();
+    if (fromId) params.set('from', String(fromId));
+    if (toId) params.set('to', String(toId));
+    const q = params.toString() ? `?${params.toString()}` : '';
+    return this.http.get<any>(`${this.base(accountId)}/${id}/diff${q}`)
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  restoreVersion(accountId: number, id: number, sourceId: number):
+    Observable<{ success: boolean; protocol: Protocol; restored_from: number }> {
+    return this.http.post<any>(`${this.base(accountId)}/${id}/restore`, { source_id: sourceId })
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
 
   deleteProtocol(accountId: number, id: number): Observable<{ success: boolean }> {
     return this.http.delete<any>(`${this.base(accountId)}/${id}`)

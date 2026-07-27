@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import {
   ProtocolService, Protocol, ProtocolStep, StepComponent, COMPONENT_LIBRARY, componentMeta,
+  ProtocolVersion, VersionDiff,
 } from '../../../services/protocol.service';
 import { AccountService, Account } from '../../../services/account.service';
 import { AuthService } from '../../../services/auth.service';
@@ -64,12 +65,31 @@ export class ProtocolDetailComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.protocolId = Number(this.route.snapshot.paramMap.get('id'));
+    // React to param changes too: navigating between versions (e.g. after a
+    // restore or new-version) reuses this component instance, so a snapshot
+    // read once would leave the page showing the old version.
+    this.route.paramMap.subscribe(params => {
+      const id = Number(params.get('id'));
+      if (id && id !== this.protocolId) {
+        this.protocolId = id;
+        this.resetView();
+        if (this.account && this.isBrowser) this.load();
+      }
+    });
     this.accountService.activeAccount$.subscribe(a => {
       this.account = a;
       if (a && this.isBrowser && !this.protocol) this.load();
     });
     if (this.isBrowser) this.accountService.loadSavedAccount();
+  }
+
+  /** Clear per-protocol view state when switching to a different version. */
+  private resetView(): void {
+    this.protocol = null;
+    this.steps = [];
+    this.showVersions = false;
+    this.diff = null;
+    this.errorMessage = '';
   }
 
   private load(): void {
@@ -172,6 +192,59 @@ export class ProtocolDetailComponent implements OnInit {
       error: (err) => (this.errorMessage = err.message),
     });
   }
+
+  // ── Version history / diff / rollback ──
+
+  showVersions = false;
+  versions: ProtocolVersion[] = [];
+  diff: VersionDiff | null = null;
+  diffFrom: ProtocolVersion | null = null;
+  diffTo: ProtocolVersion | null = null;
+  versionBusy = false;
+
+  openVersions(): void {
+    if (!this.account) return;
+    this.showVersions = true;
+    this.diff = null;
+    this.protocolService.listVersions(this.account.id, this.protocolId).subscribe({
+      next: (res) => (this.versions = res.versions),
+      error: (err) => (this.errorMessage = err.message),
+    });
+  }
+
+  /** Compare a version against the one it supersedes (or explicit from/to). */
+  showDiff(to: ProtocolVersion, from?: ProtocolVersion): void {
+    if (!this.account) return;
+    this.versionBusy = true;
+    this.protocolService.diffVersions(this.account.id, this.protocolId, from?.id, to.id).subscribe({
+      next: (res) => {
+        this.diffFrom = res.from; this.diffTo = res.to; this.diff = res.diff;
+        this.versionBusy = false;
+      },
+      error: (err) => { this.errorMessage = err.message; this.versionBusy = false; },
+    });
+  }
+
+  hasPredecessor(v: ProtocolVersion): boolean {
+    return this.versions.some(other => other.version === v.version - 1);
+  }
+
+  predecessor(v: ProtocolVersion): ProtocolVersion | undefined {
+    return this.versions.find(other => other.version === v.version - 1);
+  }
+
+  restore(v: ProtocolVersion): void {
+    if (!this.account) return;
+    if (this.isBrowser &&
+        !confirm(`Roll back to v${v.version}? This drafts a new version with v${v.version}'s content.`)) return;
+    this.versionBusy = true;
+    this.protocolService.restoreVersion(this.account.id, this.protocolId, v.id).subscribe({
+      next: (res) => this.router.navigate(['/protocols', res.protocol.id]),
+      error: (err) => { this.errorMessage = err.message; this.versionBusy = false; },
+    });
+  }
+
+  changeClass(c: string): string { return 'chg-' + c; }
 
   statusLabel(s: string): string {
     return ({ draft: 'Draft', in_review: 'In review', approved: 'Approved',

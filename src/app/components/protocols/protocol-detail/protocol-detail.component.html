@@ -22,6 +22,7 @@
       </div>
       <div class="head-side">
         <button class="btn-primary" (click)="runProtocol()" [disabled]="steps.length === 0" title="Run this protocol">▶ Run</button>
+        <button class="btn-ghost sm" *ngIf="protocol.version > 1" (click)="openVersions()" title="Version history">⧉ v{{ protocol.version }} history</button>
         <button class="btn-danger sm" *ngIf="protocol.status === 'draft'" (click)="deleteProtocol()">Delete</button>
       </div>
     </header>
@@ -207,6 +208,61 @@
                 (click)="submitSign()" [disabled]="busy || !signPassword">
           {{ signDecision === 'rejected' ? 'Reject &amp; sign' : 'Sign' }}
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Version history + diff -->
+  <div class="modal-overlay" *ngIf="showVersions" (click)="showVersions = false">
+    <div class="modal wide" (click)="$event.stopPropagation()">
+      <h3>Version history</h3>
+      <p class="modal-sub">Every version in this SOP's lineage. Compare changes or roll back to a prior version.</p>
+
+      <div class="ver-list">
+        <div class="ver-row" *ngFor="let v of versions" [class.current]="v.is_current">
+          <div class="ver-main">
+            <span class="ver-num">v{{ v.version }}</span>
+            <span class="status-badge sm" [ngClass]="'st-' + v.status">{{ statusLabel(v.status) }}</span>
+            <span class="ver-current" *ngIf="v.is_current">viewing</span>
+          </div>
+          <div class="ver-meta">
+            {{ v.step_count }} steps · {{ v.created_by }}
+            <span *ngIf="v.effective_date"> · effective {{ v.effective_date }}</span>
+          </div>
+          <div class="ver-actions">
+            <button class="btn-ghost xs" *ngIf="hasPredecessor(v)"
+                    (click)="showDiff(v, predecessor(v))">Compare with v{{ v.version - 1 }}</button>
+            <button class="btn-ghost xs" *ngIf="!v.is_current" (click)="restore(v)"
+                    [disabled]="versionBusy">Restore</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Diff panel -->
+      <div class="diff-panel" *ngIf="diff && diffFrom && diffTo">
+        <h4>v{{ diffFrom.version }} → v{{ diffTo.version }}</h4>
+
+        <div class="diff-meta" *ngIf="diff.meta_changes.length">
+          <div class="meta-chg" *ngFor="let m of diff.meta_changes">
+            <span class="mf-name">{{ m.field }}</span>
+            <span class="mf-from">{{ m.from || '(empty)' }}</span>
+            <span class="mf-arrow">→</span>
+            <span class="mf-to">{{ m.to || '(empty)' }}</span>
+          </div>
+        </div>
+
+        <div class="diff-steps">
+          <div class="diff-step" *ngFor="let s of diff.steps" [ngClass]="changeClass(s.change)">
+            <span class="ds-badge">{{ s.change }}</span>
+            <span class="ds-title">{{ s.index + 1 }}. {{ s.title }}</span>
+            <span class="ds-fields" *ngIf="s.fields?.length">changed: {{ s.fields?.join(', ') }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="empty-mini" *ngIf="versionBusy">Loading…</div>
+
+      <div class="modal-actions">
+        <button class="btn-ghost" (click)="showVersions = false">Close</button>
       </div>
     </div>
   </div>
