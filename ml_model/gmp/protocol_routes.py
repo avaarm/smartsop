@@ -3,6 +3,7 @@
 All routes are account-scoped and require membership (require_account_access).
 """
 
+import calendar
 import json
 import logging
 from datetime import datetime, timedelta
@@ -12,6 +13,7 @@ from sqlalchemy import func
 
 from .database import (
     db, Protocol, ProtocolStep, ProtocolRun, ProtocolRunStep, ProtocolSignoff, Deviation,
+    Assignment,
 )
 from .auth import require_account_access, has_account_role
 from .protocol_import import extract_text, split_into_steps, ai_structure
@@ -38,6 +40,10 @@ MANAGER_ROLES = ("owner", "admin")
 DEVIATION_SEVERITIES = ("minor", "major", "critical")
 DEVIATION_STATUSES = ("open", "investigating", "resolved", "closed")
 DEVIATION_CLOSED_STATUSES = ("resolved", "closed")
+
+# Scheduling / assignments.
+ASSIGNMENT_STATUSES = ("pending", "completed", "cancelled")
+ASSIGNMENT_RECURRENCES = ("none", "daily", "weekly", "monthly")
 DEFAULT_MEANING = {
     "reviewer": "Reviewed for accuracy and completeness",
     "approver": "Approved for use",
@@ -386,31 +392,24 @@ def _get_run(account_id, run_id):
     return ProtocolRun.query.filter_by(id=run_id, account_id=account_id).first()
 
 
-@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/runs", methods=["POST"])
-@require_account_access
-def start_run(account_id, protocol_id):
-    """Start a run: snapshot the protocol's steps so later edits don't rewrite history."""
-    protocol = _get_protocol(account_id, protocol_id)
-    if protocol is None:
-        return jsonify({"success": False, "error": "Protocol not found"}), 404
+def _new_run(account_id, protocol, experiment_id=""):
+    """Create a run and snapshot the protocol's steps (flushed, not committed).
 
+    Returns the run, or None if the protocol has no steps to run.
+    """
     steps = protocol.steps.all()
     if not steps:
-        return jsonify({"success": False, "error": "Cannot run a protocol with no steps"}), 400
-
-    data = request.get_json(silent=True) or {}
-    actor = (g.current_user.name or "").strip() or g.current_user.email
+        return None
     run = ProtocolRun(
         account_id=account_id,
-        protocol_id=protocol_id,
+        protocol_id=protocol.id,
         protocol_title=protocol.title,
         protocol_version=protocol.version,
-        experiment_id=(data.get("experiment_id") or "")[:200],
-        started_by=actor,
+        experiment_id=(experiment_id or "")[:200],
+        started_by=_actor_name(),
     )
     db.session.add(run)
     db.session.flush()
-
     for step in steps:
         db.session.add(ProtocolRunStep(
             run_id=run.id,
@@ -424,6 +423,21 @@ def start_run(account_id, protocol_id):
             components_json=step.components_json,
             branch_json=step.branch_json,
         ))
+    return run
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/runs", methods=["POST"])
+@require_account_access
+def start_run(account_id, protocol_id):
+    """Start a run: snapshot the protocol's steps so later edits don't rewrite history."""
+    protocol = _get_protocol(account_id, protocol_id)
+    if protocol is None:
+        return jsonify({"success": False, "error": "Protocol not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    run = _new_run(account_id, protocol, data.get("experiment_id"))
+    if run is None:
+        return jsonify({"success": False, "error": "Cannot run a protocol with no steps"}), 400
     db.session.commit()
     return jsonify({"success": True, "run": run.to_dict(include_steps=True)}), 201
 
@@ -744,10 +758,177 @@ def update_deviation(account_id, deviation_id):
     return jsonify({"success": True, "deviation": dev.to_dict()})
 
 
-# ── Controlled-document lifecycle (SOP review / approval) ──
+# ── Scheduling / assignments ──
 
 def _actor_name():
     return (g.current_user.name or "").strip() or g.current_user.email
+
+
+def _advance_due_date(iso_date, recurrence):
+    """Next due date for a recurring assignment, or '' if not recurring/invalid."""
+    if recurrence not in ("daily", "weekly", "monthly") or not iso_date:
+        return ""
+    try:
+        d = datetime.strptime(iso_date, "%Y-%m-%d").date()
+    except ValueError:
+        return ""
+    if recurrence == "daily":
+        d = d + timedelta(days=1)
+    elif recurrence == "weekly":
+        d = d + timedelta(days=7)
+    else:  # monthly — advance one month, clamping the day
+        month = d.month % 12 + 1
+        year = d.year + (1 if d.month == 12 else 0)
+        day = min(d.day, calendar.monthrange(year, month)[1])
+        d = datetime(year, month, day).date()
+    return d.isoformat()
+
+
+@protocol_bp.route("/<int:account_id>/assignments", methods=["GET"])
+@require_account_access
+def list_assignments(account_id):
+    query = Assignment.query.filter_by(account_id=account_id)
+    status = request.args.get("status")
+    if status in ASSIGNMENT_STATUSES:
+        query = query.filter_by(status=status)
+    assignee = request.args.get("assigned_to")
+    if assignee:
+        query = query.filter_by(assigned_to=assignee)
+    # Pending first (soonest due), then everything else newest-first.
+    items = query.all()
+    items.sort(key=lambda a: (
+        a.status != "pending",
+        a.due_date or "9999-12-31",
+        -a.id,
+    ))
+    return jsonify({"success": True, "assignments": [a.to_dict() for a in items]})
+
+
+@protocol_bp.route("/<int:account_id>/assignments", methods=["POST"])
+@require_account_access
+def create_assignment(account_id):
+    data = request.get_json(silent=True) or {}
+    protocol = _get_protocol(account_id, data.get("protocol_id"))
+    if protocol is None:
+        return jsonify({"success": False, "error": "Protocol not found"}), 404
+
+    recurrence = (data.get("recurrence") or "none").lower()
+    if recurrence not in ASSIGNMENT_RECURRENCES:
+        return jsonify({
+            "success": False,
+            "error": f"recurrence must be one of {', '.join(ASSIGNMENT_RECURRENCES)}",
+        }), 400
+
+    a = Assignment(
+        account_id=account_id,
+        protocol_id=protocol.id,
+        protocol_title=protocol.title,
+        assigned_to=(data.get("assigned_to") or "")[:255],
+        assigned_by=_actor_name(),
+        due_date=(data.get("due_date") or "")[:30],
+        recurrence=recurrence,
+        notes=data.get("notes") or "",
+    )
+    db.session.add(a)
+    db.session.commit()
+    return jsonify({"success": True, "assignment": a.to_dict()}), 201
+
+
+@protocol_bp.route("/<int:account_id>/assignments/<int:assignment_id>", methods=["GET"])
+@require_account_access
+def get_assignment(account_id, assignment_id):
+    a = Assignment.query.filter_by(id=assignment_id, account_id=account_id).first()
+    if a is None:
+        return jsonify({"success": False, "error": "Assignment not found"}), 404
+    return jsonify({"success": True, "assignment": a.to_dict()})
+
+
+@protocol_bp.route("/<int:account_id>/assignments/<int:assignment_id>", methods=["PATCH"])
+@require_account_access
+def update_assignment(account_id, assignment_id):
+    """Update an assignment. Completing a recurring one spawns the next occurrence."""
+    a = Assignment.query.filter_by(id=assignment_id, account_id=account_id).first()
+    if a is None:
+        return jsonify({"success": False, "error": "Assignment not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    spawned = None
+    if "status" in data:
+        status = (data.get("status") or "").lower()
+        if status not in ASSIGNMENT_STATUSES:
+            return jsonify({
+                "success": False,
+                "error": f"status must be one of {', '.join(ASSIGNMENT_STATUSES)}",
+            }), 400
+        was_open = a.status == "pending"
+        a.status = status
+        a.completed_at = datetime.utcnow() if status == "completed" else None
+        # Completing a recurring assignment schedules the next round.
+        if status == "completed" and was_open and a.recurrence != "none":
+            next_due = _advance_due_date(a.due_date, a.recurrence)
+            if next_due:
+                spawned = Assignment(
+                    account_id=account_id,
+                    protocol_id=a.protocol_id,
+                    protocol_title=a.protocol_title,
+                    assigned_to=a.assigned_to,
+                    assigned_by=a.assigned_by,
+                    due_date=next_due,
+                    recurrence=a.recurrence,
+                    notes=a.notes,
+                )
+                db.session.add(spawned)
+    if "assigned_to" in data:
+        a.assigned_to = (data.get("assigned_to") or "")[:255]
+    if "due_date" in data:
+        a.due_date = (data.get("due_date") or "")[:30]
+    if "recurrence" in data:
+        recurrence = (data.get("recurrence") or "none").lower()
+        if recurrence not in ASSIGNMENT_RECURRENCES:
+            return jsonify({"success": False, "error": "Invalid recurrence"}), 400
+        a.recurrence = recurrence
+    if "notes" in data:
+        a.notes = data.get("notes") or ""
+
+    db.session.commit()
+    body = {"success": True, "assignment": a.to_dict()}
+    if spawned is not None:
+        body["next_occurrence"] = spawned.to_dict()
+    return jsonify(body)
+
+
+@protocol_bp.route("/<int:account_id>/assignments/<int:assignment_id>", methods=["DELETE"])
+@require_account_access
+def delete_assignment(account_id, assignment_id):
+    a = Assignment.query.filter_by(id=assignment_id, account_id=account_id).first()
+    if a is None:
+        return jsonify({"success": False, "error": "Assignment not found"}), 404
+    db.session.delete(a)
+    db.session.commit()
+    return jsonify({"success": True})
+
+
+@protocol_bp.route("/<int:account_id>/assignments/<int:assignment_id>/start", methods=["POST"])
+@require_account_access
+def start_assignment(account_id, assignment_id):
+    """Start a run of the assignment's SOP and link it to the assignment."""
+    a = Assignment.query.filter_by(id=assignment_id, account_id=account_id).first()
+    if a is None:
+        return jsonify({"success": False, "error": "Assignment not found"}), 404
+    protocol = _get_protocol(account_id, a.protocol_id)
+    if protocol is None:
+        return jsonify({"success": False, "error": "The assigned protocol no longer exists"}), 404
+
+    run = _new_run(account_id, protocol)
+    if run is None:
+        return jsonify({"success": False, "error": "Cannot run a protocol with no steps"}), 400
+    a.run_id = run.id
+    db.session.commit()
+    return jsonify({"success": True, "run": run.to_dict(include_steps=True),
+                    "assignment": a.to_dict()}), 201
+
+
+# ── Controlled-document lifecycle (SOP review / approval) ──
 
 
 @protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/submit", methods=["POST"])

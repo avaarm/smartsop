@@ -127,8 +127,8 @@ the run-mode / typed-block / lifecycle / SSO work and is stale.
 | **Empty-state onboarding** — new workspace opens on the template gallery | ✅ |
 | Responsive shell (sidebar collapses to a top bar on phones) | ✅ |
 | **Version history + diff + rollback** ("what changed between v3 and v4", restore a prior version) | ✅ |
+| **Task manager / scheduling** (assign a run, due dates, recurring PM, start→run) | ✅ |
 | Offline mobile execution (local cache + sync-on-reconnect) | ⬜ |
-| Task manager / scheduling (assign a run, due dates, recurring PM) | ⬜ |
 | Inline comments + concurrent editing | ⬜ |
 | Training & competency (assign SOP, quiz, expiry tracking) | ⬜ |
 | Public REST API + webhooks | ⬜ |

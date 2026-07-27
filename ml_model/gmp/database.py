@@ -643,6 +643,58 @@ class Asset(db.Model):
         return d
 
 
+class Assignment(db.Model):
+    """A scheduled task: run this SOP, by this date, assigned to this person.
+
+    Turns the SOP library into an ops schedule — one-off jobs or recurring
+    preventive-maintenance rounds (monthly PM) that show up as a to-do list and
+    can be started straight into a run.
+    """
+
+    __tablename__ = "assignments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False)
+    protocol_id = db.Column(db.Integer, db.ForeignKey("protocols.id"), nullable=False)
+    protocol_title = db.Column(db.String(500), default="")   # snapshot for display
+
+    assigned_to = db.Column(db.String(255), default="")      # person or role
+    assigned_by = db.Column(db.String(255), default="")
+    due_date = db.Column(db.String(30), default="")          # ISO date
+    status = db.Column(db.String(20), default="pending")     # pending, completed, cancelled
+    recurrence = db.Column(db.String(20), default="none")    # none, daily, weekly, monthly
+    notes = db.Column(db.Text, default="")
+
+    # The run that fulfilled this assignment (set when started/completed).
+    run_id = db.Column(db.Integer, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+    def is_overdue(self):
+        if self.status != "pending" or not self.due_date:
+            return False
+        return self.due_date < datetime.utcnow().date().isoformat()
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "account_id": self.account_id,
+            "protocol_id": self.protocol_id,
+            "protocol_title": self.protocol_title,
+            "assigned_to": self.assigned_to,
+            "assigned_by": self.assigned_by,
+            "due_date": self.due_date,
+            "status": self.status,
+            "recurrence": self.recurrence,
+            "notes": self.notes,
+            "run_id": self.run_id,
+            "is_overdue": self.is_overdue(),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+        }
+
+
 class Deviation(db.Model):
     """A recorded deviation / corrective action (CAPA) raised during a run.
 
