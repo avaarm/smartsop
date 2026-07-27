@@ -126,9 +126,9 @@ the run-mode / typed-block / lifecycle / SSO work and is stale.
 | **Regulatory template packs** (OSHA 1910.147 / 1910.146, NFPA 70E, HACCP) | ✅ |
 | **Empty-state onboarding** — new workspace opens on the template gallery | ✅ |
 | Responsive shell (sidebar collapses to a top bar on phones) | ✅ |
+| **Version history + diff + rollback** ("what changed between v3 and v4", restore a prior version) | ✅ |
 | Offline mobile execution (local cache + sync-on-reconnect) | ⬜ |
 | Task manager / scheduling (assign a run, due dates, recurring PM) | ⬜ |
-| Version diff + rollback ("what changed between v3 and v4") | ⬜ |
 | Inline comments + concurrent editing | ⬜ |
 | Training & competency (assign SOP, quiz, expiry tracking) | ⬜ |
 | Public REST API + webhooks | ⬜ |

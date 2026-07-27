@@ -881,9 +881,18 @@ def new_version(account_id, protocol_id):
     )
     db.session.add(clone)
     db.session.flush()
+    _copy_steps(source, clone)
+    db.session.commit()
+    return jsonify({"success": True, "protocol": clone.to_dict(include_steps=True)}), 201
+
+
+# ── Version history, diff, and rollback ──
+
+def _copy_steps(source, dest):
+    """Clone every step of `source` onto `dest` (dest must be flushed)."""
     for step in source.steps:
         db.session.add(ProtocolStep(
-            protocol_id=clone.id,
+            protocol_id=dest.id,
             order_index=step.order_index,
             section=step.section,
             title=step.title,
@@ -894,5 +903,169 @@ def new_version(account_id, protocol_id):
             components_json=step.components_json,
             branch_json=step.branch_json,
         ))
+
+
+def _version_chain(protocol):
+    """Every protocol in this one's version lineage, ordered oldest → newest.
+
+    Walks the supersedes chain backwards, then forwards, so any member of the
+    chain returns the whole history.
+    """
+    account_id = protocol.account_id
+    seen = {protocol.id: protocol}
+
+    cur = protocol
+    while cur.supersedes_id and cur.supersedes_id not in seen:
+        prior = Protocol.query.filter_by(id=cur.supersedes_id, account_id=account_id).first()
+        if prior is None:
+            break
+        seen[prior.id] = prior
+        cur = prior
+
+    frontier = list(seen.values())
+    while frontier:
+        node = frontier.pop()
+        for child in Protocol.query.filter_by(supersedes_id=node.id, account_id=account_id).all():
+            if child.id not in seen:
+                seen[child.id] = child
+                frontier.append(child)
+
+    return sorted(seen.values(), key=lambda p: (p.version, p.id))
+
+
+def _version_summary(p, current_id):
+    return {
+        "id": p.id,
+        "version": p.version,
+        "status": p.status,
+        "created_by": p.created_by,
+        "created_at": p.created_at.isoformat() if p.created_at else None,
+        "effective_date": p.effective_date,
+        "step_count": p.steps.count(),
+        "is_current": p.id == current_id,
+    }
+
+
+STEP_DIFF_FIELDS = ("title", "description", "warning", "duration_seconds",
+                    "reagents_json", "components_json", "branch_json")
+STEP_FIELD_LABELS = {
+    "reagents_json": "reagents", "components_json": "components", "branch_json": "branch",
+    "duration_seconds": "duration",
+}
+
+
+def _diff_protocols(a, b):
+    """Field- and step-level diff of version `a` → version `b`.
+
+    Steps are matched by position: they carry no stable cross-version id, so an
+    insertion mid-list shifts everything after it (reported honestly as changes).
+    """
+    meta = []
+    for f in ("title", "description", "protocol_type", "sop_number", "department", "review_date"):
+        av, bv = getattr(a, f) or "", getattr(b, f) or ""
+        if av != bv:
+            meta.append({"field": f, "from": av, "to": bv})
+
+    a_steps, b_steps = a.steps.all(), b.steps.all()
+    steps = []
+    for i in range(max(len(a_steps), len(b_steps))):
+        sa = a_steps[i] if i < len(a_steps) else None
+        sb = b_steps[i] if i < len(b_steps) else None
+        if sa is None:
+            steps.append({"index": i, "change": "added", "title": sb.title})
+        elif sb is None:
+            steps.append({"index": i, "change": "removed", "title": sa.title})
+        else:
+            changed = [STEP_FIELD_LABELS.get(f, f) for f in STEP_DIFF_FIELDS
+                       if (getattr(sa, f) or "") != (getattr(sb, f) or "")]
+            if changed:
+                steps.append({"index": i, "change": "modified",
+                              "title": sb.title, "fields": changed})
+            else:
+                steps.append({"index": i, "change": "unchanged", "title": sb.title})
+    return {"meta_changes": meta, "steps": steps}
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/versions", methods=["GET"])
+@require_account_access
+def list_versions(account_id, protocol_id):
+    """The full version history for a protocol's lineage."""
+    protocol = _get_protocol(account_id, protocol_id)
+    if protocol is None:
+        return jsonify({"success": False, "error": "Protocol not found"}), 404
+    chain = _version_chain(protocol)
+    return jsonify({
+        "success": True,
+        "versions": [_version_summary(p, protocol_id) for p in chain],
+    })
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/diff", methods=["GET"])
+@require_account_access
+def diff_versions(account_id, protocol_id):
+    """Diff two versions. `from`/`to` are protocol ids; defaults compare the
+    given protocol against the version it supersedes."""
+    to_id = request.args.get("to", type=int) or protocol_id
+    to_p = _get_protocol(account_id, to_id)
+    if to_p is None:
+        return jsonify({"success": False, "error": "Target version not found"}), 404
+
+    from_id = request.args.get("from", type=int) or to_p.supersedes_id
+    if not from_id:
+        return jsonify({"success": False, "error": "No earlier version to compare against"}), 400
+    from_p = _get_protocol(account_id, from_id)
+    if from_p is None:
+        return jsonify({"success": False, "error": "Base version not found"}), 404
+
+    return jsonify({
+        "success": True,
+        "from": _version_summary(from_p, protocol_id),
+        "to": _version_summary(to_p, protocol_id),
+        "diff": _diff_protocols(from_p, to_p),
+    })
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/restore", methods=["POST"])
+@require_account_access
+def restore_version(account_id, protocol_id):
+    """Roll back to a prior version's content.
+
+    Controlled documents are never mutated in place, so a rollback drafts a new
+    version (superseding the current head) whose steps are copied from the
+    chosen source version.
+    """
+    data = request.get_json(silent=True) or {}
+    source_id = data.get("source_id")
+    source = _get_protocol(account_id, source_id) if source_id else None
+    if source is None:
+        return jsonify({"success": False, "error": "Source version not found"}), 404
+
+    chain = _version_chain(_get_protocol(account_id, protocol_id))
+    if source.id not in {p.id for p in chain}:
+        return jsonify({"success": False, "error": "That version is not in this lineage"}), 400
+
+    head = chain[-1]  # highest version
+    clone = Protocol(
+        account_id=account_id,
+        title=source.title,
+        description=source.description,
+        protocol_type=source.protocol_type,
+        status="draft",
+        version=head.version + 1,
+        created_by=_actor_name(),
+        sop_number=source.sop_number,
+        department=source.department,
+        review_date=source.review_date,
+        supersedes_id=head.id,
+    )
+    db.session.add(clone)
+    db.session.flush()
+    _copy_steps(source, clone)
     db.session.commit()
-    return jsonify({"success": True, "protocol": clone.to_dict(include_steps=True)}), 201
+    logger.info("Restored v%s content as draft v%s (account=%s)",
+                source.version, clone.version, account_id)
+    return jsonify({
+        "success": True,
+        "protocol": clone.to_dict(include_steps=True),
+        "restored_from": source.version,
+    }), 201
