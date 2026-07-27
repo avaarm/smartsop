@@ -51,6 +51,12 @@ export const routes: Routes = [
             .then(m => m.AssetScanComponent),
       },
       {
+        path: 'schedule',
+        loadComponent: () =>
+          import('./components/schedule/schedule.component')
+            .then(m => m.ScheduleComponent),
+      },
+      {
         path: 'deviations',
         loadComponent: () =>
           import('./components/protocols/deviations/deviations.component')

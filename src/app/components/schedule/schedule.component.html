@@ -1,0 +1,108 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>Schedule</h1>
+      <p class="subtitle">Assign SOP runs with due dates and recurring PM rounds. Start a run straight from a task.</p>
+    </div>
+    <button class="btn-primary" (click)="openForm()" *ngIf="account">+ Assign a run</button>
+  </header>
+
+  <div class="toast toast-error" *ngIf="errorMessage">{{ errorMessage }}</div>
+  <div class="empty" *ngIf="!account">Select an account to view the schedule.</div>
+
+  <ng-container *ngIf="account">
+    <div class="loading" *ngIf="loading">Loading…</div>
+
+    <div class="empty" *ngIf="!loading && !assignments.length">
+      Nothing scheduled. Assign an SOP to someone with a due date — set it to recurring for monthly PM rounds.
+    </div>
+
+    <div class="columns" *ngIf="!loading && assignments.length">
+      <!-- Overdue -->
+      <section class="col" *ngIf="overdue.length">
+        <h2 class="col-head overdue">Overdue <span>{{ overdue.length }}</span></h2>
+        <div class="task" *ngFor="let a of overdue" [class.od]="true">
+          <ng-container *ngTemplateOutlet="taskCard; context: { $implicit: a }"></ng-container>
+        </div>
+      </section>
+
+      <!-- Upcoming -->
+      <section class="col">
+        <h2 class="col-head">Upcoming <span>{{ upcoming.length }}</span></h2>
+        <div class="empty-mini" *ngIf="!upcoming.length">Nothing due.</div>
+        <div class="task" *ngFor="let a of upcoming">
+          <ng-container *ngTemplateOutlet="taskCard; context: { $implicit: a }"></ng-container>
+        </div>
+      </section>
+
+      <!-- Completed -->
+      <section class="col">
+        <h2 class="col-head done">Completed <span>{{ done.length }}</span></h2>
+        <div class="empty-mini" *ngIf="!done.length">None yet.</div>
+        <div class="task done" *ngFor="let a of done">
+          <ng-container *ngTemplateOutlet="taskCard; context: { $implicit: a }"></ng-container>
+        </div>
+      </section>
+    </div>
+  </ng-container>
+</div>
+
+<!-- Task card template -->
+<ng-template #taskCard let-a>
+  <div class="task-main">
+    <div class="task-title">{{ a.protocol_title }}</div>
+    <span class="recur" *ngIf="a.recurrence !== 'none'">↻ {{ a.recurrence }}</span>
+  </div>
+  <div class="task-meta">
+    <span class="due" [class.overdue-text]="a.is_overdue">📅 {{ formatDue(a.due_date) }}</span>
+    <span *ngIf="a.assigned_to"> · 👤 {{ a.assigned_to }}</span>
+  </div>
+  <div class="task-notes" *ngIf="a.notes">{{ a.notes }}</div>
+  <div class="task-actions" *ngIf="a.status === 'pending'">
+    <button class="btn-primary xs" (click)="start(a)">▶ Start run</button>
+    <button class="btn-ghost xs" (click)="complete(a)">Mark done</button>
+    <button class="btn-ghost xs danger" (click)="remove(a)">✕</button>
+  </div>
+</ng-template>
+
+<!-- Assign form -->
+<div class="modal-overlay" *ngIf="showForm" (click)="showForm = false">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <h3>Assign a run</h3>
+
+    <label>SOP / protocol</label>
+    <select [(ngModel)]="form.protocol_id" name="f-protocol">
+      <option [ngValue]="null" disabled>Choose a protocol…</option>
+      <option *ngFor="let p of protocols" [ngValue]="p.id">{{ p.title }} (v{{ p.version }})</option>
+    </select>
+
+    <div class="row">
+      <div>
+        <label>Assigned to</label>
+        <input type="text" [(ngModel)]="form.assigned_to" name="f-who" placeholder="Person or role" />
+      </div>
+      <div>
+        <label>Due date</label>
+        <input type="date" [(ngModel)]="form.due_date" name="f-due" />
+      </div>
+    </div>
+
+    <label>Recurrence</label>
+    <div class="recur-picker">
+      <button *ngFor="let r of recurrences" type="button" class="recur-opt"
+              [class.active]="form.recurrence === r" (click)="form.recurrence = r">
+        {{ r === 'none' ? 'One-off' : r }}
+      </button>
+    </div>
+
+    <label>Notes</label>
+    <textarea rows="2" [(ngModel)]="form.notes" name="f-notes" placeholder="Anything the assignee should know…"></textarea>
+
+    <div class="modal-actions">
+      <button class="btn-ghost" (click)="showForm = false">Cancel</button>
+      <button class="btn-primary" (click)="save()" [disabled]="saving || !form.protocol_id">
+        {{ saving ? 'Saving…' : 'Assign' }}
+      </button>
+    </div>
+  </div>
+</div>
