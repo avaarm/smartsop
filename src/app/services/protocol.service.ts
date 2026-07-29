@@ -302,6 +302,18 @@ export class ProtocolService {
 
   newVersion(accountId: number, id: number) { return this.lifecycle(accountId, id, 'new-version'); }
 
+  /** Fork a protocol into a new independent draft (its own version-1 lineage). */
+  copyProtocol(accountId: number, id: number): Observable<{ success: boolean; protocol: Protocol }> {
+    return this.http.post<any>(`${this.base(accountId)}/${id}/copy`, {})
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  /** Download an export (json|pdf) as a Blob; the interceptor adds auth. */
+  exportProtocol(accountId: number, id: number, format: 'json' | 'pdf'): Observable<Blob> {
+    return this.http.get(`${this.base(accountId)}/${id}/export.${format}`, { responseType: 'blob' })
+      .pipe(timeout(30000), catchError(this.handleError));
+  }
+
   // ── Version history / diff / rollback ──
 
   listVersions(accountId: number, id: number):

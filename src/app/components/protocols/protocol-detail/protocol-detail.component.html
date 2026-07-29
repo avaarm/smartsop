@@ -23,6 +23,14 @@
       <div class="head-side">
         <button class="btn-primary" (click)="runProtocol()" [disabled]="steps.length === 0" title="Run this protocol">▶ Run</button>
         <button class="btn-ghost sm" (click)="openComments()" title="Comments">💬 Comments<span class="cbadge" *ngIf="openCommentCount">{{ openCommentCount }}</span></button>
+        <button class="btn-ghost sm" (click)="copyProtocol()" title="Duplicate as a new draft">⎘ Copy</button>
+        <div class="export-wrap">
+          <button class="btn-ghost sm" (click)="exportMenuOpen = !exportMenuOpen" title="Export">⤓ Export</button>
+          <div class="export-menu" *ngIf="exportMenuOpen">
+            <button (click)="exportProtocol('pdf')">PDF (audit copy)</button>
+            <button (click)="exportProtocol('json')">JSON (backup)</button>
+          </div>
+        </div>
         <button class="btn-ghost sm" *ngIf="protocol.version > 1" (click)="openVersions()" title="Version history">⧉ v{{ protocol.version }} history</button>
         <button class="btn-danger sm" *ngIf="protocol.status === 'draft'" (click)="deleteProtocol()">Delete</button>
       </div>

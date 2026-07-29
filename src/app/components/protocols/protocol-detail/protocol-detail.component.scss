@@ -352,3 +352,16 @@ button { font-family: inherit; }
 .compose { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px;
   select, textarea { width: 100%; box-sizing: border-box; font-size: 13px; font-family: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; background: #fff; &:focus { outline: none; border-color: hsl(217 91% 60%); } }
 }
+
+/* Export dropdown */
+.export-wrap { position: relative; display: inline-block; }
+.export-menu {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 20;
+  background: #fff; border: 1px solid var(--border); border-radius: 9px;
+  box-shadow: 0 8px 24px hsl(0 0% 0% / 0.12); padding: 5px; min-width: 160px;
+  button {
+    display: block; width: 100%; text-align: left; padding: 8px 11px; font-size: 12.5px;
+    background: none; border: none; border-radius: 6px; cursor: pointer; color: var(--primary);
+    &:hover { background: hsl(240 4.8% 96%); }
+  }
+}
