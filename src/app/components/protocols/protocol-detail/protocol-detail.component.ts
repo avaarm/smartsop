@@ -9,6 +9,7 @@ import {
 } from '../../../services/protocol.service';
 import { AccountService, Account } from '../../../services/account.service';
 import { AuthService } from '../../../services/auth.service';
+import { CommentService, Comment } from '../../../services/comment.service';
 
 @Component({
   selector: 'app-protocol-detail',
@@ -42,6 +43,7 @@ export class ProtocolDetailComponent implements OnInit {
     private protocolService: ProtocolService,
     private accountService: AccountService,
     private auth: AuthService,
+    private commentService: CommentService,
     private route: ActivatedRoute,
     public router: Router,
   ) {}
@@ -100,6 +102,7 @@ export class ProtocolDetailComponent implements OnInit {
         this.protocol = res.protocol;
         this.steps = res.protocol.steps || [];
         this.loading = false;
+        this.loadComments();
       },
       error: (err) => { this.errorMessage = err.message; this.loading = false; },
     });
@@ -245,6 +248,115 @@ export class ProtocolDetailComponent implements OnInit {
   }
 
   changeClass(c: string): string { return 'chg-' + c; }
+
+  // ── Comments & collaboration ──
+
+  showComments = false;
+  comments: Comment[] = [];
+  commentFilter: 'all' | 'unresolved' | 'pinned' = 'all';
+  newCommentTarget: number | 'protocol' = 'protocol';   // step id or 'protocol'
+  newCommentBody = '';
+  replyingTo: number | null = null;
+  replyBody = '';
+  commentBusy = false;
+
+  get currentUserId(): number | null {
+    return this.auth.currentUser$.value?.id ?? null;
+  }
+
+  loadComments(): void {
+    if (!this.account) return;
+    this.commentService.list(this.account.id, this.protocolId).subscribe({
+      next: (res) => (this.comments = res.comments),
+      error: () => {},
+    });
+  }
+
+  openComments(): void {
+    this.showComments = true;
+    this.commentFilter = 'all';
+    this.loadComments();
+  }
+
+  /** Top-level comments (not replies) that pass the active filter, pinned first. */
+  get visibleThreads(): Comment[] {
+    let list = this.comments.filter(c => c.parent_id === null);
+    if (this.commentFilter === 'unresolved') list = list.filter(c => !c.resolved);
+    if (this.commentFilter === 'pinned') list = list.filter(c => c.is_pinned);
+    return [...list].sort((a, b) =>
+      (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0) ||
+      a.created_at.localeCompare(b.created_at));
+  }
+
+  repliesFor(id: number): Comment[] {
+    return this.comments.filter(c => c.parent_id === id)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at));
+  }
+
+  stepLabel(stepId: number | null): string {
+    if (stepId === null) return 'General';
+    const i = this.steps.findIndex(s => s.id === stepId);
+    return i >= 0 ? `Step ${i + 1}` : 'Step';
+  }
+
+  stepCommentCount(stepId: number): number {
+    return this.comments.filter(c => c.step_id === stepId).length;
+  }
+
+  get openCommentCount(): number {
+    return this.comments.filter(c => !c.resolved).length;
+  }
+
+  addComment(): void {
+    if (!this.account || !this.newCommentBody.trim()) return;
+    this.commentBusy = true;
+    const step_id = this.newCommentTarget === 'protocol' ? null : this.newCommentTarget;
+    this.commentService.create(this.account.id, this.protocolId,
+      { body: this.newCommentBody.trim(), step_id }).subscribe({
+      next: () => { this.newCommentBody = ''; this.commentBusy = false; this.loadComments(); },
+      error: (err) => { this.commentBusy = false; this.errorMessage = err.message; },
+    });
+  }
+
+  startReply(c: Comment): void {
+    this.replyingTo = c.id;
+    this.replyBody = '';
+  }
+
+  sendReply(parent: Comment): void {
+    if (!this.account || !this.replyBody.trim()) return;
+    this.commentBusy = true;
+    this.commentService.create(this.account.id, this.protocolId,
+      { body: this.replyBody.trim(), parent_id: parent.id }).subscribe({
+      next: () => { this.replyingTo = null; this.replyBody = ''; this.commentBusy = false; this.loadComments(); },
+      error: (err) => { this.commentBusy = false; this.errorMessage = err.message; },
+    });
+  }
+
+  togglePin(c: Comment): void {
+    if (!this.account) return;
+    this.commentService.update(this.account.id, this.protocolId, c.id, { is_pinned: !c.is_pinned })
+      .subscribe({ next: (res) => Object.assign(c, res.comment), error: (err) => (this.errorMessage = err.message) });
+  }
+
+  toggleResolve(c: Comment): void {
+    if (!this.account) return;
+    this.commentService.update(this.account.id, this.protocolId, c.id, { resolved: !c.resolved })
+      .subscribe({ next: (res) => Object.assign(c, res.comment), error: (err) => (this.errorMessage = err.message) });
+  }
+
+  deleteComment(c: Comment): void {
+    if (!this.account) return;
+    if (this.isBrowser && !confirm('Delete this comment' + (this.repliesFor(c.id).length ? ' and its replies?' : '?'))) return;
+    this.commentService.remove(this.account.id, this.protocolId, c.id).subscribe({
+      next: () => this.loadComments(),
+      error: (err) => (this.errorMessage = err.message),
+    });
+  }
+
+  commentStamp(iso: string): string {
+    return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
 
   statusLabel(s: string): string {
     return ({ draft: 'Draft', in_review: 'In review', approved: 'Approved',

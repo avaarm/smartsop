@@ -67,10 +67,10 @@ Legend: ✅ built · 🚧 in progress · ⬜ planned
 
 | Feature | Status |
 |---|---|
-| Per-step comments (anchored, rich text, `Private comment`) | ⬜ |
-| Protocol-level comments; `/comments` page | ⬜ |
-| Filters `All` / `Step-level` / `Protocol-level` w/ counts; search | ⬜ |
-| Threaded `Reply`; pinned comments | ⬜ |
+| Per-step comments (anchored) | ✅ |
+| Protocol-level comments (comments drawer) | ✅ |
+| Filters `All` / `Unresolved` / `Pinned`; open-count badge | ✅ |
+| Threaded `Reply`; **pinned by author**; resolve/reopen | ✅ |
 | **AI generated summary** of comment thread + topic chips | ⬜ |
 
 ## 5. AI (leverages the existing Ollama + Celery pipeline)
@@ -129,7 +129,7 @@ the run-mode / typed-block / lifecycle / SSO work and is stale.
 | **Version history + diff + rollback** ("what changed between v3 and v4", restore a prior version) | ✅ |
 | **Task manager / scheduling** (assign a run, due dates, recurring PM, start→run) | ✅ |
 | Offline mobile execution (local cache + sync-on-reconnect) | ⬜ |
-| Inline comments + concurrent editing | ⬜ |
+| **Inline + protocol comments** (threaded, pin, resolve) — concurrent editing still ⬜ | ✅ |
 | **Training & competency** (assign SOP, read-and-acknowledge, annual re-cert expiry) | ✅ |
 | Public REST API + webhooks | ⬜ |
 | AI: video/voice → SOP | ⬜ |
