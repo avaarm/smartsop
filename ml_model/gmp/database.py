@@ -698,6 +698,56 @@ class TrainingRecord(db.Model):
         }
 
 
+class Comment(db.Model):
+    """A comment on a protocol — anchored to a step, or the protocol as a whole.
+
+    protocols.io-style collaboration: threaded discussion, a "pinned by author"
+    canonical answer, and resolvable threads so a review conversation has a
+    clear close-out.
+    """
+
+    __tablename__ = "comments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False)
+    protocol_id = db.Column(db.Integer, db.ForeignKey("protocols.id"), nullable=False)
+    # Anchor: a step id for an inline comment, or NULL for a protocol-level one.
+    step_id = db.Column(db.Integer, nullable=True)
+    # Threading: a reply points at the comment it answers (one level).
+    parent_id = db.Column(db.Integer, nullable=True)
+
+    body = db.Column(db.Text, nullable=False)
+    author = db.Column(db.String(255), default="")
+    author_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+    is_pinned = db.Column(db.Boolean, default=False)     # "pinned by author"
+    resolved = db.Column(db.Boolean, default=False)
+    resolved_by = db.Column(db.String(255), default="")
+    resolved_at = db.Column(db.DateTime, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "account_id": self.account_id,
+            "protocol_id": self.protocol_id,
+            "step_id": self.step_id,
+            "parent_id": self.parent_id,
+            "body": self.body,
+            "author": self.author,
+            "author_user_id": self.author_user_id,
+            "is_pinned": self.is_pinned,
+            "resolved": self.resolved,
+            "resolved_by": self.resolved_by,
+            "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
+            "level": "step" if self.step_id else "protocol",
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
 class Assignment(db.Model):
     """A scheduled task: run this SOP, by this date, assigned to this person.
 

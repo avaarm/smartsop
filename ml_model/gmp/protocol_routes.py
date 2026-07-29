@@ -13,7 +13,7 @@ from sqlalchemy import func
 
 from .database import (
     db, Protocol, ProtocolStep, ProtocolRun, ProtocolRunStep, ProtocolSignoff, Deviation,
-    Assignment, TrainingRecord,
+    Assignment, TrainingRecord, Comment,
 )
 from .auth import require_account_access, has_account_role
 from .protocol_import import extract_text, split_into_steps, ai_structure
@@ -1008,6 +1008,118 @@ def delete_competency(account_id, record_id):
     if rec is None:
         return jsonify({"success": False, "error": "Training record not found"}), 404
     db.session.delete(rec)
+    db.session.commit()
+    return jsonify({"success": True})
+
+
+# ── Comments & collaboration ──
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/comments", methods=["GET"])
+@require_account_access
+def list_comments(account_id, protocol_id):
+    protocol = _get_protocol(account_id, protocol_id)
+    if protocol is None:
+        return jsonify({"success": False, "error": "Protocol not found"}), 404
+    comments = (
+        Comment.query.filter_by(account_id=account_id, protocol_id=protocol_id)
+        .order_by(Comment.created_at.asc()).all()
+    )
+    return jsonify({"success": True, "comments": [c.to_dict() for c in comments]})
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/comments", methods=["POST"])
+@require_account_access
+def create_comment(account_id, protocol_id):
+    protocol = _get_protocol(account_id, protocol_id)
+    if protocol is None:
+        return jsonify({"success": False, "error": "Protocol not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    body = (data.get("body") or "").strip()
+    if not body:
+        return jsonify({"success": False, "error": "A comment body is required"}), 400
+
+    # An inline comment must point at a real step of this protocol.
+    step_id = data.get("step_id")
+    if step_id is not None:
+        if ProtocolStep.query.filter_by(id=step_id, protocol_id=protocol_id).first() is None:
+            return jsonify({"success": False, "error": "Step not found on this protocol"}), 404
+
+    # A reply must answer a comment on the same protocol.
+    parent_id = data.get("parent_id")
+    if parent_id is not None:
+        parent = Comment.query.filter_by(
+            id=parent_id, protocol_id=protocol_id, account_id=account_id).first()
+        if parent is None:
+            return jsonify({"success": False, "error": "Parent comment not found"}), 404
+        # Replies inherit the parent's anchor; keep threads one level deep.
+        step_id = parent.step_id
+        parent_id = parent.parent_id or parent.id
+
+    comment = Comment(
+        account_id=account_id,
+        protocol_id=protocol_id,
+        step_id=int(step_id) if isinstance(step_id, (int, float)) else None,
+        parent_id=int(parent_id) if isinstance(parent_id, (int, float)) else None,
+        body=body,
+        author=_actor_name(),
+        author_user_id=g.current_user.id,
+    )
+    db.session.add(comment)
+    db.session.commit()
+    return jsonify({"success": True, "comment": comment.to_dict()}), 201
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/comments/<int:comment_id>",
+                   methods=["PATCH"])
+@require_account_access
+def update_comment(account_id, protocol_id, comment_id):
+    """Edit the body (author only), or pin / resolve a thread (any member)."""
+    comment = Comment.query.filter_by(
+        id=comment_id, protocol_id=protocol_id, account_id=account_id).first()
+    if comment is None:
+        return jsonify({"success": False, "error": "Comment not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    is_author = comment.author_user_id == g.current_user.id
+
+    if "body" in data:
+        if not is_author:
+            return jsonify({"success": False, "error": "Only the author can edit a comment"}), 403
+        body = (data.get("body") or "").strip()
+        if not body:
+            return jsonify({"success": False, "error": "A comment body is required"}), 400
+        comment.body = body
+    if "is_pinned" in data:
+        comment.is_pinned = bool(data.get("is_pinned"))
+    if "resolved" in data:
+        comment.resolved = bool(data.get("resolved"))
+        if comment.resolved:
+            comment.resolved_by = _actor_name()
+            comment.resolved_at = datetime.utcnow()
+        else:
+            comment.resolved_by, comment.resolved_at = "", None
+
+    db.session.commit()
+    return jsonify({"success": True, "comment": comment.to_dict()})
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/comments/<int:comment_id>",
+                   methods=["DELETE"])
+@require_account_access
+def delete_comment(account_id, protocol_id, comment_id):
+    """Delete a comment. Author or an account manager, and its replies with it."""
+    comment = Comment.query.filter_by(
+        id=comment_id, protocol_id=protocol_id, account_id=account_id).first()
+    if comment is None:
+        return jsonify({"success": False, "error": "Comment not found"}), 404
+    if comment.author_user_id != g.current_user.id and \
+            not has_account_role(g.current_user, account_id, MANAGER_ROLES):
+        return jsonify({"success": False, "error": "Only the author or a manager can delete"}), 403
+
+    # Remove any replies to this comment too.
+    Comment.query.filter_by(parent_id=comment.id, protocol_id=protocol_id).delete()
+    db.session.delete(comment)
     db.session.commit()
     return jsonify({"success": True})
 

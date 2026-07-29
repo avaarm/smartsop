@@ -22,6 +22,7 @@
       </div>
       <div class="head-side">
         <button class="btn-primary" (click)="runProtocol()" [disabled]="steps.length === 0" title="Run this protocol">▶ Run</button>
+        <button class="btn-ghost sm" (click)="openComments()" title="Comments">💬 Comments<span class="cbadge" *ngIf="openCommentCount">{{ openCommentCount }}</span></button>
         <button class="btn-ghost sm" *ngIf="protocol.version > 1" (click)="openVersions()" title="Version history">⧉ v{{ protocol.version }} history</button>
         <button class="btn-danger sm" *ngIf="protocol.status === 'draft'" (click)="deleteProtocol()">Delete</button>
       </div>
@@ -265,5 +266,73 @@
         <button class="btn-ghost" (click)="showVersions = false">Close</button>
       </div>
     </div>
+  </div>
+
+  <!-- Comments drawer -->
+  <div class="drawer-overlay" *ngIf="showComments" (click)="showComments = false">
+    <aside class="drawer" (click)="$event.stopPropagation()">
+      <header class="drawer-head">
+        <h3>Comments</h3>
+        <button class="x" (click)="showComments = false">✕</button>
+      </header>
+
+      <div class="cfilters">
+        <button [class.active]="commentFilter === 'all'" (click)="commentFilter = 'all'">All</button>
+        <button [class.active]="commentFilter === 'unresolved'" (click)="commentFilter = 'unresolved'">Unresolved</button>
+        <button [class.active]="commentFilter === 'pinned'" (click)="commentFilter = 'pinned'">Pinned</button>
+      </div>
+
+      <div class="cthreads">
+        <div class="empty-mini" *ngIf="!visibleThreads.length">No comments here yet.</div>
+
+        <div class="cthread" *ngFor="let c of visibleThreads" [class.resolved]="c.resolved">
+          <div class="canchor">
+            <span class="anchor-tag" [class.step]="c.step_id !== null">{{ stepLabel(c.step_id) }}</span>
+            <span class="pinned" *ngIf="c.is_pinned">📌 pinned</span>
+            <span class="resolved-tag" *ngIf="c.resolved">✓ resolved</span>
+          </div>
+
+          <div class="cbody">{{ c.body }}</div>
+          <div class="cmeta">{{ c.author }} · {{ commentStamp(c.created_at) }}</div>
+
+          <div class="cactions">
+            <button (click)="startReply(c)">Reply</button>
+            <button (click)="togglePin(c)">{{ c.is_pinned ? 'Unpin' : 'Pin' }}</button>
+            <button (click)="toggleResolve(c)">{{ c.resolved ? 'Reopen' : 'Resolve' }}</button>
+            <button class="danger" *ngIf="c.author_user_id === currentUserId || isManager" (click)="deleteComment(c)">Delete</button>
+          </div>
+
+          <!-- Replies -->
+          <div class="creply" *ngFor="let r of repliesFor(c.id)">
+            <div class="cbody">{{ r.body }}</div>
+            <div class="cmeta">
+              {{ r.author }} · {{ commentStamp(r.created_at) }}
+              <button class="link" *ngIf="r.author_user_id === currentUserId || isManager" (click)="deleteComment(r)">delete</button>
+            </div>
+          </div>
+
+          <!-- Reply composer -->
+          <div class="reply-box" *ngIf="replyingTo === c.id">
+            <textarea [(ngModel)]="replyBody" name="reply-{{ c.id }}" rows="2" placeholder="Write a reply…"></textarea>
+            <div class="reply-actions">
+              <button class="btn-ghost sm" (click)="replyingTo = null">Cancel</button>
+              <button class="btn-primary sm" (click)="sendReply(c)" [disabled]="commentBusy || !replyBody.trim()">Reply</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- New comment composer -->
+      <div class="compose">
+        <select [(ngModel)]="newCommentTarget" name="c-target">
+          <option value="protocol">On the whole protocol</option>
+          <option *ngFor="let s of steps; let i = index" [ngValue]="s.id">Step {{ i + 1 }}: {{ s.title || 'Untitled' }}</option>
+        </select>
+        <textarea [(ngModel)]="newCommentBody" name="c-new" rows="3" placeholder="Add a comment…"></textarea>
+        <button class="btn-primary" (click)="addComment()" [disabled]="commentBusy || !newCommentBody.trim()">
+          {{ commentBusy ? 'Posting…' : 'Comment' }}
+        </button>
+      </div>
+    </aside>
   </div>
 </div>
