@@ -196,6 +196,34 @@ export class ProtocolDetailComponent implements OnInit {
     });
   }
 
+  copyProtocol(): void {
+    if (!this.account) return;
+    this.protocolService.copyProtocol(this.account.id, this.protocolId).subscribe({
+      next: (res) => this.router.navigate(['/protocols', res.protocol.id]),
+      error: (err) => (this.errorMessage = err.message),
+    });
+  }
+
+  exportMenuOpen = false;
+
+  exportProtocol(format: 'json' | 'pdf'): void {
+    if (!this.account || !this.isBrowser) return;
+    this.exportMenuOpen = false;
+    this.protocolService.exportProtocol(this.account.id, this.protocolId, format).subscribe({
+      next: (blob) => {
+        const slug = (this.protocol?.title || 'protocol')
+          .replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'protocol';
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${slug}-v${this.protocol?.version ?? 1}.${format}`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: (err) => (this.errorMessage = err.message),
+    });
+  }
+
   // ── Version history / diff / rollback ──
 
   showVersions = false;

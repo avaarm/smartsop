@@ -53,7 +53,7 @@ Legend: ✅ built · 🚧 in progress · ⬜ planned
 |---|---|
 | Controlled lifecycle: draft → in_review → approved → effective → retired | ✅ |
 | Versioning: version numbers + supersedes chain (new-version clones) | ✅ (basic) |
-| `Copy / Fork` + `Forks` tab | ⬜ |
+| `Copy / Fork` (duplicate into an independent draft) | ✅ (fork; Forks tab ⬜) |
 | `New Merge Request` (fork-and-merge contribution) | ⬜ |
 | **Publish wizard** (6 steps): `Complete your protocol`, `Authors and Funders`, `Comments and Additional`, `Workspaces`, `Preview`, `Confirmation` | ⬜ |
 | **DOI**: `Reserve DOI`, minted per version (`10.17504/protocols.io.<id>/vN`) | ⬜ |
@@ -99,7 +99,7 @@ Legend: ✅ built · 🚧 in progress · ⬜ planned
 
 | Feature | Status |
 |---|---|
-| Export **format × destination**: `JSON`, `PDF` → `To your computer`, `Box`, `Google Drive`, `LabArchives`, `SciSure` | ⬜ |
+| Export `JSON` + `PDF` (audit copy) → to your computer (cloud destinations ⬜) | ✅ |
 | _Existing: DOCX generation engine (reuse for protocol export)_ | ✅ |
 | Settings → `Apps` integration toggles | ⬜ |
 | Settings: `General`, `Security and Privacy`, `Email Notifications`, `Workspaces`, `Active sessions` | ⬜ (partial) |

@@ -284,6 +284,40 @@ def get_protocol(account_id, protocol_id):
     return jsonify({"success": True, "protocol": protocol.to_dict(include_steps=True)})
 
 
+def _export_filename(protocol, ext):
+    slug = "".join(c if c.isalnum() else "-" for c in (protocol.title or "protocol")).strip("-").lower()
+    return f"{slug or 'protocol'}-v{protocol.version}.{ext}"
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/export.json", methods=["GET"])
+@require_account_access
+def export_protocol_json(account_id, protocol_id):
+    """Download the protocol as JSON — machine-readable archive / backup."""
+    protocol = _get_protocol(account_id, protocol_id)
+    if protocol is None:
+        return jsonify({"success": False, "error": "Protocol not found"}), 404
+    payload = json.dumps(protocol.to_dict(include_steps=True), indent=2)
+    return payload, 200, {
+        "Content-Type": "application/json",
+        "Content-Disposition": f'attachment; filename="{_export_filename(protocol, "json")}"',
+    }
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/export.pdf", methods=["GET"])
+@require_account_access
+def export_protocol_pdf(account_id, protocol_id):
+    """Download the protocol as a printable PDF — the OSHA / ISO audit artifact."""
+    protocol = _get_protocol(account_id, protocol_id)
+    if protocol is None:
+        return jsonify({"success": False, "error": "Protocol not found"}), 404
+    from .protocol_export import protocol_to_pdf
+    buf = protocol_to_pdf(protocol.to_dict(include_steps=True))
+    return buf.read(), 200, {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": f'attachment; filename="{_export_filename(protocol, "pdf")}"',
+    }
+
+
 @protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>", methods=["PUT"])
 @require_account_access
 def update_protocol(account_id, protocol_id):
@@ -1260,6 +1294,38 @@ def new_version(account_id, protocol_id):
     db.session.flush()
     _copy_steps(source, clone)
     db.session.commit()
+    return jsonify({"success": True, "protocol": clone.to_dict(include_steps=True)}), 201
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/copy", methods=["POST"])
+@require_account_access
+def copy_protocol(account_id, protocol_id):
+    """Fork a protocol into a new, independent draft (not a version in the chain).
+
+    Unlike new-version, the copy has its own version-1 lineage — a fresh
+    document you can adapt without touching the original's history.
+    """
+    source = _get_protocol(account_id, protocol_id)
+    if source is None:
+        return jsonify({"success": False, "error": "Protocol not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    title = (data.get("title") or f"{source.title} (copy)")[:500]
+    clone = Protocol(
+        account_id=account_id,
+        title=title,
+        description=source.description,
+        protocol_type=source.protocol_type,
+        status="draft",
+        version=1,
+        created_by=_actor_name(),
+        department=source.department,
+    )
+    db.session.add(clone)
+    db.session.flush()
+    _copy_steps(source, clone)
+    db.session.commit()
+    logger.info("Protocol %s forked to %s (account=%s)", protocol_id, clone.id, account_id)
     return jsonify({"success": True, "protocol": clone.to_dict(include_steps=True)}), 201
 
 
