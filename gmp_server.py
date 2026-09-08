@@ -28,9 +28,24 @@ logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 
+# Deployment environment: "development" (default) or "production". Honors the
+# conventional FLASK_ENV too, so existing deploy configs activate prod mode.
+APP_ENV = (os.environ.get("APP_ENV") or os.environ.get("FLASK_ENV") or "development").lower()
+
+# Fail fast in production if signing secrets are missing or left at a known
+# placeholder — a default secret means forgeable session cookies and JWTs.
+_INSECURE_SECRETS = {"", "dev-insecure-secret-change-me", "please-change-me-in-production",
+                     "your_jwt_secret_here", "changeme"}
+_configured_secret = os.environ.get("SECRET_KEY") or os.environ.get("JWT_SECRET")
+if APP_ENV == "production" and (not _configured_secret
+                                or _configured_secret.strip() in _INSECURE_SECRETS):
+    raise RuntimeError(
+        "SECRET_KEY (or JWT_SECRET) must be set to a real secret when running in "
+        "production — refusing to start with a missing or placeholder signing key."
+    )
+
 # Signs the Flask session cookie (used for the SSO state / CSRF check).
-app.secret_key = (os.environ.get("SECRET_KEY") or os.environ.get("JWT_SECRET")
-                  or "dev-insecure-secret-change-me")
+app.secret_key = _configured_secret or "dev-insecure-secret-change-me"
 
 # Cap request bodies to protect against oversized/abusive payloads (default 16 MB).
 app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))
@@ -115,4 +130,6 @@ def handle_unexpected_exception(e):
 if __name__ == '__main__':
     print("\n  GMP Document Server")
     print("  http://localhost:5001\n")
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    # Debug (with the auto-reloader and interactive traceback) stays off in
+    # production. This entrypoint is for local dev; deploy behind gunicorn/uwsgi.
+    app.run(host='0.0.0.0', port=5001, debug=APP_ENV != "production")

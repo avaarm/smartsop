@@ -17,4 +17,5 @@ reportlab
 PyPDF2
 pydantic
 lxml
+segno
 gunicorn

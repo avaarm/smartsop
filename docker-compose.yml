@@ -19,13 +19,20 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
+    # Apply DB migrations before serving, so the schema is always current and
+    # the app never relies on create_all in production.
+    command: ["sh", "-c", "flask --app gmp_server db upgrade && gunicorn --config gunicorn.conf.py gmp_server:app"]
     ports:
       - "5001:5001"
     environment:
+      - APP_ENV=production
       - FLASK_ENV=production
+      - AUTO_CREATE_TABLES=false
       - OLLAMA_HOST=http://ollama:11434
-      - JWT_SECRET=${JWT_SECRET:-please-change-me-in-production}
+      # Required: the app refuses to start in production without a real secret.
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set to a real secret}
       - DATABASE_URL=postgresql://smartsop:smartsop@db:5432/smartsop
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:4000}
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
     volumes:
