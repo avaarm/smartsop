@@ -59,7 +59,7 @@
           <div class="card-title">{{ p.title }}</div>
           <div class="card-desc" *ngIf="p.description">{{ p.description }}</div>
           <div class="card-meta">
-            <span class="pill" [class.effective]="p.status === 'effective'">{{ p.status.replace('_', ' ') }}</span>
+            <span class="pill" [ngClass]="p.status">{{ p.status.replace('_', ' ') }}</span>
             <span>v{{ p.version }}</span>
             <span class="sep">·</span>
             <span>{{ p.step_count }} step{{ p.step_count === 1 ? '' : 's' }}</span>
