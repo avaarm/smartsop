@@ -105,13 +105,38 @@
       </div>
     </section>
 
+    <!-- Materials summary (auto-aggregated) -->
+    <section class="materials-panel" *ngIf="materials.length">
+      <button class="materials-head" (click)="showMaterials = !showMaterials">
+        <span>🧪 Materials &amp; controls <em>({{ materials.length }})</em></span>
+        <span class="chev">{{ showMaterials ? '▾' : '▸' }}</span>
+      </button>
+      <div class="materials-list" *ngIf="showMaterials">
+        <span class="material" *ngFor="let m of materials">
+          {{ m.icon }} {{ m.label }}<em *ngIf="m.detail"> — {{ m.detail }}</em>
+        </span>
+      </div>
+    </section>
+
+    <!-- Section outline -->
+    <section class="outline" *ngIf="outline.length">
+      <div class="outline-head">Sections</div>
+      <button class="outline-item" *ngFor="let s of outline" (click)="scrollToStep(s.index)">
+        <span class="o-name">{{ s.name }}</span>
+        <span class="o-meta">{{ s.steps }} step{{ s.steps === 1 ? '' : 's' }}<span *ngIf="s.seconds"> · {{ fmtMins(s.seconds) }}</span></span>
+      </button>
+    </section>
+
     <!-- Steps -->
     <h3 class="steps-h">Steps</h3>
     <div class="steps">
-      <div class="step-card" *ngFor="let step of steps; let i = index">
+      <ng-container *ngFor="let step of steps; let i = index">
+      <div class="section-divider" *ngIf="isSectionStart(i)" [id]="'step-' + i">{{ step.section }}</div>
+      <div class="step-card" [id]="isSectionStart(i) ? null : 'step-' + i">
         <div class="step-num">{{ i + 1 }}</div>
         <div class="step-body">
           <ng-container *ngIf="canEdit; else readStep">
+            <input class="step-section" [(ngModel)]="step.section" [name]="'sec-' + step.id" (blur)="saveStep(step)" placeholder="§ Section (optional — groups steps)" />
             <input class="step-title" [(ngModel)]="step.title" [name]="'st-' + step.id" (blur)="saveStep(step)" placeholder="Step title (optional)" />
             <textarea class="step-desc" [(ngModel)]="step.description" [name]="'sd-' + step.id" (blur)="saveStep(step)" rows="2" placeholder="Describe what to do in this step…"></textarea>
             <div class="components">
@@ -192,6 +217,7 @@
           <button class="del" (click)="deleteStep(step)" title="Delete step">✕</button>
         </div>
       </div>
+      </ng-container>
     </div>
 
     <button class="add-step" *ngIf="canEdit" (click)="addStep()">+ Add step</button>

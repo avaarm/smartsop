@@ -144,3 +144,20 @@ h1 { font-size: 21px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 6px
   &.major.active { background: hsl(28 85% 50%); border-color: hsl(28 85% 50%); color: #fff; }
   &.critical.active { background: hsl(0 72% 51%); border-color: hsl(0 72% 51%); color: #fff; }
 }
+
+/* Materials summary at the top of a run */
+.materials-panel { margin: 0 0 16px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: #fff; }
+.materials-head {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 15px; background: hsl(240 5% 98.5%); border: none; cursor: pointer;
+  font-size: 13.5px; font-weight: 600; color: var(--primary); font-family: inherit;
+  em { font-weight: 400; color: var(--muted-fg); font-style: normal; }
+  .chev { color: var(--muted-fg); }
+  &:hover { background: hsl(240 5% 97%); }
+}
+.materials-list { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 15px; border-top: 1px solid var(--border); }
+.material {
+  font-size: 12.5px; padding: 5px 11px; border-radius: 7px;
+  background: hsl(240 5% 96%); color: hsl(240 4% 26%); border: 1px solid hsl(240 5% 90%);
+  em { font-style: normal; color: var(--muted-fg); }
+}

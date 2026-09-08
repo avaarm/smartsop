@@ -43,6 +43,19 @@
       </div>
     </div>
 
+    <!-- Materials — everything you'll need, gathered up front -->
+    <section class="materials-panel" *ngIf="materials.length">
+      <button class="materials-head" (click)="showMaterials = !showMaterials">
+        <span>🧪 Materials &amp; controls <em>({{ materials.length }})</em></span>
+        <span class="chev">{{ showMaterials ? '▾' : '▸' }}</span>
+      </button>
+      <div class="materials-list" *ngIf="showMaterials">
+        <span class="material" *ngFor="let m of materials">
+          {{ m.icon }} {{ m.label }}<em *ngIf="m.detail"> — {{ m.detail }}</em>
+        </span>
+      </div>
+    </section>
+
     <!-- Steps -->
     <div class="steps">
       <div class="run-step" *ngFor="let step of steps; let i = index" [attr.data-status]="step.status"

@@ -155,6 +155,27 @@ export class ProtocolRunComponent implements OnInit, OnDestroy {
 
   meta(type: string) { return componentMeta(type); }
 
+  showMaterials = false;
+
+  /** Aggregated reagents + typed components across the run's steps (deduped). */
+  get materials(): { label: string; detail: string; icon: string }[] {
+    const seen = new Map<string, { label: string; detail: string; icon: string }>();
+    for (const step of this.steps) {
+      for (const r of step.reagents || []) {
+        if (!r.name?.trim()) continue;
+        const key = 'r:' + r.name.toLowerCase();
+        if (!seen.has(key)) seen.set(key, { label: r.name, detail: r.amount || '', icon: '🧪' });
+      }
+      for (const c of step.components || []) {
+        const m = componentMeta(c.type);
+        const val = c.value === true ? 'required' : String(c.value || '');
+        const key = 'c:' + c.type + ':' + val.toLowerCase();
+        if (!seen.has(key)) seen.set(key, { label: m.label, detail: val, icon: m.icon });
+      }
+    }
+    return [...seen.values()];
+  }
+
   // ── Branch decisions ──
   halted: { question: string; label: string } | null = null;
   highlightIndex: number | null = null;

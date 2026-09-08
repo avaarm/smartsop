@@ -428,6 +428,7 @@ export class ProtocolDetailComponent implements OnInit {
   saveStep(step: ProtocolStep): void {
     if (!this.account) return;
     this.protocolService.updateStep(this.account.id, this.protocolId, step.id, {
+      section: step.section,
       title: step.title,
       description: step.description,
       warning: step.warning,
@@ -439,6 +440,69 @@ export class ProtocolDetailComponent implements OnInit {
       next: () => this.flash('Saved'),
       error: (err) => (this.errorMessage = err.message),
     });
+  }
+
+  // ── Sections & materials (protocols.io-style structure) ──
+
+  /** True when step i begins a new section (first step, or section changed). */
+  isSectionStart(i: number): boolean {
+    const s = (this.steps[i]?.section || '').trim();
+    if (!s) return false;
+    const prev = (this.steps[i - 1]?.section || '').trim();
+    return i === 0 || s !== prev;
+  }
+
+  /** Ordered outline of named sections with their step count and rolled-up time. */
+  get outline(): { name: string; index: number; steps: number; seconds: number }[] {
+    const out: { name: string; index: number; steps: number; seconds: number }[] = [];
+    this.steps.forEach((step, i) => {
+      const name = (step.section || '').trim();
+      if (!name) return;
+      let entry = out.length && out[out.length - 1].name === name && this.contiguous(i, name)
+        ? out[out.length - 1] : null;
+      if (!entry) { entry = { name, index: i, steps: 0, seconds: 0 }; out.push(entry); }
+      entry.steps++;
+      entry.seconds += step.duration_seconds || 0;
+    });
+    return out;
+  }
+
+  private contiguous(i: number, name: string): boolean {
+    return (this.steps[i - 1]?.section || '').trim() === name;
+  }
+
+  /** Aggregated reagents + typed components across every step (deduped). */
+  get materials(): { label: string; detail: string; icon: string }[] {
+    const seen = new Map<string, { label: string; detail: string; icon: string }>();
+    for (const step of this.steps) {
+      for (const r of step.reagents || []) {
+        if (!r.name?.trim()) continue;
+        const key = 'r:' + r.name.toLowerCase();
+        if (!seen.has(key)) seen.set(key, { label: r.name, detail: r.amount || '', icon: '🧪' });
+      }
+      for (const c of step.components || []) {
+        const m = this.meta(c.type);
+        const val = c.value === true ? 'required' : String(c.value || '');
+        const key = 'c:' + c.type + ':' + val.toLowerCase();
+        if (!seen.has(key)) seen.set(key, { label: m.label, detail: val, icon: m.icon });
+      }
+    }
+    return [...seen.values()];
+  }
+
+  showMaterials = false;
+
+  fmtMins(seconds: number): string {
+    if (!seconds) return '';
+    const m = Math.round(seconds / 60);
+    if (m < 60) return `${m} min`;
+    const h = Math.floor(m / 60), rem = m % 60;
+    return rem ? `${h}h ${rem}m` : `${h}h`;
+  }
+
+  scrollToStep(i: number): void {
+    if (!this.isBrowser) return;
+    document.getElementById('step-' + i)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   // ── Decision / branch ──

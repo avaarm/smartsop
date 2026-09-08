@@ -18,7 +18,8 @@ Legend: ✅ built · 🚧 in progress · ⬜ planned
 | Step components: Duration, Safety Information, Reagent | ✅ (basic) |
 | **Typed component library** (LOTO/GMP: 13 blocks — Duration, Temperature, Amount, Equipment, Reagent, Safety, PPE, Hazard, Verification, Critical Control, etc.) with icons + flags | ✅ |
 | Add / reorder / delete steps | ✅ |
-| **Sections** + **sub-steps** (`1`, `2`, `2.1`) with rolled-up durations | ⬜ |
+| **Sections** with a navigable outline + rolled-up per-section durations (sub-step `2.1` numbering ⬜) | ✅ |
+| **Materials summary** — reagents + typed components auto-aggregated, in the editor and at the top of a run | ✅ |
 | **Full component set (28)**: `Amount`, `Sample`, `Concentration`, `Temperature`, `Duration`, `Protocol`, `Document`, `Equipment`, `Reagent`, `Command`, `Citation`, `Dataset`, `Software`, `Note`, `Safety Information`, `Expected Result`, `Geo. Coordinates`, `Centrifugation`, `Smart Component`, `Shaker`, `Spectral Data`, `Goto`, `PH`, `Cost`, `Pressure`, `Thickness`, `Relative Humidity`, `Well Plate Map` | ⬜ |
 | Components as **inline atoms** in step prose (`🧪 10 µL`, `⏱ 00:05:00`, `🌡 60 °C`) | ⬜ |
 | Reagent picker w/ vendor catalog, `Catalog #`, `CAS number`, `RRID`, `Home-made` | ⬜ |
