@@ -38,13 +38,147 @@ def extract_text(filename: str, data: bytes) -> str:
     return data.decode("utf-8", errors="replace")
 
 
+# A hierarchical section number like "3.2.S.1", "3.2.P", or "4.1" — segments of
+# digits or single letters joined by "." / "-", at least two deep. Recognizes
+# CTD/CMC-style headings that carry no Word heading style. A plain "1. foo" (one
+# segment) is NOT matched, so ordinary numbered steps aren't mistaken for headings.
+_NUM_HEADING = re.compile(r"^\s*((?:\d+|[A-Za-z])(?:[.\-](?:\d+|[A-Za-z]))+)\.?\s+\S")
+
+
+def _heading_level(style_name: str, text: str) -> int:
+    """Return a heading level (1..6) for a paragraph, or 0 if it's body text.
+
+    Word heading styles win; otherwise a hierarchical section number
+    (e.g. "3.2.S.1 Nomenclature") is treated as a heading so structured
+    documents keep their outline.
+    """
+    style = (style_name or "").lower()
+    m = re.match(r"heading\s*(\d+)", style)
+    if m:
+        return min(int(m.group(1)), 6)
+    if style in ("title",):
+        return 1
+    if style in ("subtitle",):
+        return 2
+    if len(text) <= 160:
+        nm = _NUM_HEADING.match(text)
+        if nm:
+            return min(nm.group(1).replace("-", ".").count(".") + 1, 6)
+    return 0
+
+
+def _iter_docx_blocks(doc):
+    """Yield paragraphs and tables in document order (so structure is preserved)."""
+    from docx.document import Document as _DocT
+    from docx.oxml.table import CT_Tbl
+    from docx.oxml.text.paragraph import CT_P
+    from docx.table import Table
+    from docx.text.paragraph import Paragraph
+
+    parent = doc.element.body if isinstance(doc, _DocT) else doc
+    for child in parent.iterchildren():
+        if isinstance(child, CT_P):
+            yield Paragraph(child, doc)
+        elif isinstance(child, CT_Tbl):
+            yield Table(child, doc)
+
+
+def _table_to_text(table) -> str:
+    """Render a Word table as plain text, preserving rows/columns."""
+    rows = []
+    for row in table.rows:
+        cells = [c.text.strip().replace("\n", " ") for c in row.cells]
+        rows.append(" | ".join(cells))
+    return "\n".join(r for r in rows if r.strip(" |"))
+
+
+def extract_structured(filename: str, data: bytes):
+    """Extract an uploaded doc into [{section, title, description}] preserving its
+    structure 1-to-1: headings become sections/step titles, body paragraphs and
+    tables are kept in full under their heading, in original order.
+
+    Non-.docx files fall back to text + heading-aware line parsing.
+    """
+    name = (filename or "").lower()
+    if name.endswith(".docx"):
+        from docx import Document
+        return _clean(_structured_from_docx(Document(io.BytesIO(data))))
+    return _clean(_structured_from_text(extract_text(filename, data)))
+
+
+def _structured_from_docx(doc):
+    steps, current, h1 = [], None, ""
+    from docx.text.paragraph import Paragraph as _Para
+
+    def append_body(text):
+        nonlocal current
+        if current is None:
+            current = {"section": h1, "title": "", "description": ""}
+            steps.append(current)
+        current["description"] = (current["description"] + ("\n" if current["description"] else "") + text)
+
+    for block in _iter_docx_blocks(doc):
+        if isinstance(block, _Para):
+            text = block.text.strip()
+            if not text:
+                if current and current["description"] and not current["description"].endswith("\n"):
+                    current["description"] += "\n"
+                continue
+            level = _heading_level(block.style.name if block.style else "", text)
+            if level == 1:
+                h1 = text
+                current = {"section": text, "title": "", "description": ""}
+                steps.append(current)
+            elif level >= 2:
+                current = {"section": h1, "title": text, "description": ""}
+                steps.append(current)
+            else:
+                append_body(text)
+        else:  # table
+            tbl = _table_to_text(block)
+            if tbl:
+                append_body(tbl)
+    return steps
+
+
+def _structured_from_text(text: str):
+    """Heading-aware structuring for pasted / non-docx text: markdown #/## and
+    numbered section headings define the outline; everything else is body."""
+    steps, current, h1 = [], None, ""
+    for ln in (text or "").splitlines():
+        stripped = ln.strip()
+        md = _MD_HEADING.match(ln)
+        if md:
+            text_h = md.group(1).strip()
+            hashes = len(ln) - len(ln.lstrip("#"))   # number of leading '#'
+            level = 1 if hashes <= 1 else 2
+        else:
+            level = _heading_level("", stripped) if stripped else 0
+            text_h = stripped
+        if stripped and level == 1:
+            h1 = text_h
+            current = {"section": text_h, "title": "", "description": ""}
+            steps.append(current)
+        elif stripped and level >= 2:
+            current = {"section": h1, "title": text_h, "description": ""}
+            steps.append(current)
+        elif stripped:
+            if current is None:
+                current = {"section": "", "title": "", "description": ""}
+                steps.append(current)
+            current["description"] = (current["description"] + ("\n" if current["description"] else "") + stripped)
+    return steps
+
+
 def _clean(steps):
     out = []
     for s in steps:
+        section = (s.get("section") or "").strip()[:200]
         title = (s.get("title") or "").strip()[:500]
         desc = (s.get("description") or "").strip()
-        if title or desc:
+        if section or title or desc:
             out.append({
+                "section": section,
                 "title": title,
                 "description": desc,
                 "duration_seconds": s.get("duration_seconds"),

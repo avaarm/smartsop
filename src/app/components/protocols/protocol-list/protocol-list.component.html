@@ -110,8 +110,9 @@
         <p class="file-name" *ngIf="importFile">Selected: {{ importFile.name }}</p>
       </ng-container>
 
-      <label class="ml"><span>How to split into steps</span>
+      <label class="ml"><span>How to parse it</span>
         <select [(ngModel)]="importMode" name="importMode">
+          <option value="structured">Preserve structure — keep headings, sections &amp; all content (recommended)</option>
           <option value="numbered">Each number is a step (1. / 2) / Step 3:)</option>
           <option value="lines">Each line is a step</option>
           <option value="markdown">Markdown (headings become steps)</option>
@@ -182,6 +183,30 @@
 
     <div class="modal-actions">
       <button class="btn-ghost" (click)="showTemplates = false">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Project setup: fill in the template's variables -->
+<div class="modal-overlay" *ngIf="showVarSetup" (click)="showVarSetup = false">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <h3>Set up your project</h3>
+    <p class="modal-sub">Fill in the details for this project — they'll be substituted throughout
+      the new document from <strong>{{ varTemplate?.title }}</strong>.</p>
+
+    <label class="ml"><span>Project title</span>
+      <input type="text" [(ngModel)]="varTitle" name="varTitle" placeholder="New document title" /></label>
+    <p class="var-preview" *ngIf="varTitlePreview !== varTitle">→ {{ varTitlePreview }}</p>
+
+    <label class="ml" *ngFor="let v of varList"><span>{{ v }}</span>
+      <input type="text" [(ngModel)]="varValues[v]" [name]="'var-' + v"
+             placeholder="Value for {{ v }}" /></label>
+
+    <div class="modal-actions">
+      <button class="btn-ghost" (click)="showVarSetup = false">Cancel</button>
+      <button class="btn-primary" (click)="confirmVarSetup()" [disabled]="creatingFromTemplate">
+        {{ creatingFromTemplate ? 'Creating…' : 'Create project' }}
+      </button>
     </div>
   </div>
 </div>

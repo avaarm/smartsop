@@ -309,6 +309,9 @@
       <h3>Save as reusable template</h3>
       <p class="modal-sub">Adds a pristine copy to your organization's template library. Start future
         projects from it — the structure and wording carry over, ready to edit.</p>
+      <p class="modal-sub">💡 Put placeholders like <code ngNonBindable>{{product}}</code> or
+        <code ngNonBindable>{{batch_number}}</code> in the text and you'll be prompted to fill
+        them in each time you start a project from this template.</p>
       <label class="ml"><span>Document type</span>
         <input type="text" [(ngModel)]="templateCategory" name="tplCat" list="tpl-cats"
                placeholder="e.g. Batch Record, CMC, Stability Protocol" (keyup.enter)="confirmSaveTemplate()" />

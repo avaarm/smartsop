@@ -6,6 +6,7 @@ All routes are account-scoped and require membership (require_account_access).
 import calendar
 import json
 import logging
+import re
 from datetime import datetime, timedelta
 
 from flask import Blueprint, request, jsonify, g
@@ -16,7 +17,9 @@ from .database import (
     Assignment, TrainingRecord, Comment, AuditEvent, User,
 )
 from .auth import require_account_access, has_account_role, has_account_access
-from .protocol_import import extract_text, split_into_steps, ai_structure
+from .protocol_import import (
+    extract_text, split_into_steps, ai_structure, extract_structured, _structured_from_text,
+)
 from .templates import template_summaries, get_template
 from .generator_provider import get_generator
 
@@ -60,6 +63,35 @@ protocol_bp = Blueprint("protocols", __name__, url_prefix="/api/accounts")
 
 def _get_protocol(account_id, protocol_id):
     return Protocol.query.filter_by(id=protocol_id, account_id=account_id).first()
+
+
+VAR_RE = re.compile(r"\{\{\s*([\w .\-/#]+?)\s*\}\}")
+
+
+def _protocol_variables(protocol):
+    """Unique {{placeholder}} names found across a protocol's text, in order."""
+    seen = []
+
+    def scan(text):
+        for m in VAR_RE.finditer(text or ""):
+            name = m.group(1).strip()
+            if name and name not in seen:
+                seen.append(name)
+
+    scan(protocol.title)
+    scan(protocol.description)
+    for s in protocol.steps:
+        scan(s.section)
+        scan(s.title)
+        scan(s.description)
+    return seen
+
+
+def _apply_variables(text, variables):
+    """Substitute {{key}} with its value; unknown placeholders are left intact."""
+    if not text or not variables:
+        return text
+    return VAR_RE.sub(lambda m: str(variables.get(m.group(1).strip(), m.group(0))), text)
 
 
 def record_audit(account_id, action, entity_type="", entity_id=None, summary="", detail=None):
@@ -276,19 +308,23 @@ def import_protocol(account_id):
     LLM is unavailable). Returns the created protocol and the mode actually used.
     """
     upload = request.files.get("file")
+    file_bytes = None
+    file_name = ""
     if upload is not None:
-        text = extract_text(upload.filename, upload.read())
+        file_name = upload.filename or ""
+        file_bytes = upload.read()
+        text = extract_text(file_name, file_bytes)
         title = (request.form.get("title") or "").strip()
-        mode = (request.form.get("mode") or "numbered").lower()
+        mode = (request.form.get("mode") or "structured").lower()
         as_template = request.form.get("as_template") in ("true", "1", "yes")
         category = (request.form.get("category") or "").strip()[:120]
         if not title:
-            base = (upload.filename or "").rsplit(".", 1)[0].replace("_", " ").strip()
-            title = base[:500] or "Imported protocol"
+            base = file_name.rsplit(".", 1)[0].replace("_", " ").strip()
+            title = base[:500] or "Imported document"
     else:
         data = request.get_json(silent=True) or {}
         text = data.get("text") or ""
-        title = (data.get("title") or "").strip() or "Imported protocol"
+        title = (data.get("title") or "").strip() or "Imported document"
         mode = (data.get("mode") or "numbered").lower()
         as_template = bool(data.get("as_template"))
         category = (data.get("category") or "").strip()[:120]
@@ -297,18 +333,27 @@ def import_protocol(account_id):
         return jsonify({"success": False, "error": "No text to import"}), 400
 
     used = mode
-    if mode == "ai":
+    if mode == "structured":
+        # 1-to-1 structural extraction — preserve headings/sections, full body,
+        # and tables. Best for real documents (CMC, batch records, SOPs).
+        if file_bytes is not None:
+            steps = extract_structured(file_name, file_bytes)
+        else:
+            steps = _structured_from_text(text)
+            steps = [s for s in steps if s.get("section") or s.get("title") or s.get("description")]
+    elif mode == "ai":
         steps = ai_structure(text, getattr(get_generator(), "ollama", None))
         if steps is None:
-            steps = split_into_steps(text, "numbered")
-            used = "numbered (AI unavailable)"
+            steps = extract_structured(file_name, file_bytes) if file_bytes is not None \
+                else split_into_steps(text, "numbered")
+            used = "structured (AI unavailable)"
     else:
         if mode not in ("numbered", "lines", "markdown"):
             mode = used = "numbered"
         steps = split_into_steps(text, mode)
 
     if not steps:
-        return jsonify({"success": False, "error": "Could not extract any steps from the input"}), 400
+        return jsonify({"success": False, "error": "Could not extract any content from the input"}), 400
 
     author = (g.current_user.name or "").strip() or g.current_user.email
     protocol = Protocol(
@@ -320,6 +365,7 @@ def import_protocol(account_id):
     for i, s in enumerate(steps):
         db.session.add(ProtocolStep(
             protocol_id=protocol.id, order_index=i,
+            section=s.get("section", ""),
             title=s.get("title", ""), description=s.get("description", ""),
             duration_seconds=s.get("duration_seconds"), warning=s.get("warning", ""),
         ))
@@ -342,6 +388,16 @@ def get_protocol(account_id, protocol_id):
     if protocol is None:
         return jsonify({"success": False, "error": "Protocol not found"}), 404
     return jsonify({"success": True, "protocol": protocol.to_dict(include_steps=True)})
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/template-variables", methods=["GET"])
+@require_account_access
+def template_variables(account_id, protocol_id):
+    """The {{placeholders}} in a template, so 'use' can prompt to fill them in."""
+    protocol = _get_protocol(account_id, protocol_id)
+    if protocol is None:
+        return jsonify({"success": False, "error": "Protocol not found"}), 404
+    return jsonify({"success": True, "variables": _protocol_variables(protocol)})
 
 
 def _export_filename(protocol, ext):
@@ -1495,11 +1551,17 @@ def copy_protocol(account_id, protocol_id):
         return jsonify({"success": False, "error": "Protocol not found"}), 404
 
     data = request.get_json(silent=True) or {}
+    # Fill-in variables: {{product}}, {{batch_number}}, … supplied when starting
+    # a project from a template are substituted throughout the copy.
+    variables = data.get("variables") if isinstance(data.get("variables"), dict) else None
     title = (data.get("title") or f"{source.title} (copy)")[:500]
+    if variables:
+        title = _apply_variables(title, variables)[:500]
+
     clone = Protocol(
         account_id=account_id,
         title=title,
-        description=source.description,
+        description=_apply_variables(source.description, variables),
         protocol_type=source.protocol_type,
         status="draft",
         version=1,
@@ -1509,6 +1571,11 @@ def copy_protocol(account_id, protocol_id):
     db.session.add(clone)
     db.session.flush()
     _copy_steps(source, clone)
+    if variables:
+        for st in clone.steps:
+            st.section = _apply_variables(st.section, variables)
+            st.title = _apply_variables(st.title, variables)
+            st.description = _apply_variables(st.description, variables)
     db.session.commit()
     logger.info("Protocol %s forked to %s (account=%s)", protocol_id, clone.id, account_id)
     return jsonify({"success": True, "protocol": clone.to_dict(include_steps=True)}), 201

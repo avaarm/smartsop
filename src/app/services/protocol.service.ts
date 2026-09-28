@@ -323,9 +323,19 @@ export class ProtocolService {
 
   newVersion(accountId: number, id: number) { return this.lifecycle(accountId, id, 'new-version'); }
 
-  /** Fork a protocol into a new independent draft (its own version-1 lineage). */
-  copyProtocol(accountId: number, id: number): Observable<{ success: boolean; protocol: Protocol }> {
-    return this.http.post<any>(`${this.base(accountId)}/${id}/copy`, {})
+  /** Fork a protocol into a new independent draft (its own version-1 lineage).
+      Optionally fill {{placeholders}} and set a title when starting from a template. */
+  copyProtocol(accountId: number, id: number,
+               opts?: { title?: string; variables?: Record<string, string> }):
+    Observable<{ success: boolean; protocol: Protocol }> {
+    return this.http.post<any>(`${this.base(accountId)}/${id}/copy`, opts || {})
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  /** The {{placeholders}} a template defines, so 'use' can prompt to fill them. */
+  templateVariables(accountId: number, id: number):
+    Observable<{ success: boolean; variables: string[] }> {
+    return this.http.get<any>(`${this.base(accountId)}/${id}/template-variables`)
       .pipe(timeout(15000), catchError(this.handleError));
   }
 
