@@ -282,7 +282,12 @@ import { AccountService, Account } from '../../services/account.service';
       &:hover { background: hsl(0 0% 100% / 0.08); color: hsl(0 0% 95%); }
     }
 
-    .main-content { flex: 1; overflow-y: auto; background: hsl(240 20% 99%); }
+    .main-content {
+      flex: 1; overflow-y: auto;
+      background:
+        radial-gradient(120% 80% at 100% 0%, hsl(243 60% 97.5%) 0%, transparent 45%),
+        hsl(240 24% 97.6%);
+    }
 
     .sidebar::-webkit-scrollbar { width: 4px; }
     .sidebar::-webkit-scrollbar-track { background: transparent; }
