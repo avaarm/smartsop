@@ -106,3 +106,9 @@ h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 4px
   .modal-overlay { position: static; background: none; padding: 0; }
   .modal { box-shadow: none; max-width: none; }
 }
+
+/* ── Premium polish (consistent with Analytics) ── */
+h1 { font-size: 27px; font-weight: 720; letter-spacing: -0.03em; }
+.page { padding-top: 40px; }
+.asset-card { border-radius: 16px; box-shadow: 0 1px 2px hsl(240 20% 12% / 0.04), 0 1px 3px hsl(240 20% 12% / 0.06); transition: transform .14s ease, box-shadow .18s ease;
+  &:hover { transform: translateY(-2px); box-shadow: 0 4px 12px hsl(240 24% 16% / 0.06), 0 10px 24px hsl(240 24% 16% / 0.05); border-color: hsl(243 55% 86%); } }

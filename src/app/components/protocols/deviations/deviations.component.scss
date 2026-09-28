@@ -93,3 +93,11 @@ select {
   &.major.active { background: hsl(28 85% 50%); border-color: hsl(28 85% 50%); color: #fff; }
   &.critical.active { background: hsl(0 72% 51%); border-color: hsl(0 72% 51%); color: #fff; }
 }
+
+/* ── Premium polish (consistent with Analytics) ── */
+h1 { font-size: 27px; font-weight: 720; letter-spacing: -0.03em; }
+.page { padding-top: 40px; }
+.tile { border-radius: 16px; box-shadow: 0 1px 2px hsl(240 20% 12% / 0.04), 0 1px 3px hsl(240 20% 12% / 0.06); transition: transform .14s ease, box-shadow .18s ease;
+  &:hover { transform: translateY(-2px); box-shadow: 0 4px 12px hsl(240 24% 16% / 0.06), 0 10px 24px hsl(240 24% 16% / 0.05); } }
+.tile-num { font-size: 32px; font-weight: 760; letter-spacing: -0.03em; }
+.dev-table { border-radius: 16px; box-shadow: 0 1px 2px hsl(240 20% 12% / 0.04), 0 1px 3px hsl(240 20% 12% / 0.06); overflow: hidden; }
