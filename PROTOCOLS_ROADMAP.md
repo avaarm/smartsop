@@ -129,7 +129,7 @@ the run-mode / typed-block / lifecycle / SSO work and is stale.
 | Responsive shell (sidebar collapses to a top bar on phones) | ✅ |
 | **Version history + diff + rollback** ("what changed between v3 and v4", restore a prior version) | ✅ |
 | **Task manager / scheduling** (assign a run, due dates, recurring PM, start→run) | ✅ |
-| Offline mobile execution (local cache + sync-on-reconnect) | ⬜ |
+| **Offline mobile execution** — cached run, offline step outcomes/notes queued locally, sync-on-reconnect + reconcile | ✅ |
 | **Inline + protocol comments** (threaded, pin, resolve) — concurrent editing still ⬜ | ✅ |
 | **Training & competency** (assign SOP, read-and-acknowledge, annual re-cert expiry) | ✅ |
 | **Full audit trail** — immutable, exportable log of regulated actions (CFR Part 11 / ISO 9001 / GxP) | ✅ |
