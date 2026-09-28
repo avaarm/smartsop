@@ -90,6 +90,8 @@ Legend: ✅ built · 🚧 in progress · ⬜ planned
 | Feature | Status |
 |---|---|
 | **Org template library** — save any doc as a reusable, document-type template (CMC, Batch Record, Stability Protocol…); import a Word/PDF straight in as a template; start new projects from it | ✅ |
+| **Fill-in variables** — {{product}}, {{batch_number}}, … placeholders in a template; "Set up your project" prompts for them and substitutes throughout the new document | ✅ |
+| **1-to-1 structural import** — Word/PDF headings → sections, full body + tables preserved (not flattened to bare steps) | ✅ |
 | Workspaces (= accounts) w/ members + roles | ✅ |
 | Public vs Private/Internal; membership `Open to all`/`By request`/`By invitation only` | ⬜ |
 | **File manager**: folders, tree, `+ New`, `Recent files`, `Trash`, storage used | ⬜ |

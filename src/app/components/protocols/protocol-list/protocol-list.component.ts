@@ -34,7 +34,7 @@ export class ProtocolListComponent implements OnInit {
   importTab: 'paste' | 'file' = 'paste';
   importTitle = '';
   importText = '';
-  importMode = 'numbered';
+  importMode = 'structured';
   importFile: File | null = null;
   importing = false;
 
@@ -101,18 +101,61 @@ export class ProtocolListComponent implements OnInit {
     });
   }
 
-  /** Start a new working document from one of the org's own templates. */
+  // Project setup (fill-in variables) when starting from a template.
+  showVarSetup = false;
+  varTemplate: Protocol | null = null;
+  varList: string[] = [];
+  varValues: Record<string, string> = {};
+  varTitle = '';
+  varBusy = false;
+
+  /** Start a new working document from one of the org's own templates.
+      If the template has {{placeholders}}, collect them first. */
   useMyTemplate(t: Protocol): void {
     if (!this.activeAccount || this.creatingFromTemplate) return;
     this.creatingFromTemplate = true;
-    this.protocolService.copyProtocol(this.activeAccount.id, t.id).subscribe({
+    this.protocolService.templateVariables(this.activeAccount.id, t.id).subscribe({
+      next: (res) => {
+        this.creatingFromTemplate = false;
+        if (res.variables.length) {
+          this.varTemplate = t;
+          this.varList = res.variables;
+          this.varValues = {};
+          res.variables.forEach(v => (this.varValues[v] = ''));
+          this.varTitle = t.title;
+          this.showTemplates = false;
+          this.showVarSetup = true;
+        } else {
+          this.forkTemplate(t.id);
+        }
+      },
+      error: (err) => { this.errorMessage = err.message; this.creatingFromTemplate = false; },
+    });
+  }
+
+  private forkTemplate(id: number, opts?: { title?: string; variables?: Record<string, string> }): void {
+    if (!this.activeAccount) return;
+    this.creatingFromTemplate = true;
+    this.protocolService.copyProtocol(this.activeAccount.id, id, opts).subscribe({
       next: (res) => {
         this.creatingFromTemplate = false;
         this.showTemplates = false;
+        this.showVarSetup = false;
         this.router.navigate(['/protocols', res.protocol.id]);
       },
       error: (err) => { this.errorMessage = err.message; this.creatingFromTemplate = false; },
     });
+  }
+
+  confirmVarSetup(): void {
+    if (!this.varTemplate) return;
+    this.forkTemplate(this.varTemplate.id, { title: this.varTitle.trim() || undefined, variables: this.varValues });
+  }
+
+  /** A live preview of the project title with variables filled in. */
+  get varTitlePreview(): string {
+    return this.varTitle.replace(/\{\{\s*([\w .\-/#]+?)\s*\}\}/g,
+      (m, k) => (this.varValues[String(k).trim()] || m));
   }
 
   search = '';
@@ -160,7 +203,7 @@ export class ProtocolListComponent implements OnInit {
     this.importTab = 'paste';
     this.importTitle = '';
     this.importText = '';
-    this.importMode = 'numbered';
+    this.importMode = 'structured';
     this.importFile = null;
     this.importAsTemplate = false;
     this.importCategory = '';
