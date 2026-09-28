@@ -1,0 +1,40 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>Audit trail</h1>
+      <p class="subtitle">An immutable, timestamped record of every regulated action — the artifact you hand an auditor.</p>
+    </div>
+    <button class="btn-primary" *ngIf="account && events.length" (click)="exportCsv()">⤓ Export CSV</button>
+  </header>
+
+  <div class="toast toast-error" *ngIf="errorMessage">{{ errorMessage }}</div>
+  <div class="empty" *ngIf="!account">Select an account to view its audit trail.</div>
+
+  <ng-container *ngIf="account">
+    <div class="filters">
+      <select [(ngModel)]="actionFilter" (change)="load()" name="action">
+        <option *ngFor="let a of actions" [value]="a.value">{{ a.label }}</option>
+      </select>
+    </div>
+
+    <div class="loading" *ngIf="loading">Loading…</div>
+
+    <div class="empty" *ngIf="!loading && !events.length">
+      No audit events yet. Actions like submitting, signing, releasing, running, and flagging deviations are recorded here automatically.
+    </div>
+
+    <ol class="timeline" *ngIf="!loading && events.length">
+      <li class="event" *ngFor="let e of events">
+        <span class="dot" [ngClass]="kind(e.action)"></span>
+        <div class="ev-body">
+          <div class="ev-top">
+            <span class="ev-action" [ngClass]="kind(e.action)">{{ label(e.action) }}</span>
+            <span class="ev-time">{{ stamp(e.created_at) }}</span>
+          </div>
+          <div class="ev-summary">{{ e.summary }}</div>
+          <div class="ev-actor">by {{ e.actor || 'system' }}</div>
+        </div>
+      </li>
+    </ol>
+  </ng-container>
+</div>

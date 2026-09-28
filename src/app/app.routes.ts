@@ -75,6 +75,12 @@ export const routes: Routes = [
             .then(m => m.AnalyticsComponent),
       },
       {
+        path: 'audit',
+        loadComponent: () =>
+          import('./components/audit/audit.component')
+            .then(m => m.AuditComponent),
+      },
+      {
         path: 'account',
         loadComponent: () =>
           import('./components/gmp-docs/account-settings/account-settings.component')

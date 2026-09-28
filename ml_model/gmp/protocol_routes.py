@@ -13,7 +13,7 @@ from sqlalchemy import func
 
 from .database import (
     db, Protocol, ProtocolStep, ProtocolRun, ProtocolRunStep, ProtocolSignoff, Deviation,
-    Assignment, TrainingRecord, Comment,
+    Assignment, TrainingRecord, Comment, AuditEvent,
 )
 from .auth import require_account_access, has_account_role
 from .protocol_import import extract_text, split_into_steps, ai_structure
@@ -60,6 +60,26 @@ protocol_bp = Blueprint("protocols", __name__, url_prefix="/api/accounts")
 
 def _get_protocol(account_id, protocol_id):
     return Protocol.query.filter_by(id=protocol_id, account_id=account_id).first()
+
+
+def record_audit(account_id, action, entity_type="", entity_id=None, summary="", detail=None):
+    """Append an immutable audit-trail entry to the current session.
+
+    Adds (does not commit) so the entry is persisted atomically with the action
+    that produced it by the caller's existing commit.
+    """
+    ev = AuditEvent(
+        account_id=account_id,
+        action=action,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        summary=(summary or "")[:500],
+        detail_json=json.dumps(detail) if detail else "",
+        actor=_actor_name(),
+        actor_user_id=g.current_user.id,
+    )
+    db.session.add(ev)
+    return ev
 
 
 def _apply_step_fields(step, data):
@@ -162,6 +182,9 @@ def create_protocol(account_id):
         created_by=author,
     )
     db.session.add(protocol)
+    db.session.flush()
+    record_audit(account_id, "protocol.created", "protocol", protocol.id,
+                 f"Created “{protocol.title}”")
     db.session.commit()
     return jsonify({"success": True, "protocol": protocol.to_dict(include_steps=True)}), 201
 
@@ -562,8 +585,60 @@ def finish_run(account_id, run_id):
         return jsonify({"success": False, "error": "Run not found"}), 404
     run.status = "completed"
     run.completed_at = datetime.utcnow()
+    record_audit(account_id, "run.finished", "run", run.id,
+                 f"Finished run of “{run.protocol_title}” (v{run.protocol_version})")
     db.session.commit()
     return jsonify({"success": True, "run": run.to_dict(include_steps=True)})
+
+
+# ── Audit trail ──
+
+@protocol_bp.route("/<int:account_id>/audit", methods=["GET"])
+@require_account_access
+def list_audit(account_id):
+    """The account's audit trail — append-only, newest first, filterable."""
+    page = max(1, request.args.get("page", 1, type=int))
+    per_page = min(max(1, request.args.get("per_page", 50, type=int)), 200)
+    query = AuditEvent.query.filter_by(account_id=account_id)
+
+    action = request.args.get("action")
+    if action:
+        query = query.filter_by(action=action)
+    entity_type = request.args.get("entity_type")
+    if entity_type:
+        query = query.filter_by(entity_type=entity_type)
+
+    paginated = query.order_by(AuditEvent.created_at.desc(), AuditEvent.id.desc()).paginate(
+        page=page, per_page=per_page, error_out=False)
+    return jsonify({
+        "success": True,
+        "events": [e.to_dict() for e in paginated.items],
+        "total": paginated.total,
+        "page": paginated.page,
+        "pages": paginated.pages,
+    })
+
+
+@protocol_bp.route("/<int:account_id>/audit/export.csv", methods=["GET"])
+@require_account_access
+def export_audit_csv(account_id):
+    """Download the full audit trail as CSV — the artifact handed to an auditor."""
+    import csv
+    import io
+    events = (AuditEvent.query.filter_by(account_id=account_id)
+              .order_by(AuditEvent.created_at.asc(), AuditEvent.id.asc()).all())
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["Timestamp (UTC)", "Actor", "Action", "Entity", "Entity ID", "Summary"])
+    for e in events:
+        writer.writerow([
+            e.created_at.isoformat() if e.created_at else "",
+            e.actor, e.action, e.entity_type, e.entity_id or "", e.summary,
+        ])
+    return buf.getvalue(), 200, {
+        "Content-Type": "text/csv",
+        "Content-Disposition": 'attachment; filename="audit-trail.csv"',
+    }
 
 
 # ── Analytics ──
@@ -742,6 +817,9 @@ def create_deviation(account_id):
         reported_by_user_id=g.current_user.id,
     )
     db.session.add(dev)
+    db.session.flush()
+    record_audit(account_id, "deviation.created", "deviation", dev.id,
+                 f"Flagged {severity} deviation: “{dev.title}”")
     db.session.commit()
     logger.info("Deviation flagged (account=%s, severity=%s)", account_id, severity)
     return jsonify({"success": True, "deviation": dev.to_dict()}), 201
@@ -766,6 +844,7 @@ def update_deviation(account_id, deviation_id):
         return jsonify({"success": False, "error": "Deviation not found"}), 404
 
     data = request.get_json(silent=True) or {}
+    newly_closed = False
     if "status" in data:
         status = (data.get("status") or "").lower()
         if status not in DEVIATION_STATUSES:
@@ -773,6 +852,8 @@ def update_deviation(account_id, deviation_id):
                 "success": False,
                 "error": f"status must be one of {', '.join(DEVIATION_STATUSES)}",
             }), 400
+        newly_closed = (status in DEVIATION_CLOSED_STATUSES
+                        and dev.status not in DEVIATION_CLOSED_STATUSES)
         dev.status = status
         dev.resolved_at = datetime.utcnow() if status in DEVIATION_CLOSED_STATUSES else None
     if "severity" in data:
@@ -792,6 +873,9 @@ def update_deviation(account_id, deviation_id):
     if "description" in data:
         dev.description = data.get("description") or ""
 
+    if newly_closed:
+        record_audit(account_id, "deviation.resolved", "deviation", dev.id,
+                     f"Resolved deviation “{dev.title}” ({dev.status})")
     db.session.commit()
     return jsonify({"success": True, "deviation": dev.to_dict()})
 
@@ -1031,6 +1115,9 @@ def acknowledge_competency(account_id, record_id):
     # Re-certification date: explicit, else one year out.
     rec.expires_at = (data.get("expires_at")
                       or (now.date() + timedelta(days=TRAINING_VALID_DAYS)).isoformat())[:30]
+    record_audit(account_id, "competency.acknowledged", "training", rec.id,
+                 f"{rec.trainee} acknowledged training on “{rec.protocol_title}” "
+                 f"(v{rec.protocol_version}); re-cert due {rec.expires_at}")
     db.session.commit()
     return jsonify({"success": True, "training": rec.to_dict()})
 
@@ -1173,6 +1260,8 @@ def submit_protocol(account_id, protocol_id):
     if protocol.steps.count() == 0:
         return jsonify({"success": False, "error": "Add at least one step before submitting"}), 400
     protocol.status = "in_review"
+    record_audit(account_id, "protocol.submitted", "protocol", protocol.id,
+                 f"Submitted “{protocol.title}” (v{protocol.version}) for review")
     db.session.commit()
     return jsonify({"success": True, "protocol": protocol.to_dict(include_steps=True)})
 
@@ -1222,6 +1311,10 @@ def sign_protocol(account_id, protocol_id):
     if role == "approver":
         protocol.status = "approved" if decision == "approved" else "rejected"
 
+    record_audit(account_id, "protocol.signed", "protocol", protocol.id,
+                 f"{role.capitalize()} e-signature ({decision}) on “{protocol.title}” "
+                 f"(v{protocol.version})",
+                 detail={"role": role, "decision": decision, "meaning": signoff.meaning})
     db.session.commit()
     return jsonify({"success": True, "protocol": protocol.to_dict(include_steps=True)})
 
@@ -1249,7 +1342,12 @@ def make_effective(account_id, protocol_id):
         prior = Protocol.query.filter_by(id=protocol.supersedes_id, account_id=account_id).first()
         if prior and prior.status == "effective":
             prior.status = "retired"
+            record_audit(account_id, "protocol.retired", "protocol", prior.id,
+                         f"Superseded by v{protocol.version} of “{protocol.title}”")
 
+    record_audit(account_id, "protocol.made_effective", "protocol", protocol.id,
+                 f"Released “{protocol.title}” v{protocol.version} as effective "
+                 f"(effective {protocol.effective_date})")
     db.session.commit()
     return jsonify({"success": True, "protocol": protocol.to_dict(include_steps=True)})
 
@@ -1265,6 +1363,8 @@ def retire_protocol(account_id, protocol_id):
     if protocol.status not in ("effective", "approved"):
         return jsonify({"success": False, "error": "Only an effective or approved protocol can be retired"}), 400
     protocol.status = "retired"
+    record_audit(account_id, "protocol.retired", "protocol", protocol.id,
+                 f"Retired “{protocol.title}” (v{protocol.version})")
     db.session.commit()
     return jsonify({"success": True, "protocol": protocol.to_dict(include_steps=True)})
 
@@ -1293,6 +1393,8 @@ def new_version(account_id, protocol_id):
     db.session.add(clone)
     db.session.flush()
     _copy_steps(source, clone)
+    record_audit(account_id, "protocol.new_version", "protocol", clone.id,
+                 f"Drafted v{clone.version} of “{clone.title}” (from v{source.version})")
     db.session.commit()
     return jsonify({"success": True, "protocol": clone.to_dict(include_steps=True)}), 201
 
