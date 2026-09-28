@@ -132,9 +132,11 @@ the run-mode / typed-block / lifecycle / SSO work and is stale.
 | Offline mobile execution (local cache + sync-on-reconnect) | ⬜ |
 | **Inline + protocol comments** (threaded, pin, resolve) — concurrent editing still ⬜ | ✅ |
 | **Training & competency** (assign SOP, read-and-acknowledge, annual re-cert expiry) | ✅ |
+| **Full audit trail** — immutable, exportable log of regulated actions (CFR Part 11 / ISO 9001 / GxP) | ✅ |
+| **Run-time gates** — verification-photo + second-person sign-off block step completion | ✅ |
+| **SOP Finder** — keyword search across titles, descriptions, and step content | ✅ (semantic/embeddings ⬜) |
 | Public REST API + webhooks | ⬜ |
 | AI: video/voice → SOP | ⬜ |
-| AI: semantic search ("SOP Finder") | ⬜ |
 | AI: bilingual EN-ES rendering | ⬜ |
 | AI: deviation assistant (suggest root cause / next action) | ⬜ |
 

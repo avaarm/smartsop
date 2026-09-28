@@ -80,13 +80,20 @@ export class ProtocolListComponent implements OnInit {
     });
   }
 
+  search = '';
+
   loadProtocols(): void {
     if (!this.activeAccount) return;
     this.loading = true;
-    this.protocolService.listProtocols(this.activeAccount.id).subscribe({
+    this.protocolService.listProtocols(this.activeAccount.id, 1, this.search.trim()).subscribe({
       next: (res) => { this.protocols = res.protocols; this.loading = false; },
       error: (err) => { this.errorMessage = err.message; this.loading = false; },
     });
+  }
+
+  clearSearch(): void {
+    this.search = '';
+    this.loadProtocols();
   }
 
   createProtocol(): void {

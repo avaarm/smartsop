@@ -152,9 +152,31 @@ def _clean_components(raw):
 def list_protocols(account_id):
     page = max(1, request.args.get("page", 1, type=int))
     per_page = min(max(1, request.args.get("per_page", 20, type=int)), 100)
+
+    query = Protocol.query.filter_by(account_id=account_id)
+
+    # SOP Finder: match the query across the protocol's own fields AND its step
+    # text, so searching a term that appears inside a step still surfaces it.
+    q = (request.args.get("q") or "").strip()
+    if q:
+        like = f"%{q}%"
+        step_match = (
+            db.session.query(ProtocolStep.protocol_id)
+            .filter(db.or_(ProtocolStep.title.ilike(like),
+                           ProtocolStep.description.ilike(like),
+                           ProtocolStep.section.ilike(like)))
+            .subquery()
+        )
+        query = query.filter(db.or_(
+            Protocol.title.ilike(like),
+            Protocol.description.ilike(like),
+            Protocol.sop_number.ilike(like),
+            Protocol.department.ilike(like),
+            Protocol.id.in_(db.session.query(step_match.c.protocol_id)),
+        ))
+
     paginated = (
-        Protocol.query.filter_by(account_id=account_id)
-        .order_by(Protocol.updated_at.desc())
+        query.order_by(Protocol.updated_at.desc())
         .paginate(page=page, per_page=per_page, error_out=False)
     )
     return jsonify({

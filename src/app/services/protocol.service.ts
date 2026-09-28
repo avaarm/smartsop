@@ -235,9 +235,10 @@ export class ProtocolService {
 
   constructor(private http: HttpClient) {}
 
-  listProtocols(accountId: number, page = 1):
+  listProtocols(accountId: number, page = 1, q = ''):
     Observable<{ success: boolean; protocols: Protocol[]; total: number; page: number; pages: number }> {
-    return this.http.get<any>(`${this.base(accountId)}?page=${page}&per_page=50`)
+    const query = q ? `&q=${encodeURIComponent(q)}` : '';
+    return this.http.get<any>(`${this.base(accountId)}?page=${page}&per_page=50${query}`)
       .pipe(timeout(15000), catchError(this.handleError));
   }
 
