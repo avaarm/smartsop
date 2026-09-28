@@ -208,10 +208,62 @@ export class ProtocolRunComponent implements OnInit, OnDestroy {
     return `${pad(h)}:${pad(m)}:${pad(sec)}`;
   }
 
+  // ── Completion gates (verification photo / second signature) ──
+
+  gateStepId: number | null = null;
+  gateForm: { verification: string; witness_email: string; witness_password: string } =
+    { verification: '', witness_email: '', witness_password: '' };
+  gateBusy = false;
+
+  private hasFlag(step: ProtocolRunStep, type: string): boolean {
+    return (step.components || []).some(c => c.type === type && c.value === true);
+  }
+  needsPhoto(step: ProtocolRunStep): boolean { return this.hasFlag(step, 'verification_photo'); }
+  needsSignature(step: ProtocolRunStep): boolean { return this.hasFlag(step, 'second_signature'); }
+  hasGate(step: ProtocolRunStep): boolean { return this.needsPhoto(step) || this.needsSignature(step); }
+
+  /** True once every required gate on the step is satisfied. */
+  gateSatisfied(step: ProtocolRunStep): boolean {
+    if (this.needsPhoto(step) && !(step.verification || '').trim()) return false;
+    if (this.needsSignature(step) && !step.witnessed_by) return false;
+    return true;
+  }
+
+  openGate(step: ProtocolRunStep): void {
+    this.gateStepId = step.id;
+    this.gateForm = { verification: step.verification || '', witness_email: '', witness_password: '' };
+    this.errorMessage = '';
+  }
+  closeGate(): void { this.gateStepId = null; }
+
+  submitGate(step: ProtocolRunStep): void {
+    if (!this.account || !this.run) return;
+    this.gateBusy = true;
+    this.protocolService.setRunStep(this.account.id, this.run.id, step.id, {
+      status: 'done',
+      verification: this.needsPhoto(step) ? this.gateForm.verification : undefined,
+      witness_email: this.needsSignature(step) ? this.gateForm.witness_email : undefined,
+      witness_password: this.needsSignature(step) ? this.gateForm.witness_password : undefined,
+    }).subscribe({
+      next: (res) => {
+        Object.assign(step, res.step);
+        this.refreshProgress();
+        this.gateBusy = false;
+        this.gateStepId = null;
+      },
+      error: (err) => { this.gateBusy = false; this.errorMessage = err.message; },
+    });
+  }
+
   // ── Outcomes ──
 
   setStatus(step: ProtocolRunStep, status: RunStepStatus): void {
     if (!this.account || !this.run) return;
+    // Completing a gated step opens the gate form instead of marking Done directly.
+    if (status === 'done' && step.status !== 'done' && this.hasGate(step) && !this.gateSatisfied(step)) {
+      this.openGate(step);
+      return;
+    }
     const next = step.status === status ? 'pending' : status;
     this.protocolService.setRunStep(this.account.id, this.run.id, step.id, { status: next }).subscribe({
       next: (res) => {

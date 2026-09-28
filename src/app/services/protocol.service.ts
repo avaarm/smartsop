@@ -112,6 +112,9 @@ export interface ProtocolRunStep {
   note: string;
   completed_by: string;
   completed_at: string | null;
+  verification?: string;
+  witnessed_by?: string;
+  witnessed_at?: string | null;
 }
 
 export interface ProtocolRun {
@@ -392,7 +395,8 @@ export class ProtocolService {
   }
 
   setRunStep(accountId: number, runId: number, runStepId: number,
-             patch: { status?: RunStepStatus; note?: string }):
+             patch: { status?: RunStepStatus; note?: string; verification?: string;
+                      witness_email?: string; witness_password?: string }):
     Observable<{ success: boolean; step: ProtocolRunStep }> {
     return this.http.patch<any>(`/api/accounts/${accountId}/runs/${runId}/steps/${runStepId}`, patch)
       .pipe(timeout(15000), catchError(this.handleError));

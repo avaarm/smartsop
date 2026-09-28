@@ -494,6 +494,12 @@ class ProtocolRunStep(db.Model):
     completed_by = db.Column(db.String(255), default="")
     completed_at = db.Column(db.DateTime, nullable=True)
 
+    # Run-time gates for steps flagged verification_photo / second_signature.
+    verification = db.Column(db.Text, default="")              # photo reference / confirmation
+    witnessed_by = db.Column(db.String(255), default="")       # second signer (peer sign-off)
+    witnessed_by_user_id = db.Column(db.Integer, nullable=True)
+    witnessed_at = db.Column(db.DateTime, nullable=True)
+
     def to_dict(self):
         import json as _json
         try:
@@ -524,6 +530,9 @@ class ProtocolRunStep(db.Model):
             "note": self.note,
             "completed_by": self.completed_by,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "verification": self.verification,
+            "witnessed_by": self.witnessed_by,
+            "witnessed_at": self.witnessed_at.isoformat() if self.witnessed_at else None,
         }
 
 

@@ -111,6 +111,39 @@
               </button>
             </div>
           </div>
+          <!-- Completion gates satisfied -->
+          <div class="gate-done" *ngIf="step.verification">📷 Verification: {{ step.verification }}</div>
+          <div class="gate-done" *ngIf="step.witnessed_by">✍️ Witnessed by {{ step.witnessed_by }}</div>
+
+          <!-- Completion gate form (verification photo / second signature) -->
+          <div class="gate-form" *ngIf="gateStepId === step.id">
+            <div class="gate-title">🔒 Complete this step</div>
+            <label *ngIf="needsPhoto(step)">
+              <span>Verification photo</span>
+              <input type="text" [(ngModel)]="gateForm.verification" [name]="'gv-' + step.id"
+                     placeholder="Reference / filename of the photo taken" />
+            </label>
+            <ng-container *ngIf="needsSignature(step)">
+              <div class="gate-hint">A second authorized person must sign off.</div>
+              <label>
+                <span>Witness email</span>
+                <input type="email" [(ngModel)]="gateForm.witness_email" [name]="'gw-' + step.id"
+                       placeholder="peer@company.com" />
+              </label>
+              <label>
+                <span>Witness password</span>
+                <input type="password" [(ngModel)]="gateForm.witness_password" [name]="'gp-' + step.id"
+                       placeholder="••••••••" />
+              </label>
+            </ng-container>
+            <div class="gate-actions">
+              <button class="btn-ghost sm" (click)="closeGate()">Cancel</button>
+              <button class="btn-primary sm" (click)="submitGate(step)" [disabled]="gateBusy">
+                {{ gateBusy ? 'Verifying…' : '✓ Complete step' }}
+              </button>
+            </div>
+          </div>
+
           <!-- Deviations raised against this step -->
           <div class="dev-list" *ngIf="deviationsForStep(step).length">
             <div class="dev-item" *ngFor="let d of deviationsForStep(step)">

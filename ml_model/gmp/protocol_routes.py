@@ -13,9 +13,9 @@ from sqlalchemy import func
 
 from .database import (
     db, Protocol, ProtocolStep, ProtocolRun, ProtocolRunStep, ProtocolSignoff, Deviation,
-    Assignment, TrainingRecord, Comment, AuditEvent,
+    Assignment, TrainingRecord, Comment, AuditEvent, User,
 )
-from .auth import require_account_access, has_account_role
+from .auth import require_account_access, has_account_role, has_account_access
 from .protocol_import import extract_text, split_into_steps, ai_structure
 from .templates import template_summaries, get_template
 from .generator_provider import get_generator
@@ -453,6 +453,28 @@ def _get_run(account_id, run_id):
     return ProtocolRun.query.filter_by(id=run_id, account_id=account_id).first()
 
 
+def _unmet_run_step_gate(step):
+    """Return an error message if a run step's completion gates aren't satisfied.
+
+    A step flagged `verification_photo` needs a verification recorded; a step
+    flagged `second_signature` needs a peer witness sign-off before it can be
+    marked Done. Returns None when all required gates are met.
+    """
+    try:
+        components = json.loads(step.components_json or "[]")
+    except ValueError:
+        components = []
+    needs_photo = any(c.get("type") == "verification_photo" and c.get("value")
+                      for c in components if isinstance(c, dict))
+    needs_signature = any(c.get("type") == "second_signature" and c.get("value")
+                          for c in components if isinstance(c, dict))
+    if needs_photo and not (step.verification or "").strip():
+        return "This step requires a verification photo before it can be completed."
+    if needs_signature and not step.witnessed_by_user_id:
+        return "This step requires a second-person signature before it can be completed."
+    return None
+
+
 def _new_run(account_id, protocol, experiment_id=""):
     """Create a run and snapshot the protocol's steps (flushed, not committed).
 
@@ -557,6 +579,23 @@ def set_run_step_outcome(account_id, run_id, run_step_id):
         return jsonify({"success": False, "error": "Run step not found"}), 404
 
     data = request.get_json(silent=True) or {}
+
+    # ── Satisfy run-time gates (verification photo / second signature) ──
+    if "verification" in data:
+        step.verification = (data.get("verification") or "")[:2000]
+
+    if data.get("witness_email") and data.get("witness_password"):
+        witness = User.query.filter_by(email=data["witness_email"].strip().lower()).first()
+        if witness is None or not witness.check_password(data["witness_password"]):
+            return jsonify({"success": False, "error": "Witness credentials are invalid"}), 401
+        if witness.id == g.current_user.id:
+            return jsonify({"success": False, "error": "The witness must be a different person"}), 400
+        if not has_account_access(witness, account_id):
+            return jsonify({"success": False, "error": "The witness is not a member of this account"}), 403
+        step.witnessed_by = (witness.name or "").strip() or witness.email
+        step.witnessed_by_user_id = witness.id
+        step.witnessed_at = datetime.utcnow()
+
     if "status" in data:
         status = (data.get("status") or "").lower()
         if status not in RUN_STEP_STATUSES:
@@ -564,6 +603,13 @@ def set_run_step_outcome(account_id, run_id, run_step_id):
                 "success": False,
                 "error": f"status must be one of {', '.join(RUN_STEP_STATUSES)}",
             }), 400
+
+        # Gates only block *completion* (Done); Fail/Skip/pending are always allowed.
+        if status == "done":
+            gate_error = _unmet_run_step_gate(step)
+            if gate_error:
+                return jsonify({"success": False, "error": gate_error}), 400
+
         step.status = status
         if status == "pending":
             step.completed_by, step.completed_at = "", None
