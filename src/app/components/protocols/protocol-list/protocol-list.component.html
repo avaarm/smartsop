@@ -118,11 +118,24 @@
           <option value="ai">AI-assisted (structure the text automatically)</option>
         </select></label>
 
+      <label class="tpl-check">
+        <input type="checkbox" [(ngModel)]="importAsTemplate" name="importAsTemplate" />
+        <span>Save as a reusable template (start future projects from it)</span>
+      </label>
+      <label class="ml" *ngIf="importAsTemplate"><span>Document type</span>
+        <input type="text" [(ngModel)]="importCategory" name="importCategory" list="import-cats"
+               placeholder="e.g. Batch Record, CMC, Stability Protocol" />
+        <datalist id="import-cats">
+          <option value="CMC"></option><option value="Batch Record"></option>
+          <option value="Validation Protocol"></option><option value="Stability Protocol"></option>
+          <option value="Test Method"></option><option value="SOP"></option>
+        </datalist></label>
+
       <div class="modal-actions">
         <button class="btn-ghost" (click)="showImport = false">Cancel</button>
         <button class="btn-primary" (click)="runImport()"
                 [disabled]="importing || (importTab === 'paste' ? !importText.trim() : !importFile)">
-          {{ importing ? 'Importing…' : 'Import' }}
+          {{ importing ? 'Importing…' : (importAsTemplate ? 'Import as template' : 'Import') }}
         </button>
       </div>
     </div>
@@ -132,9 +145,27 @@
 <!-- Template gallery -->
 <div class="modal-overlay" *ngIf="showTemplates" (click)="showTemplates = false">
   <div class="modal wide" (click)="$event.stopPropagation()">
-    <h3>Regulatory templates</h3>
-    <p class="modal-sub">Prebuilt SOPs with typed safety blocks. Each copy starts as a draft.</p>
+    <h3>Start from a template</h3>
+    <p class="modal-sub">Reuse your organization's proven documents, or a regulatory starter pack.
+      Each copy opens as a fresh working draft you edit for the new project.</p>
 
+    <!-- Your organization's own templates, grouped by document type -->
+    <ng-container *ngIf="myTemplates.length">
+      <div class="tpl-section-head">Your organization's templates</div>
+      <div class="tpl-group" *ngFor="let g of myTemplateGroups">
+        <div class="tpl-cat">{{ g.category }}</div>
+        <div class="tpl-grid">
+          <button class="tpl-card mine" *ngFor="let t of g.items"
+                  (click)="useMyTemplate(t)" [disabled]="creatingFromTemplate">
+            <div class="tpl-name">{{ t.title }}</div>
+            <div class="tpl-desc" *ngIf="t.description">{{ t.description }}</div>
+            <div class="tpl-foot">{{ t.step_count }} steps · use as a starting point</div>
+          </button>
+        </div>
+      </div>
+    </ng-container>
+
+    <div class="tpl-section-head">Regulatory starter packs</div>
     <div class="tpl-grid">
       <button class="tpl-card" *ngFor="let t of templates"
               (click)="useTemplate(t)" [disabled]="creatingFromTemplate">
@@ -144,6 +175,10 @@
         <div class="tpl-foot">{{ t.step_count }} steps · {{ t.category }}</div>
       </button>
     </div>
+
+    <p class="tpl-hint">Tip: open any document and choose <strong>★ Save as template</strong>, or
+      <button class="link-btn" (click)="showTemplates = false; openImport()">import a Word/PDF</button>
+      and save it as a template — so your next project starts from what you already have.</p>
 
     <div class="modal-actions">
       <button class="btn-ghost" (click)="showTemplates = false">Close</button>

@@ -346,6 +346,12 @@ class Protocol(db.Model):
     # SQLite's batch ALTER can't add cleanly.
     supersedes_id = db.Column(db.Integer, nullable=True)
 
+    # Reusable-template library: an org's own "start from our standard <doc type>"
+    # source (e.g. a CMC Module 3 section, a Batch Record, a Stability Protocol).
+    # Templates live apart from working documents and are copied to start new work.
+    is_template = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    template_category = db.Column(db.String(120), default="")   # the document type
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -373,6 +379,8 @@ class Protocol(db.Model):
             "effective_date": self.effective_date,
             "review_date": self.review_date,
             "supersedes_id": self.supersedes_id,
+            "is_template": self.is_template,
+            "template_category": self.template_category,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "step_count": self.steps.count(),

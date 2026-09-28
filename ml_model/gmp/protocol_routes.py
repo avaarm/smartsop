@@ -155,6 +155,11 @@ def list_protocols(account_id):
 
     query = Protocol.query.filter_by(account_id=account_id)
 
+    # Templates live in their own library; keep them out of the working list
+    # unless explicitly requested with ?templates=true.
+    want_templates = request.args.get("templates") == "true"
+    query = query.filter_by(is_template=want_templates)
+
     # SOP Finder: match the query across the protocol's own fields AND its step
     # text, so searching a term that appears inside a step still surfaces it.
     q = (request.args.get("q") or "").strip()
@@ -275,6 +280,8 @@ def import_protocol(account_id):
         text = extract_text(upload.filename, upload.read())
         title = (request.form.get("title") or "").strip()
         mode = (request.form.get("mode") or "numbered").lower()
+        as_template = request.form.get("as_template") in ("true", "1", "yes")
+        category = (request.form.get("category") or "").strip()[:120]
         if not title:
             base = (upload.filename or "").rsplit(".", 1)[0].replace("_", " ").strip()
             title = base[:500] or "Imported protocol"
@@ -283,6 +290,8 @@ def import_protocol(account_id):
         text = data.get("text") or ""
         title = (data.get("title") or "").strip() or "Imported protocol"
         mode = (data.get("mode") or "numbered").lower()
+        as_template = bool(data.get("as_template"))
+        category = (data.get("category") or "").strip()[:120]
 
     if not text.strip():
         return jsonify({"success": False, "error": "No text to import"}), 400
@@ -302,7 +311,10 @@ def import_protocol(account_id):
         return jsonify({"success": False, "error": "Could not extract any steps from the input"}), 400
 
     author = (g.current_user.name or "").strip() or g.current_user.email
-    protocol = Protocol(account_id=account_id, title=title[:500], created_by=author)
+    protocol = Protocol(
+        account_id=account_id, title=title[:500], created_by=author,
+        is_template=as_template, template_category=(category or "General") if as_template else "",
+    )
     db.session.add(protocol)
     db.session.flush()
     for i, s in enumerate(steps):
@@ -311,6 +323,9 @@ def import_protocol(account_id):
             title=s.get("title", ""), description=s.get("description", ""),
             duration_seconds=s.get("duration_seconds"), warning=s.get("warning", ""),
         ))
+    if as_template:
+        record_audit(account_id, "template.created", "protocol", protocol.id,
+                     f"Imported “{protocol.title}” into the {protocol.template_category} template library")
     db.session.commit()
     return jsonify({
         "success": True,
@@ -1497,6 +1512,43 @@ def copy_protocol(account_id, protocol_id):
     db.session.commit()
     logger.info("Protocol %s forked to %s (account=%s)", protocol_id, clone.id, account_id)
     return jsonify({"success": True, "protocol": clone.to_dict(include_steps=True)}), 201
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/save-as-template", methods=["POST"])
+@require_account_access
+def save_as_template(account_id, protocol_id):
+    """Save a copy of this document into the org's reusable template library.
+
+    The original stays a working document; the template is a pristine, document-
+    type-categorized copy you start future projects from.
+    """
+    source = _get_protocol(account_id, protocol_id)
+    if source is None:
+        return jsonify({"success": False, "error": "Protocol not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    category = (data.get("category") or source.template_category or "General")[:120]
+    title = (data.get("title") or source.title)[:500]
+
+    template = Protocol(
+        account_id=account_id,
+        title=title,
+        description=source.description,
+        protocol_type=source.protocol_type,
+        status="draft",
+        version=1,
+        created_by=_actor_name(),
+        department=source.department,
+        is_template=True,
+        template_category=category,
+    )
+    db.session.add(template)
+    db.session.flush()
+    _copy_steps(source, template)
+    record_audit(account_id, "template.created", "protocol", template.id,
+                 f"Saved “{title}” to the {category} template library")
+    db.session.commit()
+    return jsonify({"success": True, "template": template.to_dict(include_steps=True)}), 201
 
 
 # ── Version history, diff, and rollback ──

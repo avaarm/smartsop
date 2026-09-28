@@ -54,23 +54,58 @@ export class ProtocolListComponent implements OnInit {
     if (this.isBrowser) this.accountService.loadSavedAccount();
   }
 
-  // ── Regulatory templates ──
+  // ── Templates ──
+
+  myTemplates: Protocol[] = [];
 
   private loadTemplates(): void {
     if (!this.activeAccount) return;
     this.protocolService.listTemplates(this.activeAccount.id)
       .subscribe({ next: (res) => (this.templates = res.templates), error: () => {} });
+    this.loadMyTemplates();
+  }
+
+  private loadMyTemplates(): void {
+    if (!this.activeAccount) return;
+    this.protocolService.listTemplateLibrary(this.activeAccount.id)
+      .subscribe({ next: (res) => (this.myTemplates = res.protocols), error: () => {} });
+  }
+
+  /** The org's own templates grouped by document type, for the gallery. */
+  get myTemplateGroups(): { category: string; items: Protocol[] }[] {
+    const groups = new Map<string, Protocol[]>();
+    for (const t of this.myTemplates) {
+      const cat = t.template_category || 'General';
+      (groups.get(cat) || groups.set(cat, []).get(cat)!).push(t);
+    }
+    return [...groups.entries()].map(([category, items]) => ({ category, items }))
+      .sort((a, b) => a.category.localeCompare(b.category));
   }
 
   openTemplates(): void {
     this.showTemplates = true;
     this.errorMessage = '';
+    this.loadMyTemplates();
   }
 
   useTemplate(t: ProtocolTemplate): void {
     if (!this.activeAccount || this.creatingFromTemplate) return;
     this.creatingFromTemplate = true;
     this.protocolService.createFromTemplate(this.activeAccount.id, t.key).subscribe({
+      next: (res) => {
+        this.creatingFromTemplate = false;
+        this.showTemplates = false;
+        this.router.navigate(['/protocols', res.protocol.id]);
+      },
+      error: (err) => { this.errorMessage = err.message; this.creatingFromTemplate = false; },
+    });
+  }
+
+  /** Start a new working document from one of the org's own templates. */
+  useMyTemplate(t: Protocol): void {
+    if (!this.activeAccount || this.creatingFromTemplate) return;
+    this.creatingFromTemplate = true;
+    this.protocolService.copyProtocol(this.activeAccount.id, t.id).subscribe({
       next: (res) => {
         this.creatingFromTemplate = false;
         this.showTemplates = false;
@@ -117,6 +152,9 @@ export class ProtocolListComponent implements OnInit {
 
   // ── Import ──
 
+  importAsTemplate = false;
+  importCategory = '';
+
   openImport(): void {
     this.showImport = true;
     this.importTab = 'paste';
@@ -124,6 +162,8 @@ export class ProtocolListComponent implements OnInit {
     this.importText = '';
     this.importMode = 'numbered';
     this.importFile = null;
+    this.importAsTemplate = false;
+    this.importCategory = '';
     this.errorMessage = '';
   }
 
@@ -141,12 +181,16 @@ export class ProtocolListComponent implements OnInit {
     this.importing = true;
     this.errorMessage = '';
 
+    const asTemplate = this.importAsTemplate;
     const done = (res: { protocol: Protocol }) => {
       this.importing = false;
       this.showImport = false;
-      this.router.navigate(['/protocols', res.protocol.id]);
+      // A template lands in the library; go back to the list and open the gallery.
+      if (asTemplate) { this.loadProtocols(); this.loadMyTemplates(); this.showTemplates = true; }
+      else this.router.navigate(['/protocols', res.protocol.id]);
     };
     const fail = (err: Error) => { this.errorMessage = err.message; this.importing = false; };
+    const category = this.importCategory.trim() || 'General';
 
     if (this.importTab === 'file') {
       if (!this.importFile) { this.importing = false; return; }
@@ -154,11 +198,13 @@ export class ProtocolListComponent implements OnInit {
       form.append('file', this.importFile);
       form.append('mode', this.importMode);
       if (this.importTitle.trim()) form.append('title', this.importTitle.trim());
+      if (asTemplate) { form.append('as_template', 'true'); form.append('category', category); }
       this.protocolService.importFromFile(acc, form).subscribe({ next: done, error: fail });
     } else {
       if (!this.importText.trim()) { this.importing = false; return; }
       this.protocolService.importFromText(acc, {
         title: this.importTitle.trim() || undefined, text: this.importText, mode: this.importMode,
+        as_template: asTemplate || undefined, category: asTemplate ? category : undefined,
       }).subscribe({ next: done, error: fail });
     }
   }

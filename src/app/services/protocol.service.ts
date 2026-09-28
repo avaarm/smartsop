@@ -87,6 +87,8 @@ export interface Protocol {
   effective_date: string;
   review_date: string;
   supersedes_id: number | null;
+  is_template: boolean;
+  template_category: string;
   created_at: string;
   updated_at: string;
   step_count: number;
@@ -242,6 +244,20 @@ export class ProtocolService {
       .pipe(timeout(15000), catchError(this.handleError));
   }
 
+  /** The org's own reusable template library (documents saved as templates). */
+  listTemplateLibrary(accountId: number):
+    Observable<{ success: boolean; protocols: Protocol[]; total: number }> {
+    return this.http.get<any>(`${this.base(accountId)}?templates=true&per_page=100`)
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  /** Save a copy of a document into the org template library under a category. */
+  saveAsTemplate(accountId: number, id: number, category: string, title?: string):
+    Observable<{ success: boolean; template: Protocol }> {
+    return this.http.post<any>(`${this.base(accountId)}/${id}/save-as-template`, { category, title })
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
   createProtocol(accountId: number, data: { title: string; description?: string }):
     Observable<{ success: boolean; protocol: Protocol }> {
     return this.http.post<any>(this.base(accountId), data)
@@ -264,7 +280,8 @@ export class ProtocolService {
       .pipe(timeout(20000), catchError(this.handleError));
   }
 
-  importFromText(accountId: number, body: { title?: string; text: string; mode: string }):
+  importFromText(accountId: number,
+                 body: { title?: string; text: string; mode: string; as_template?: boolean; category?: string }):
     Observable<{ success: boolean; protocol: Protocol; mode: string; step_count: number }> {
     return this.http.post<any>(`${this.base(accountId)}/import`, body)
       .pipe(timeout(90000), catchError(this.handleError));
