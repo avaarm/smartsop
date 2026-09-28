@@ -853,3 +853,46 @@ class Deviation(db.Model):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
         }
+
+
+class AuditEvent(db.Model):
+    """An immutable audit-trail entry — who did what, to which record, when.
+
+    The compliance backbone for 21 CFR Part 11 / ISO 9001 / GxP: append-only,
+    account-scoped, and exportable. Records the significant, regulated actions
+    (lifecycle transitions, signatures, deviations, competency, runs) as a
+    single queryable history a quality director can hand to an auditor.
+    """
+
+    __tablename__ = "audit_events"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False, index=True)
+
+    action = db.Column(db.String(60), nullable=False)        # e.g. protocol.signed
+    entity_type = db.Column(db.String(40), default="")       # protocol | run | deviation | …
+    entity_id = db.Column(db.Integer, nullable=True)
+    summary = db.Column(db.String(500), default="")          # human-readable line
+    detail_json = db.Column(db.Text, default="")             # optional structured context
+
+    actor = db.Column(db.String(255), default="")
+    actor_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    def to_dict(self):
+        import json as _json
+        try:
+            detail = _json.loads(self.detail_json) if self.detail_json else None
+        except ValueError:
+            detail = None
+        return {
+            "id": self.id,
+            "account_id": self.account_id,
+            "action": self.action,
+            "entity_type": self.entity_type,
+            "entity_id": self.entity_id,
+            "summary": self.summary,
+            "detail": detail,
+            "actor": self.actor,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
