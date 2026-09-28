@@ -8,6 +8,7 @@ import {
   Deviation, DeviationSeverity,
 } from '../../../services/protocol.service';
 import { AccountService, Account } from '../../../services/account.service';
+import { OfflineService } from '../../../services/offline.service';
 
 @Component({
   selector: 'app-protocol-run',
@@ -25,6 +26,11 @@ export class ProtocolRunComponent implements OnInit, OnDestroy {
   loading = false;
   errorMessage = '';
 
+  // Offline state (surfaced in the run banner).
+  online = true;
+  pendingSync = 0;
+  justSynced = 0;
+
   /** Per-run-step countdown state: remaining seconds, keyed by run step id. */
   remaining: Record<number, number> = {};
   private ticker: any = null;
@@ -34,6 +40,7 @@ export class ProtocolRunComponent implements OnInit, OnDestroy {
   constructor(
     private protocolService: ProtocolService,
     private accountService: AccountService,
+    private offline: OfflineService,
     private route: ActivatedRoute,
     public router: Router,
   ) {}
@@ -47,7 +54,32 @@ export class ProtocolRunComponent implements OnInit, OnDestroy {
     if (this.isBrowser) {
       this.accountService.loadSavedAccount();
       this.ticker = setInterval(() => this.tick(), 1000);
+
+      this.offline.pending$.subscribe(n => (this.pendingSync = n));
+      this.offline.online$.subscribe(isOnline => {
+        const cameBack = isOnline && !this.online;
+        this.online = isOnline;
+        if (cameBack) this.syncNow();
+      });
+      this.offline.synced$.subscribe(n => {
+        if (n > 0) {
+          this.justSynced = n;
+          setTimeout(() => (this.justSynced = 0), 4000);
+        }
+      });
     }
+  }
+
+  /** Flush the offline queue, then reconcile the run against the server. */
+  private syncNow(): void {
+    this.offline.flush().then(() => {
+      if (this.account && this.run) {
+        this.protocolService.getRun(this.account.id, this.run.id).subscribe({
+          next: (res) => { this.applyRun(res.run); this.offline.cacheRun(res.run); },
+          error: () => {},
+        });
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -60,15 +92,25 @@ export class ProtocolRunComponent implements OnInit, OnDestroy {
     this.loading = true;
     const runId = Number(this.route.snapshot.queryParamMap.get('run')) || null;
     if (runId) {
+      // Offline: serve the cached copy so the run stays usable with no network.
+      if (!this.offline.isOnline) {
+        const cached = this.offline.getCachedRun(runId);
+        if (cached) { this.applyRun(cached); return; }
+      }
       this.protocolService.getRun(this.account.id, runId).subscribe({
-        next: (res) => this.applyRun(res.run),
-        error: (err) => { this.errorMessage = err.message; this.loading = false; },
+        next: (res) => { this.applyRun(res.run); this.offline.cacheRun(res.run); this.syncNow(); },
+        error: (err) => {
+          const cached = this.offline.getCachedRun(runId);
+          if (cached) this.applyRun(cached);
+          else { this.errorMessage = err.message; this.loading = false; }
+        },
       });
       return;
     }
     this.protocolService.startRun(this.account.id, this.protocolId).subscribe({
       next: (res) => {
         this.applyRun(res.run);
+        this.offline.cacheRun(res.run);
         this.router.navigate([], {
           relativeTo: this.route, queryParams: { run: res.run.id }, replaceUrl: true,
         });
@@ -82,6 +124,13 @@ export class ProtocolRunComponent implements OnInit, OnDestroy {
     this.steps = run.steps || [];
     this.loading = false;
     this.loadDeviations();
+  }
+
+  /** Apply a step change locally + cache, so offline edits persist and render. */
+  private applyLocalStep(step: ProtocolRunStep, patch: Partial<ProtocolRunStep>): void {
+    Object.assign(step, patch);
+    this.refreshProgress();
+    if (this.run) this.offline.cacheRun({ ...this.run, steps: this.steps });
   }
 
   // ── Deviations / corrective actions ──
@@ -261,21 +310,40 @@ export class ProtocolRunComponent implements OnInit, OnDestroy {
     if (!this.account || !this.run) return;
     // Completing a gated step opens the gate form instead of marking Done directly.
     if (status === 'done' && step.status !== 'done' && this.hasGate(step) && !this.gateSatisfied(step)) {
+      // Peer sign-off / verification needs the server; block it while offline.
+      if (!this.online) {
+        this.errorMessage = 'This step needs a connection to capture its verification / sign-off.';
+        return;
+      }
       this.openGate(step);
       return;
     }
-    const next = step.status === status ? 'pending' : status;
+    const next: RunStepStatus = step.status === status ? 'pending' : status;
+
+    // Offline: apply locally and queue the change for replay on reconnect.
+    if (!this.online) {
+      const stamp = next === 'pending'
+        ? { status: next, completed_by: '', completed_at: null }
+        : { status: next, completed_by: 'you (offline)', completed_at: new Date().toISOString() };
+      this.applyLocalStep(step, stamp as Partial<ProtocolRunStep>);
+      this.offline.enqueue(this.account.id, this.run.id, step.id, { status: next });
+      return;
+    }
+
     this.protocolService.setRunStep(this.account.id, this.run.id, step.id, { status: next }).subscribe({
-      next: (res) => {
-        Object.assign(step, res.step);
-        this.refreshProgress();
-      },
+      next: (res) => { Object.assign(step, res.step); this.refreshProgress();
+                       if (this.run) this.offline.cacheRun({ ...this.run, steps: this.steps }); },
       error: (err) => (this.errorMessage = err.message),
     });
   }
 
   saveNote(step: ProtocolRunStep): void {
     if (!this.account || !this.run) return;
+    if (!this.online) {
+      this.applyLocalStep(step, {});
+      this.offline.enqueue(this.account.id, this.run.id, step.id, { note: step.note });
+      return;
+    }
     this.protocolService.setRunStep(this.account.id, this.run.id, step.id, { note: step.note })
       .subscribe({ error: (err) => (this.errorMessage = err.message) });
   }

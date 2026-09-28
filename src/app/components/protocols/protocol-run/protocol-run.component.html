@@ -33,6 +33,18 @@
       ⛔ <strong>Run halted</strong> — “{{ halted.question }}” → {{ halted.label }}. Stop work and notify your supervisor.
     </div>
 
+    <!-- Offline / sync status -->
+    <div class="offline-banner" *ngIf="!online">
+      ⚡ <strong>Working offline</strong> — your changes are saved on this device
+      <span *ngIf="pendingSync">({{ pendingSync }} pending)</span> and will sync when you reconnect.
+    </div>
+    <div class="sync-banner" *ngIf="online && pendingSync > 0">
+      ⟳ Syncing {{ pendingSync }} change{{ pendingSync === 1 ? '' : 's' }}…
+    </div>
+    <div class="synced-banner" *ngIf="online && justSynced > 0">
+      ✓ Synced {{ justSynced }} offline change{{ justSynced === 1 ? '' : 's' }}.
+    </div>
+
     <!-- Progress -->
     <div class="progress-bar">
       <div class="progress-track"><div class="progress-fill" [style.width.%]="progressPercent"></div></div>

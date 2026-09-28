@@ -179,3 +179,18 @@ h1 { font-size: 21px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 6px
 .gate-hint { font-size: 12px; color: var(--muted-fg); margin-top: 8px; }
 .gate-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 .btn-primary.sm { padding: 7px 13px; font-size: 12.5px; }
+
+/* Offline / sync banners */
+.offline-banner {
+  padding: 11px 15px; margin-bottom: 16px; border-radius: 10px; font-size: 13.5px;
+  background: hsl(38 92% 95%); border: 1px solid hsl(38 80% 82%); color: hsl(30 75% 34%);
+  strong { font-weight: 700; }
+}
+.sync-banner {
+  padding: 10px 15px; margin-bottom: 16px; border-radius: 10px; font-size: 13px;
+  background: hsl(217 90% 96%); border: 1px solid hsl(217 70% 85%); color: hsl(217 70% 40%);
+}
+.synced-banner {
+  padding: 10px 15px; margin-bottom: 16px; border-radius: 10px; font-size: 13px;
+  background: hsl(143 60% 96%); border: 1px solid hsl(143 50% 84%); color: hsl(143 55% 30%);
+}
