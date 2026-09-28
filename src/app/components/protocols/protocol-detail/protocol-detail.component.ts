@@ -204,6 +204,30 @@ export class ProtocolDetailComponent implements OnInit {
     });
   }
 
+  // ── Save as reusable template ──
+
+  showSaveTemplate = false;
+  templateCategory = '';
+  savingTemplate = false;
+  readonly templateCategories = ['CMC', 'Batch Record', 'Validation Protocol', 'Stability Protocol',
+                                 'Test Method', 'SOP', 'Cleaning Procedure', 'Deviation Report'];
+
+  openSaveTemplate(): void {
+    this.showSaveTemplate = true;
+    this.templateCategory = this.protocol?.template_category || '';
+  }
+
+  confirmSaveTemplate(): void {
+    if (!this.account || !this.templateCategory.trim()) return;
+    this.savingTemplate = true;
+    this.protocolService.saveAsTemplate(this.account.id, this.protocolId, this.templateCategory.trim())
+      .subscribe({
+        next: () => { this.savingTemplate = false; this.showSaveTemplate = false;
+                      this.flash('Saved to your template library'); },
+        error: (err) => { this.savingTemplate = false; this.errorMessage = err.message; },
+      });
+  }
+
   exportMenuOpen = false;
 
   exportProtocol(format: 'json' | 'pdf'): void {

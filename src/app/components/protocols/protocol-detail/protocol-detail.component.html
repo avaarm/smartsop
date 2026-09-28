@@ -24,6 +24,7 @@
         <button class="btn-primary" (click)="runProtocol()" [disabled]="steps.length === 0" title="Run this protocol">▶ Run</button>
         <button class="btn-ghost sm" (click)="openComments()" title="Comments">💬 Comments<span class="cbadge" *ngIf="openCommentCount">{{ openCommentCount }}</span></button>
         <button class="btn-ghost sm" (click)="copyProtocol()" title="Duplicate as a new draft">⎘ Copy</button>
+        <button class="btn-ghost sm" (click)="openSaveTemplate()" title="Save as a reusable template">★ Save as template</button>
         <div class="export-wrap">
           <button class="btn-ghost sm" (click)="exportMenuOpen = !exportMenuOpen" title="Export">⤓ Export</button>
           <div class="export-menu" *ngIf="exportMenuOpen">
@@ -298,6 +299,29 @@
 
       <div class="modal-actions">
         <button class="btn-ghost" (click)="showVersions = false">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save as template -->
+  <div class="modal-overlay" *ngIf="showSaveTemplate" (click)="showSaveTemplate = false">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h3>Save as reusable template</h3>
+      <p class="modal-sub">Adds a pristine copy to your organization's template library. Start future
+        projects from it — the structure and wording carry over, ready to edit.</p>
+      <label class="ml"><span>Document type</span>
+        <input type="text" [(ngModel)]="templateCategory" name="tplCat" list="tpl-cats"
+               placeholder="e.g. Batch Record, CMC, Stability Protocol" (keyup.enter)="confirmSaveTemplate()" />
+        <datalist id="tpl-cats">
+          <option *ngFor="let c of templateCategories" [value]="c"></option>
+        </datalist>
+      </label>
+      <div class="modal-actions">
+        <button class="btn-ghost" (click)="showSaveTemplate = false">Cancel</button>
+        <button class="btn-primary" (click)="confirmSaveTemplate()"
+                [disabled]="savingTemplate || !templateCategory.trim()">
+          {{ savingTemplate ? 'Saving…' : 'Save to library' }}
+        </button>
       </div>
     </div>
   </div>
