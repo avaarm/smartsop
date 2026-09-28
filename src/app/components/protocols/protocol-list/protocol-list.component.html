@@ -29,11 +29,24 @@
       </div>
     </section>
 
+    <!-- SOP Finder: search across titles, descriptions, and step content -->
+    <div class="finder" *ngIf="protocols.length > 0 || search">
+      <span class="finder-icon">🔎</span>
+      <input type="text" [(ngModel)]="search" name="search"
+             (keyup.enter)="loadProtocols()" (input)="search.trim() === '' && loadProtocols()"
+             placeholder="Find an SOP — e.g. “west-plant compressor lockout”…" />
+      <button class="finder-clear" *ngIf="search" (click)="clearSearch()">✕</button>
+    </div>
+
     <div class="loading" *ngIf="loading">Loading…</div>
+
+    <div class="empty" *ngIf="!loading && search && protocols.length === 0">
+      No SOPs match “{{ search }}”.
+    </div>
 
     <!-- Empty state doubles as onboarding: a new workspace can start from a
          regulatory template instead of a blank editor. -->
-    <section class="onboard" *ngIf="!loading && protocols.length === 0 && !showNewForm">
+    <section class="onboard" *ngIf="!loading && protocols.length === 0 && !search && !showNewForm">
       <h2>Start from a regulatory template</h2>
       <p>Prebuilt SOPs with the safety blocks already filled in. Each lands as a draft you can edit and route for approval.</p>
 
