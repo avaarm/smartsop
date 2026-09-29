@@ -92,12 +92,36 @@ export interface Protocol {
   doc_format?: 'steps' | 'document';
   has_original?: boolean;
   original_filename?: string;
+  doc_category?: string;
+  product_code?: string;
   created_at: string;
   updated_at: string;
   step_count: number;
   signoffs: ProtocolSignoff[];
   steps?: ProtocolStep[];
   body?: DocBlock[];
+}
+
+/** A facility document-taxonomy category (EQ, QA, TM, BR, …). */
+export interface DocCategory {
+  code: string;
+  name: string;
+  kind: 'procedure' | 'record';
+  description: string;
+  examples: string[];
+  template_count: number;
+  effective_count: number;
+}
+
+/** A built-in facility document template (the "what do you want to write?" starters). */
+export interface DocTemplate {
+  key: string;
+  name: string;
+  doc_category: string;
+  protocol_type: ProtocolType;
+  doc_format: 'steps' | 'document';
+  description: string;
+  standard: string;
 }
 
 /** One block of a document-format protocol, preserving the original layout. */
@@ -290,6 +314,28 @@ export class ProtocolService {
   createFromTemplate(accountId: number, key: string, title?: string):
     Observable<{ success: boolean; protocol: Protocol }> {
     return this.http.post<any>(`${this.base(accountId)}/from-template`, { key, title })
+      .pipe(timeout(20000), catchError(this.handleError));
+  }
+
+  /** The facility document taxonomy with per-category template & effective counts. */
+  docCategories(accountId: number): Observable<{ success: boolean; categories: DocCategory[] }> {
+    return this.http.get<any>(`${this.base(accountId)}/doc-categories`)
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  /** Built-in facility document templates (optionally for one category). */
+  docTemplates(accountId: number, category?: string):
+    Observable<{ success: boolean; templates: DocTemplate[] }> {
+    const q = category ? `?category=${encodeURIComponent(category)}` : '';
+    return this.http.get<any>(`${this.base(accountId)}/doc-templates${q}`)
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  /** Start a new document from a built-in template, filling any {{variables}}. */
+  createFromDocTemplate(accountId: number, key: string,
+                        opts?: { title?: string; variables?: Record<string, string> }):
+    Observable<{ success: boolean; protocol: Protocol }> {
+    return this.http.post<any>(`${this.base(accountId)}/from-doc-template`, { key, ...(opts || {}) })
       .pipe(timeout(20000), catchError(this.handleError));
   }
 

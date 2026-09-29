@@ -5,9 +5,10 @@
       <p class="subtitle">Create and run step-by-step lab protocols.</p>
     </div>
     <div class="head-actions" *ngIf="activeAccount">
-      <button class="btn-ghost" (click)="openTemplates()">◲ Templates</button>
+      <button class="btn-ghost" (click)="openTemplates()">◲ My templates</button>
       <button class="btn-ghost" (click)="openImport()">↥ Import</button>
-      <button class="btn-primary" (click)="showNewForm = !showNewForm">+ New protocol</button>
+      <button class="btn-ghost" (click)="showNewForm = !showNewForm">+ Blank protocol</button>
+      <button class="btn-primary" (click)="openNewDoc()">✎ New document</button>
     </div>
   </header>
 
@@ -84,6 +85,74 @@
       </button>
     </div>
   </ng-container>
+
+  <!-- "What do you want to write?" — new-document picker -->
+  <div class="modal-overlay" *ngIf="showNewDoc" (click)="showNewDoc = false">
+    <div class="modal modal-lg" (click)="$event.stopPropagation()">
+
+      <!-- Step 1: choose the kind of document -->
+      <ng-container *ngIf="newDocStep === 'category'">
+        <h3>What do you want to write?</h3>
+        <p class="modal-sub">Pick the document category. Each one starts you from a correctly-structured template — the way your facility files it.</p>
+        <div class="cat-grid">
+          <button class="cat-card" *ngFor="let c of docCategories" (click)="pickCategory(c)">
+            <div class="cat-top">
+              <span class="cat-code" [class.record]="c.kind === 'record'">{{ c.code }}</span>
+              <span class="cat-count" *ngIf="templateCountFor(c)">{{ templateCountFor(c) }} template{{ templateCountFor(c) === 1 ? '' : 's' }}</span>
+            </div>
+            <div class="cat-name">{{ c.name }}</div>
+            <div class="cat-desc">{{ c.description }}</div>
+            <div class="cat-examples">
+              <span class="ex" *ngFor="let e of c.examples.slice(0, 3)">{{ e }}</span>
+            </div>
+          </button>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-ghost" (click)="showNewDoc = false">Cancel</button>
+        </div>
+      </ng-container>
+
+      <!-- Step 2: choose a template within the category -->
+      <ng-container *ngIf="newDocStep === 'template' && selectedCat">
+        <button class="crumb" (click)="newDocStep = 'category'">← All categories</button>
+        <h3>{{ selectedCat.name }} <span class="crumb-code">{{ selectedCat.code }}</span></h3>
+        <p class="modal-sub">{{ selectedCat.description }}</p>
+
+        <div class="tpl-section" *ngIf="builtinsForCat(selectedCat).length">
+          <div class="tpl-section-head">Standard templates</div>
+          <button class="doc-tpl" *ngFor="let t of builtinsForCat(selectedCat)"
+                  (click)="useBuiltinDocTemplate(t)" [disabled]="creatingFromTemplate">
+            <div class="doc-tpl-main">
+              <div class="doc-tpl-name">{{ t.name }}</div>
+              <div class="doc-tpl-desc">{{ t.description }}</div>
+            </div>
+            <span class="doc-tpl-std" *ngIf="t.standard">{{ t.standard }}</span>
+          </button>
+        </div>
+
+        <div class="tpl-section" *ngIf="orgTemplatesForCat(selectedCat).length">
+          <div class="tpl-section-head">Your organization's templates</div>
+          <button class="doc-tpl" *ngFor="let t of orgTemplatesForCat(selectedCat)"
+                  (click)="useOrgTemplateFromPicker(t)" [disabled]="creatingFromTemplate">
+            <div class="doc-tpl-main">
+              <div class="doc-tpl-name">{{ t.title }}</div>
+              <div class="doc-tpl-desc" *ngIf="t.description">{{ t.description }}</div>
+            </div>
+            <span class="doc-tpl-std">v{{ t.version }}</span>
+          </button>
+        </div>
+
+        <p class="empty-mini" *ngIf="!builtinsForCat(selectedCat).length && !orgTemplatesForCat(selectedCat).length">
+          No templates yet in {{ selectedCat.name }}. Start blank, or import an existing document and save it as a template.
+        </p>
+
+        <div class="modal-actions">
+          <button class="btn-ghost" (click)="startBlankInCategory(selectedCat)" [disabled]="creating">Start blank</button>
+          <button class="btn-ghost" (click)="showNewDoc = false; openImport()">Import a file</button>
+        </div>
+      </ng-container>
+    </div>
+  </div>
 
   <!-- Import modal -->
   <div class="modal-overlay" *ngIf="showImport" (click)="showImport = false">

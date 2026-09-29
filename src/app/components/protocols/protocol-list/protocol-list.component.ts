@@ -3,7 +3,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
-import { ProtocolService, Protocol, ProtocolTemplate } from '../../../services/protocol.service';
+import { ProtocolService, Protocol, ProtocolTemplate, DocCategory, DocTemplate } from '../../../services/protocol.service';
 import { AccountService, Account } from '../../../services/account.service';
 
 @Component({
@@ -156,6 +156,84 @@ export class ProtocolListComponent implements OnInit {
   get varTitlePreview(): string {
     return this.varTitle.replace(/\{\{\s*([\w .\-/#]+?)\s*\}\}/g,
       (m, k) => (this.varValues[String(k).trim()] || m));
+  }
+
+  // ── "What do you want to write?" — new-document picker ──
+  showNewDoc = false;
+  newDocStep: 'category' | 'template' = 'category';
+  docCategories: DocCategory[] = [];
+  builtinDocTemplates: DocTemplate[] = [];
+  selectedCat: DocCategory | null = null;
+
+  openNewDoc(): void {
+    if (!this.activeAccount) return;
+    this.showNewDoc = true;
+    this.newDocStep = 'category';
+    this.selectedCat = null;
+    this.errorMessage = '';
+    this.protocolService.docCategories(this.activeAccount.id)
+      .subscribe({ next: (res) => (this.docCategories = res.categories), error: () => {} });
+    this.protocolService.docTemplates(this.activeAccount.id)
+      .subscribe({ next: (res) => (this.builtinDocTemplates = res.templates), error: () => {} });
+    this.loadMyTemplates();
+  }
+
+  /** How many starting points a category offers (built-in + the org's own). */
+  templateCountFor(cat: DocCategory): number {
+    return this.builtinsForCat(cat).length + this.orgTemplatesForCat(cat).length;
+  }
+
+  pickCategory(cat: DocCategory): void {
+    this.selectedCat = cat;
+    this.newDocStep = 'template';
+  }
+
+  builtinsForCat(cat: DocCategory): DocTemplate[] {
+    return this.builtinDocTemplates.filter(t => t.doc_category === cat.code);
+  }
+
+  orgTemplatesForCat(cat: DocCategory): Protocol[] {
+    return this.myTemplates.filter(t =>
+      t.doc_category === cat.code ||
+      (!t.doc_category && (t.template_category || '').toLowerCase() === cat.name.toLowerCase()));
+  }
+
+  /** Start a new document from a built-in facility template. */
+  useBuiltinDocTemplate(t: DocTemplate): void {
+    if (!this.activeAccount || this.creatingFromTemplate) return;
+    this.creatingFromTemplate = true;
+    this.protocolService.createFromDocTemplate(this.activeAccount.id, t.key).subscribe({
+      next: (res) => {
+        this.creatingFromTemplate = false;
+        this.showNewDoc = false;
+        this.router.navigate(['/protocols', res.protocol.id]);
+      },
+      error: (err) => { this.errorMessage = err.message; this.creatingFromTemplate = false; },
+    });
+  }
+
+  /** Start from one of the org's own templates (via the picker). */
+  useOrgTemplateFromPicker(t: Protocol): void {
+    this.showNewDoc = false;
+    this.useMyTemplate(t);
+  }
+
+  /** Blank document in the chosen category. */
+  startBlankInCategory(cat: DocCategory): void {
+    if (!this.activeAccount || this.creating) return;
+    this.creating = true;
+    this.protocolService.createProtocol(this.activeAccount.id,
+      { title: `New ${cat.name} document` }).subscribe({
+      next: (res) => {
+        this.creating = false;
+        this.showNewDoc = false;
+        // Tag it with the chosen category, then open it.
+        this.protocolService.updateProtocol(this.activeAccount!.id, res.protocol.id,
+          { doc_category: cat.code } as any).subscribe({ next: () => {}, error: () => {} });
+        this.router.navigate(['/protocols', res.protocol.id]);
+      },
+      error: (err) => { this.errorMessage = err.message; this.creating = false; },
+    });
   }
 
   search = '';
