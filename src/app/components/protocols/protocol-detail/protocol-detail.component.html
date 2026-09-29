@@ -21,13 +21,16 @@
                   (blur)="saveMeta()" rows="2" placeholder="Add a description / abstract…"></textarea>
       </div>
       <div class="head-side">
-        <button class="btn-primary" (click)="runProtocol()" [disabled]="steps.length === 0" title="Run this protocol">▶ Run</button>
+        <button *ngIf="!isDocument" class="btn-primary" (click)="runProtocol()" [disabled]="steps.length === 0" title="Run this protocol">▶ Run</button>
+        <button *ngIf="isDocument" class="btn-primary" (click)="openFill()" title="Fill in the fields and download a matching Word file">✎ Fill in &amp; export</button>
         <button class="btn-ghost sm" (click)="openComments()" title="Comments">💬 Comments<span class="cbadge" *ngIf="openCommentCount">{{ openCommentCount }}</span></button>
         <button class="btn-ghost sm" (click)="copyProtocol()" title="Duplicate as a new draft">⎘ Copy</button>
         <button class="btn-ghost sm" (click)="openSaveTemplate()" title="Save as a reusable template">★ Save as template</button>
         <div class="export-wrap">
           <button class="btn-ghost sm" (click)="exportMenuOpen = !exportMenuOpen" title="Export">⤓ Export</button>
           <div class="export-menu" *ngIf="exportMenuOpen">
+            <button *ngIf="isDocument && protocol.has_original" (click)="downloadOriginal()">Word (original)</button>
+            <button *ngIf="isDocument" (click)="openFill()">Word (fill in &amp; export)</button>
             <button (click)="exportProtocol('pdf')">PDF (audit copy)</button>
             <button (click)="exportProtocol('json')">JSON (backup)</button>
           </div>
@@ -70,7 +73,7 @@
       <div class="lc-state">
         <strong>{{ statusLabel(protocol.status) }}</strong>
         <span class="lc-hint" [ngSwitch]="protocol.status">
-          <ng-container *ngSwitchCase="'draft'">Edit the steps, then submit for review.</ng-container>
+          <ng-container *ngSwitchCase="'draft'">{{ isDocument ? 'Edit the document, then submit for review.' : 'Edit the steps, then submit for review.' }}</ng-container>
           <ng-container *ngSwitchCase="'rejected'">Address the feedback below, then re-submit.</ng-container>
           <ng-container *ngSwitchCase="'in_review'">Awaiting reviewer &amp; approver signatures.</ng-container>
           <ng-container *ngSwitchCase="'approved'">Approved — release it to make it effective.</ng-container>
@@ -80,7 +83,7 @@
       </div>
       <div class="lc-actions">
         <button class="btn-primary" *ngIf="protocol.status === 'draft' || protocol.status === 'rejected'"
-                (click)="submit()" [disabled]="busy || steps.length === 0">Submit for review</button>
+                (click)="submit()" [disabled]="busy || (!isDocument && steps.length === 0)">Submit for review</button>
 
         <button class="btn-ghost" *ngIf="protocol.status === 'in_review'" (click)="openSign('reviewer')">✍ Sign as reviewer</button>
         <button class="btn-primary" *ngIf="protocol.status === 'in_review' && isManager" (click)="openSign('approver', 'approved')">Approve &amp; sign</button>
@@ -119,7 +122,59 @@
       </div>
     </section>
 
-    <!-- Section outline -->
+    <!-- ═══ Document-fidelity view: renders the uploaded document as-is ═══ -->
+    <section class="doc-view" *ngIf="isDocument">
+      <div class="doc-toolbar">
+        <div class="doc-tools-left">
+          <button *ngIf="protocol.has_original" class="btn-ghost sm" (click)="downloadOriginal()" title="Download the exact file you uploaded">⤓ Download original</button>
+          <button class="btn-ghost sm" (click)="openFill()" title="Fill in the fields and download a matching Word file">✎ Fill in &amp; export</button>
+        </div>
+        <button *ngIf="canEdit" class="btn-ghost sm" [class.active]="docEditing" (click)="toggleDocEdit()">
+          {{ docEditing ? '✓ Done editing' : '✎ Edit document' }}
+        </button>
+      </div>
+
+      <div class="doc-paper" [class.editing]="docEditing">
+        <ng-container *ngFor="let b of body; let bi = index" [ngSwitch]="b.type">
+          <div *ngSwitchCase="'heading'" class="doc-h" [ngClass]="'lvl-' + (b.level || 1)">
+            <span *ngIf="!docEditing">{{ b.text }}</span>
+            <input *ngIf="docEditing" [(ngModel)]="b.text" [name]="'dh-' + bi" />
+          </div>
+
+          <div *ngSwitchCase="'checkbox'" class="doc-check">
+            <span class="cbox" (click)="docEditing ? (b.checked = !b.checked) : null">{{ b.checked ? '☑' : '☐' }}</span>
+            <span *ngIf="!docEditing">{{ b.text }}</span>
+            <input *ngIf="docEditing" [(ngModel)]="b.text" [name]="'dc-' + bi" />
+          </div>
+
+          <table *ngSwitchCase="'table'" class="doc-table">
+            <tbody>
+              <tr *ngFor="let row of b.rows; let ri = index">
+                <td *ngFor="let cell of row; let ci = index" [class.hdr]="ri === 0">
+                  <span *ngIf="!docEditing">{{ cell }}</span>
+                  <input *ngIf="docEditing" [(ngModel)]="b.rows![ri][ci]" [name]="'dt-' + bi + '-' + ri + '-' + ci" />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div *ngSwitchDefault class="doc-p">
+            <span *ngIf="!docEditing">{{ b.text }}</span>
+            <textarea *ngIf="docEditing" [(ngModel)]="b.text" [name]="'dp-' + bi" rows="2"></textarea>
+          </div>
+        </ng-container>
+
+        <div class="doc-empty" *ngIf="!body.length">This document has no content.</div>
+      </div>
+
+      <div class="doc-save-bar" *ngIf="docEditing">
+        <button class="btn-primary" (click)="saveBody()">Save document</button>
+        <span class="doc-save-hint">Tip: type <code ngNonBindable>{{variable}}</code> anywhere to make it a fill-in field.</span>
+      </div>
+    </section>
+
+    <!-- Section outline (step-format protocols only) -->
+    <ng-container *ngIf="!isDocument">
     <section class="outline" *ngIf="outline.length">
       <div class="outline-head">Sections</div>
       <button class="outline-item" *ngFor="let s of outline" (click)="scrollToStep(s.index)">
@@ -222,7 +277,31 @@
     </div>
 
     <button class="add-step" *ngIf="canEdit" (click)="addStep()">+ Add step</button>
+    </ng-container>
   </ng-container>
+
+  <!-- Fill in & export modal (document fidelity) -->
+  <div class="modal-overlay" *ngIf="showFill" (click)="showFill = false">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h3>Fill in &amp; export</h3>
+      <p class="modal-sub" *ngIf="fillVars.length">
+        Enter the project-specific values. We produce a Word file that matches the original's
+        formatting — with these fields filled in.
+      </p>
+      <p class="modal-sub" *ngIf="!fillVars.length">
+        This document has no fill-in fields yet. Download it as-is, or switch on
+        <strong>Edit document</strong> and type a placeholder to create one.
+      </p>
+      <label class="ml" *ngFor="let v of fillVars"><span>{{ v }}</span>
+        <input type="text" [(ngModel)]="fillValues[v]" [name]="'fv-' + v" placeholder="value…" /></label>
+      <div class="modal-actions">
+        <button class="btn-ghost" (click)="showFill = false">Cancel</button>
+        <button class="btn-primary" (click)="exportFilled()" [disabled]="fillBusy">
+          {{ fillBusy ? 'Preparing…' : '⤓ Download .docx' }}
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- E-signature modal -->
   <div class="modal-overlay" *ngIf="showSign" (click)="showSign = false">

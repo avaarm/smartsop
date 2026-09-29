@@ -407,3 +407,65 @@ button { font-family: inherit; }
   &:focus { outline: none; border-color: hsl(217 91% 60%); border-style: solid; }
   &::placeholder { color: hsl(240 4% 62%); }
 }
+
+/* ═══ Document-fidelity view ═══ */
+.doc-view { margin-top: 8px; }
+.doc-toolbar {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  margin-bottom: 12px; flex-wrap: wrap;
+}
+.doc-tools-left { display: flex; gap: 8px; flex-wrap: wrap; }
+.doc-toolbar .active { background: hsl(243 90% 96%); border-color: hsl(243 60% 82%); color: hsl(243 70% 48%); }
+
+/* The "paper" — a document surface, elevated so it reads like a real doc */
+.doc-paper {
+  background: #fff; border: 1px solid var(--border); border-radius: 14px;
+  padding: 40px 44px; max-width: 880px;
+  box-shadow: 0 1px 2px hsl(240 20% 12% / 0.04), 0 8px 28px hsl(240 24% 16% / 0.06);
+  font-size: 13.5px; line-height: 1.55; color: hsl(240 6% 15%);
+}
+.doc-paper.editing { background: hsl(240 30% 99.3%); }
+
+.doc-h { font-weight: 700; letter-spacing: -0.01em; margin: 20px 0 8px; color: hsl(240 6% 12%); }
+.doc-h:first-child { margin-top: 0; }
+.doc-h.lvl-1 { font-size: 19px; padding-bottom: 5px; border-bottom: 2px solid hsl(240 6% 88%); }
+.doc-h.lvl-2 { font-size: 16px; }
+.doc-h.lvl-3 { font-size: 14.5px; }
+.doc-h.lvl-4, .doc-h.lvl-5, .doc-h.lvl-6 { font-size: 13.5px; color: var(--muted-fg); text-transform: uppercase; letter-spacing: 0.03em; }
+
+.doc-p { margin: 8px 0; white-space: pre-wrap; }
+.doc-empty { color: var(--muted-fg); font-style: italic; text-align: center; padding: 30px; }
+
+.doc-check { display: flex; align-items: flex-start; gap: 8px; margin: 6px 0; }
+.doc-check .cbox { font-size: 15px; line-height: 1.4; user-select: none; }
+.doc-paper.editing .doc-check .cbox { cursor: pointer; }
+
+/* Tables — the whole point: they stay tables */
+.doc-table {
+  width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12.5px;
+  border: 1px solid hsl(240 6% 80%);
+}
+.doc-table td {
+  border: 1px solid hsl(240 6% 82%); padding: 7px 10px; vertical-align: top;
+  white-space: pre-wrap;
+}
+.doc-table td.hdr { background: hsl(240 12% 96%); font-weight: 650; color: hsl(240 6% 20%); }
+
+/* Inline editing inputs sit flush so the layout doesn't jump */
+.doc-paper.editing input,
+.doc-paper.editing textarea {
+  width: 100%; box-sizing: border-box; font-family: inherit; font-size: inherit;
+  color: inherit; border: 1px solid transparent; border-radius: 5px;
+  padding: 3px 6px; background: #fff; resize: vertical;
+  &:hover { border-color: hsl(240 6% 88%); }
+  &:focus { outline: none; border-color: hsl(243 70% 68%); background: #fff; box-shadow: 0 0 0 2px hsl(243 90% 95%); }
+}
+.doc-paper.editing .doc-h input { font-weight: 700; }
+.doc-table input { min-width: 40px; }
+
+.doc-save-bar {
+  display: flex; align-items: center; gap: 14px; margin-top: 14px;
+  max-width: 880px;
+}
+.doc-save-hint { font-size: 12px; color: var(--muted-fg); }
+.doc-save-hint code { background: hsl(240 10% 95%); padding: 1px 6px; border-radius: 4px; font-size: 11.5px; }

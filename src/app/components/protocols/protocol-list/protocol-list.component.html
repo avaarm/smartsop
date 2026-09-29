@@ -89,7 +89,7 @@
   <div class="modal-overlay" *ngIf="showImport" (click)="showImport = false">
     <div class="modal" (click)="$event.stopPropagation()">
       <h3>Import a protocol</h3>
-      <p class="modal-sub">Turn an existing procedure into structured steps — paste the text or upload a Word / PDF / text file.</p>
+      <p class="modal-sub">Upload an existing Word / PDF SOP, batch record or CMC doc and keep it exactly as-is — tables, headings and all — or paste text to structure into steps.</p>
 
       <div class="tabs">
         <button [class.active]="importTab === 'paste'" (click)="importTab = 'paste'">Paste text</button>
@@ -110,14 +110,17 @@
         <p class="file-name" *ngIf="importFile">Selected: {{ importFile.name }}</p>
       </ng-container>
 
-      <label class="ml"><span>How to parse it</span>
+      <label class="ml"><span>How to import it</span>
         <select [(ngModel)]="importMode" name="importMode">
-          <option value="structured">Preserve structure — keep headings, sections &amp; all content (recommended)</option>
+          <option value="document">Keep as a document — preserve tables, headings &amp; layout exactly (recommended)</option>
+          <option value="structured">Split into steps, preserving sections &amp; content</option>
           <option value="numbered">Each number is a step (1. / 2) / Step 3:)</option>
           <option value="lines">Each line is a step</option>
           <option value="markdown">Markdown (headings become steps)</option>
           <option value="ai">AI-assisted (structure the text automatically)</option>
-        </select></label>
+        </select>
+        <span class="mode-hint" *ngIf="importMode === 'document'">Best for batch records, CMC docs, forms &amp; any structured Word file — it stays a document you fill in, not a step list.</span>
+      </label>
 
       <label class="tpl-check">
         <input type="checkbox" [(ngModel)]="importAsTemplate" name="importAsTemplate" />

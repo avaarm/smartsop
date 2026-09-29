@@ -19,6 +19,7 @@ from .database import (
 from .auth import require_account_access, has_account_role, has_account_access
 from .protocol_import import (
     extract_text, split_into_steps, ai_structure, extract_structured, _structured_from_text,
+    extract_document, _document_from_text,
 )
 from .templates import template_summaries, get_template
 from .generator_provider import get_generator
@@ -84,6 +85,18 @@ def _protocol_variables(protocol):
         scan(s.section)
         scan(s.title)
         scan(s.description)
+    # Document-format protocols carry their content in body_json, not steps.
+    if protocol.body_json:
+        try:
+            for b in json.loads(protocol.body_json):
+                if b.get("type") == "table":
+                    for row in b.get("rows", []):
+                        for cell in row:
+                            scan(cell)
+                else:
+                    scan(b.get("text"))
+        except ValueError:
+            pass
     return seen
 
 
@@ -92,6 +105,21 @@ def _apply_variables(text, variables):
     if not text or not variables:
         return text
     return VAR_RE.sub(lambda m: str(variables.get(m.group(1).strip(), m.group(0))), text)
+
+
+def _apply_variables_to_blocks(blocks, variables):
+    """Substitute {{key}} throughout document blocks (headings, paragraphs, cells)."""
+    if not variables:
+        return blocks
+    out = []
+    for b in blocks:
+        b = dict(b)
+        if b.get("type") == "table":
+            b["rows"] = [[_apply_variables(c, variables) for c in row] for row in b.get("rows", [])]
+        elif "text" in b:
+            b["text"] = _apply_variables(b["text"], variables)
+        out.append(b)
+    return out
 
 
 def record_audit(account_id, action, entity_type="", entity_id=None, summary="", detail=None):
@@ -315,7 +343,10 @@ def import_protocol(account_id):
         file_bytes = upload.read()
         text = extract_text(file_name, file_bytes)
         title = (request.form.get("title") or "").strip()
-        mode = (request.form.get("mode") or "structured").lower()
+        # Uploaded files are almost always real documents (batch records, CMC
+        # sections, forms), so default to document-fidelity — keep tables,
+        # headings and checkboxes 1-to-1 instead of flattening them into steps.
+        mode = (request.form.get("mode") or "document").lower()
         as_template = request.form.get("as_template") in ("true", "1", "yes")
         category = (request.form.get("category") or "").strip()[:120]
         if not title:
@@ -328,6 +359,42 @@ def import_protocol(account_id):
         mode = (data.get("mode") or "numbered").lower()
         as_template = bool(data.get("as_template"))
         category = (data.get("category") or "").strip()[:120]
+
+    # ── Document-fidelity mode ──────────────────────────────────────────────
+    # Keep the upload as a real document — headings, paragraphs, tables and
+    # checkboxes preserved 1-to-1 — instead of mangling it into a step list.
+    # The original file is stored so a filled copy exports byte-faithfully.
+    if mode == "document":
+        if file_bytes is not None:
+            doc_data = extract_document(file_name, file_bytes)
+        else:
+            doc_data = _document_from_text(text)
+        blocks = doc_data.get("blocks") or []
+        if not blocks:
+            return jsonify({"success": False, "error": "Could not read any content from the file"}), 400
+        author = (g.current_user.name or "").strip() or g.current_user.email
+        protocol = Protocol(
+            account_id=account_id, title=title[:500], created_by=author,
+            description="",
+            doc_format="document", body_json=json.dumps(blocks),
+            original_filename=(file_name or "")[:300],
+            is_template=as_template,
+            template_category=(category or "General") if as_template else "",
+        )
+        if file_bytes is not None and (file_name or "").lower().endswith(".docx"):
+            protocol.original_file = file_bytes
+        db.session.add(protocol)
+        db.session.flush()
+        if as_template:
+            record_audit(account_id, "template.created", "protocol", protocol.id,
+                         f"Imported “{protocol.title}” into the {protocol.template_category} template library")
+        db.session.commit()
+        return jsonify({
+            "success": True,
+            "protocol": protocol.to_dict(include_steps=True),
+            "mode": "document",
+            "block_count": len(blocks),
+        }), 201
 
     if not text.strip():
         return jsonify({"success": False, "error": "No text to import"}), 400
@@ -426,11 +493,52 @@ def export_protocol_pdf(account_id, protocol_id):
     protocol = _get_protocol(account_id, protocol_id)
     if protocol is None:
         return jsonify({"success": False, "error": "Protocol not found"}), 404
-    from .protocol_export import protocol_to_pdf
-    buf = protocol_to_pdf(protocol.to_dict(include_steps=True))
+    from .protocol_export import protocol_to_pdf, document_to_pdf
+    if (protocol.doc_format or "steps") == "document":
+        buf = document_to_pdf(protocol.to_dict(include_steps=True))
+    else:
+        buf = protocol_to_pdf(protocol.to_dict(include_steps=True))
     return buf.read(), 200, {
         "Content-Type": "application/pdf",
         "Content-Disposition": f'attachment; filename="{_export_filename(protocol, "pdf")}"',
+    }
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/original", methods=["GET"])
+@require_account_access
+def download_original(account_id, protocol_id):
+    """Download the exact file that was uploaded — so you can always get your
+    approved document back, byte-for-byte."""
+    protocol = _get_protocol(account_id, protocol_id)
+    if protocol is None:
+        return jsonify({"success": False, "error": "Protocol not found"}), 404
+    if not protocol.original_file:
+        return jsonify({"success": False, "error": "No original file stored for this document"}), 404
+    name = (protocol.original_filename or _export_filename(protocol, "docx")).replace('"', "")
+    return protocol.original_file, 200, {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "Content-Disposition": f'attachment; filename="{name}"',
+    }
+
+
+@protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/render.docx", methods=["POST"])
+@require_account_access
+def render_document_docx(account_id, protocol_id):
+    """Fill {{variables}} into the document and download a Word file that matches
+    the original's formatting — the real time-saver: reuse an approved doc,
+    change only the project-specific fields."""
+    protocol = _get_protocol(account_id, protocol_id)
+    if protocol is None:
+        return jsonify({"success": False, "error": "Protocol not found"}), 404
+    data = request.get_json(silent=True) or {}
+    variables = data.get("variables") if isinstance(data.get("variables"), dict) else {}
+    from .protocol_docx import render_filled_docx
+    buf = render_filled_docx(protocol, variables)
+    if buf is None:
+        return jsonify({"success": False, "error": "This document has no content to render"}), 400
+    return buf.read(), 200, {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "Content-Disposition": f'attachment; filename="{_export_filename(protocol, "docx")}"',
     }
 
 
@@ -448,6 +556,10 @@ def update_protocol(account_id, protocol_id):
         protocol.title = title[:500]
     if "description" in data:
         protocol.description = data.get("description") or ""
+    # Inline document editing: persist the edited blocks (adapt a template's
+    # wording/tables for a new project) back to body_json.
+    if "body" in data and isinstance(data.get("body"), list):
+        protocol.body_json = json.dumps(data["body"])
     if "protocol_type" in data:
         ptype = (data.get("protocol_type") or "").lower()
         if ptype not in PROTOCOL_TYPES:
@@ -1532,6 +1644,7 @@ def new_version(account_id, protocol_id):
     db.session.add(clone)
     db.session.flush()
     _copy_steps(source, clone)
+    _copy_document_fields(source, clone)
     record_audit(account_id, "protocol.new_version", "protocol", clone.id,
                  f"Drafted v{clone.version} of “{clone.title}” (from v{source.version})")
     db.session.commit()
@@ -1571,6 +1684,7 @@ def copy_protocol(account_id, protocol_id):
     db.session.add(clone)
     db.session.flush()
     _copy_steps(source, clone)
+    _copy_document_fields(source, clone, variables)
     if variables:
         for st in clone.steps:
             st.section = _apply_variables(st.section, variables)
@@ -1612,6 +1726,7 @@ def save_as_template(account_id, protocol_id):
     db.session.add(template)
     db.session.flush()
     _copy_steps(source, template)
+    _copy_document_fields(source, template)
     record_audit(account_id, "template.created", "protocol", template.id,
                  f"Saved “{title}” to the {category} template library")
     db.session.commit()
@@ -1619,6 +1734,23 @@ def save_as_template(account_id, protocol_id):
 
 
 # ── Version history, diff, and rollback ──
+
+def _copy_document_fields(source, dest, variables=None):
+    """Carry document-fidelity content (format, blocks, original file) onto a
+    clone. When `variables` are given, {{placeholders}} in the blocks are filled
+    so 'start from our template' produces a ready-to-edit document."""
+    dest.doc_format = source.doc_format or "steps"
+    dest.original_filename = source.original_filename
+    dest.original_file = source.original_file
+    if source.body_json:
+        try:
+            blocks = json.loads(source.body_json)
+        except ValueError:
+            blocks = []
+        if variables:
+            blocks = _apply_variables_to_blocks(blocks, variables)
+        dest.body_json = json.dumps(blocks)
+
 
 def _copy_steps(source, dest):
     """Clone every step of `source` onto `dest` (dest must be flushed)."""

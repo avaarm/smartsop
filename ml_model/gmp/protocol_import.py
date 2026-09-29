@@ -187,6 +187,108 @@ def _clean(steps):
     return out[:MAX_STEPS]
 
 
+# ── Document-fidelity extraction ──────────────────────────────────────────
+# A controlled document (batch record, CMC section, form) is NOT a step list.
+# It's headings, paragraphs, tables, approval blocks and fill-in fields. These
+# helpers keep that structure 1-to-1 as ordered "blocks" so the document renders
+# like the original instead of being flattened into mangled step titles.
+
+_CHECK_UNCHECKED = "☐□❑⬜"          # empty checkbox glyphs
+_CHECK_CHECKED = "☑☒✓✔■"           # ticked / filled checkbox glyphs
+
+
+def _cell_text(cell) -> str:
+    """All text in a table cell, paragraphs joined by newlines."""
+    return "\n".join(p.text for p in cell.paragraphs).strip()
+
+
+def _table_block(table) -> dict:
+    """A Word table preserved as a grid of cell strings (rows × columns)."""
+    rows = []
+    for row in table.rows:
+        rows.append([_cell_text(c) for c in row.cells])
+    return {"type": "table", "rows": rows}
+
+
+def _blocks_text(blocks) -> str:
+    """Flatten blocks to plain text (for search / a description fallback)."""
+    parts = []
+    for b in blocks:
+        if b.get("type") == "table":
+            for row in b.get("rows", []):
+                parts.append(" | ".join(row))
+        else:
+            parts.append(b.get("text", ""))
+    return "\n".join(p for p in parts if p)
+
+
+def extract_document(filename: str, data: bytes) -> dict:
+    """Extract an uploaded file into faithful, structure-preserving blocks.
+
+    Returns {"blocks": [...], "text": "..."} where each block is one of:
+      {"type": "heading", "level": 1-6, "text": str}
+      {"type": "paragraph", "text": str}
+      {"type": "checkbox", "checked": bool, "text": str}
+      {"type": "table", "rows": [[cell, ...], ...]}
+
+    Tables stay tables, headings keep their level, checkboxes are recognized —
+    so a batch record looks like the batch record, not a step list.
+    """
+    name = (filename or "").lower()
+    if name.endswith(".docx"):
+        from docx import Document
+        return _document_from_docx(Document(io.BytesIO(data)))
+    return _document_from_text(extract_text(filename, data))
+
+
+def _document_from_docx(doc) -> dict:
+    from docx.text.paragraph import Paragraph as _Para
+    blocks = []
+    for block in _iter_docx_blocks(doc):
+        if isinstance(block, _Para):
+            text = block.text.strip()
+            if not text:
+                continue
+            first = text[0]
+            if first in _CHECK_UNCHECKED or first in _CHECK_CHECKED:
+                blocks.append({
+                    "type": "checkbox",
+                    "checked": first in _CHECK_CHECKED,
+                    "text": text[1:].strip(),
+                })
+                continue
+            level = _heading_level(block.style.name if block.style else "", text)
+            if level:
+                blocks.append({"type": "heading", "level": level, "text": text})
+            else:
+                blocks.append({"type": "paragraph", "text": text})
+        else:  # table
+            tb = _table_block(block)
+            if any(any(c.strip() for c in row) for row in tb["rows"]):
+                blocks.append(tb)
+    return {"blocks": blocks, "text": _blocks_text(blocks)}
+
+
+def _document_from_text(text: str) -> dict:
+    """Blocks from pasted / non-docx text: headings + paragraphs (no tables)."""
+    blocks = []
+    for ln in (text or "").splitlines():
+        s = ln.strip()
+        if not s:
+            continue
+        md = _MD_HEADING.match(ln)
+        if md:
+            hashes = len(ln) - len(ln.lstrip("#"))
+            blocks.append({"type": "heading", "level": min(hashes, 6), "text": md.group(1).strip()})
+            continue
+        level = _heading_level("", s)
+        if level:
+            blocks.append({"type": "heading", "level": level, "text": s})
+        else:
+            blocks.append({"type": "paragraph", "text": s})
+    return {"blocks": blocks, "text": text or ""}
+
+
 def split_into_steps(text: str, mode: str = "numbered"):
     """Split text into [{title, description}] using a deterministic strategy."""
     lines = (text or "").splitlines()

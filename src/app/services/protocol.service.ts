@@ -89,11 +89,24 @@ export interface Protocol {
   supersedes_id: number | null;
   is_template: boolean;
   template_category: string;
+  doc_format?: 'steps' | 'document';
+  has_original?: boolean;
+  original_filename?: string;
   created_at: string;
   updated_at: string;
   step_count: number;
   signoffs: ProtocolSignoff[];
   steps?: ProtocolStep[];
+  body?: DocBlock[];
+}
+
+/** One block of a document-format protocol, preserving the original layout. */
+export interface DocBlock {
+  type: 'heading' | 'paragraph' | 'checkbox' | 'table';
+  text?: string;
+  level?: number;
+  checked?: boolean;
+  rows?: string[][];
 }
 
 export type RunStepStatus = 'pending' | 'done' | 'failed' | 'skipped';
@@ -294,10 +307,23 @@ export class ProtocolService {
   }
 
   updateProtocol(accountId: number, id: number,
-                 patch: Partial<Pick<Protocol, 'title' | 'description' | 'protocol_type' | 'sop_number' | 'department' | 'review_date'>>):
+                 patch: Partial<Pick<Protocol, 'title' | 'description' | 'protocol_type' | 'sop_number' | 'department' | 'review_date'>>
+                   & { body?: DocBlock[] }):
     Observable<{ success: boolean; protocol: Protocol }> {
     return this.http.put<any>(`${this.base(accountId)}/${id}`, patch)
       .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  /** Download the exact file that was uploaded (byte-faithful). */
+  downloadOriginal(accountId: number, id: number): Observable<Blob> {
+    return this.http.get(`${this.base(accountId)}/${id}/original`, { responseType: 'blob' })
+      .pipe(timeout(30000), catchError(this.handleError));
+  }
+
+  /** Fill {{variables}} into the document and download a matching .docx. */
+  renderDocx(accountId: number, id: number, variables: Record<string, string>): Observable<Blob> {
+    return this.http.post(`${this.base(accountId)}/${id}/render.docx`, { variables }, { responseType: 'blob' })
+      .pipe(timeout(30000), catchError(this.handleError));
   }
 
   // ── Controlled-document lifecycle ──

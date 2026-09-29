@@ -48,6 +48,71 @@ def _component_text(comp):
     return f"{label}: {value}" if value else label
 
 
+def document_to_pdf(protocol_dict) -> BytesIO:
+    """Render a document-format protocol (body blocks: headings, paragraphs,
+    tables, checkboxes) to a PDF that mirrors the original document's layout —
+    the audit artifact for a controlled document, not a step list."""
+    buf = BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=letter,
+        leftMargin=0.75 * inch, rightMargin=0.75 * inch,
+        topMargin=0.75 * inch, bottomMargin=0.75 * inch,
+        title=protocol_dict.get("title", "Document"),
+    )
+    styles = getSampleStyleSheet()
+    h_title = ParagraphStyle("dt", parent=styles["Title"], fontSize=16, spaceAfter=6, alignment=TA_LEFT)
+    h_levels = {
+        1: ParagraphStyle("dh1", parent=styles["Heading1"], fontSize=13, spaceBefore=10, spaceAfter=3),
+        2: ParagraphStyle("dh2", parent=styles["Heading2"], fontSize=12, spaceBefore=8, spaceAfter=2),
+        3: ParagraphStyle("dh3", parent=styles["Heading3"], fontSize=11, spaceBefore=6, spaceAfter=2),
+    }
+    body = ParagraphStyle("db", parent=styles["Normal"], fontSize=9.5, leading=13)
+    cell = ParagraphStyle("dc", parent=styles["Normal"], fontSize=8.5, leading=11)
+
+    def p(text, style):
+        return Paragraph(escape(str(text)).replace("\n", "<br/>"), style)
+
+    flow = [p(protocol_dict.get("title") or "Untitled document", h_title),
+            HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#ccc")),
+            Spacer(1, 6)]
+
+    for b in protocol_dict.get("body", []) or []:
+        btype = b.get("type")
+        if btype == "heading":
+            flow.append(p(b.get("text", ""), h_levels.get(min(b.get("level", 1), 3), h_levels[3])))
+        elif btype == "checkbox":
+            mark = "☒" if b.get("checked") else "☐"
+            flow.append(p(f"{mark} {b.get('text', '')}", body))
+        elif btype == "table":
+            rows = b.get("rows", [])
+            if not rows:
+                continue
+            ncols = max((len(r) for r in rows), default=0)
+            if ncols == 0:
+                continue
+            data = [[p(r[c] if c < len(r) else "", cell) for c in range(ncols)] for r in rows]
+            avail = 7.0 * inch
+            t = Table(data, colWidths=[avail / ncols] * ncols)
+            t.setStyle(TableStyle([
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#bbb")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f2f2f4")),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ]))
+            flow.append(Spacer(1, 4))
+            flow.append(t)
+            flow.append(Spacer(1, 4))
+        else:
+            flow.append(p(b.get("text", ""), body))
+
+    doc.build(flow)
+    buf.seek(0)
+    return buf
+
+
 def protocol_to_pdf(protocol_dict) -> BytesIO:
     """Render a protocol dict (from Protocol.to_dict(include_steps=True))."""
     buf = BytesIO()
