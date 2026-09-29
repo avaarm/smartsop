@@ -352,6 +352,17 @@ class Protocol(db.Model):
     is_template = db.Column(db.Boolean, default=False, nullable=False, index=True)
     template_category = db.Column(db.String(120), default="")   # the document type
 
+    # Document-fidelity import. A real controlled document (batch record, CMC
+    # section, form) is NOT a step list — it's headings, paragraphs, tables,
+    # approval blocks and fill-in fields. Flattening it into steps destroys the
+    # structure. A "document" protocol keeps its layout 1-to-1 as ordered blocks
+    # in body_json, and stores the original upload so a filled copy can be
+    # exported byte-faithfully (same formatting the reviewer already approved).
+    doc_format = db.Column(db.String(20), default="steps")     # steps | document
+    body_json = db.Column(db.Text, default="")                 # [{type, ...}] blocks
+    original_filename = db.Column(db.String(300), default="")
+    original_file = db.Column(db.LargeBinary, nullable=True)    # raw uploaded bytes
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -381,13 +392,21 @@ class Protocol(db.Model):
             "supersedes_id": self.supersedes_id,
             "is_template": self.is_template,
             "template_category": self.template_category,
+            "doc_format": self.doc_format or "steps",
+            "has_original": bool(self.original_file),
+            "original_filename": self.original_filename or "",
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "step_count": self.steps.count(),
             "signoffs": [s.to_dict() for s in self.signoffs],
         }
         if include_steps:
+            import json as _json
             d["steps"] = [s.to_dict() for s in self.steps]
+            try:
+                d["body"] = _json.loads(self.body_json) if self.body_json else []
+            except ValueError:
+                d["body"] = []
         return d
 
 

@@ -5,7 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import {
   ProtocolService, Protocol, ProtocolStep, StepComponent, COMPONENT_LIBRARY, componentMeta,
-  ProtocolVersion, VersionDiff,
+  ProtocolVersion, VersionDiff, DocBlock,
 } from '../../../services/protocol.service';
 import { AccountService, Account } from '../../../services/account.service';
 import { AuthService } from '../../../services/auth.service';
@@ -22,6 +22,7 @@ export class ProtocolDetailComponent implements OnInit {
   account: Account | null = null;
   protocol: Protocol | null = null;
   steps: ProtocolStep[] = [];
+  body: DocBlock[] = [];
   protocolId!: number;
 
   loading = false;
@@ -66,6 +67,12 @@ export class ProtocolDetailComponent implements OnInit {
     return !!this.protocol && this.protocol.protocol_type !== 'protocol';
   }
 
+  /** A document-fidelity protocol: rendered as a real document (tables, headings,
+      approval blocks), not a step list. */
+  get isDocument(): boolean {
+    return this.protocol?.doc_format === 'document';
+  }
+
   ngOnInit(): void {
     // React to param changes too: navigating between versions (e.g. after a
     // restore or new-version) reuses this component instance, so a snapshot
@@ -89,6 +96,8 @@ export class ProtocolDetailComponent implements OnInit {
   private resetView(): void {
     this.protocol = null;
     this.steps = [];
+    this.body = [];
+    this.docEditing = false;
     this.showVersions = false;
     this.diff = null;
     this.errorMessage = '';
@@ -101,6 +110,7 @@ export class ProtocolDetailComponent implements OnInit {
       next: (res) => {
         this.protocol = res.protocol;
         this.steps = res.protocol.steps || [];
+        this.body = res.protocol.body || [];
         this.loading = false;
         this.loadComments();
       },
@@ -234,17 +244,84 @@ export class ProtocolDetailComponent implements OnInit {
     if (!this.account || !this.isBrowser) return;
     this.exportMenuOpen = false;
     this.protocolService.exportProtocol(this.account.id, this.protocolId, format).subscribe({
-      next: (blob) => {
-        const slug = (this.protocol?.title || 'protocol')
-          .replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'protocol';
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${slug}-v${this.protocol?.version ?? 1}.${format}`;
-        a.click();
-        URL.revokeObjectURL(url);
+      next: (blob) => this.saveBlob(blob, `${this.slug()}-v${this.protocol?.version ?? 1}.${format}`),
+      error: (err) => (this.errorMessage = err.message),
+    });
+  }
+
+  private slug(): string {
+    return (this.protocol?.title || 'protocol')
+      .replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'protocol';
+  }
+
+  private saveBlob(blob: Blob, filename: string): void {
+    if (!this.isBrowser) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Document-fidelity view (tables, headings, approval blocks, fill-in) ──
+
+  docEditing = false;
+
+  toggleDocEdit(): void {
+    if (this.docEditing) { this.saveBody(); return; }
+    this.docEditing = true;
+  }
+
+  saveBody(): void {
+    if (!this.account) return;
+    this.protocolService.updateProtocol(this.account.id, this.protocolId, { body: this.body }).subscribe({
+      next: () => { this.docEditing = false; this.flash('Document saved'); },
+      error: (err) => (this.errorMessage = err.message),
+    });
+  }
+
+  downloadOriginal(): void {
+    if (!this.account) return;
+    this.exportMenuOpen = false;
+    this.protocolService.downloadOriginal(this.account.id, this.protocolId).subscribe({
+      next: (blob) => this.saveBlob(blob, this.protocol?.original_filename || `${this.slug()}.docx`),
+      error: (err) => (this.errorMessage = err.message),
+    });
+  }
+
+  // Fill-in & export modal
+  showFill = false;
+  fillVars: string[] = [];
+  fillValues: Record<string, string> = {};
+  fillBusy = false;
+
+  openFill(): void {
+    if (!this.account) return;
+    this.exportMenuOpen = false;
+    this.showFill = true;
+    this.fillVars = [];
+    this.fillValues = {};
+    this.protocolService.templateVariables(this.account.id, this.protocolId).subscribe({
+      next: (res) => {
+        this.fillVars = res.variables || [];
+        for (const v of this.fillVars) this.fillValues[v] = '';
       },
       error: (err) => (this.errorMessage = err.message),
+    });
+  }
+
+  exportFilled(): void {
+    if (!this.account) return;
+    this.fillBusy = true;
+    this.protocolService.renderDocx(this.account.id, this.protocolId, this.fillValues).subscribe({
+      next: (blob) => {
+        this.saveBlob(blob, `${this.slug()}-filled.docx`);
+        this.fillBusy = false;
+        this.showFill = false;
+        this.flash('Document exported');
+      },
+      error: (err) => { this.fillBusy = false; this.errorMessage = err.message; },
     });
   }
 

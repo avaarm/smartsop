@@ -52,11 +52,11 @@ def test_docx_import_preserves_structure(client):
     assert "Molecular weight" in manu["description"] and "151.16" in manu["description"]
 
 
-def test_structured_is_default_for_file_import(client):
+def test_structured_extracts_steps_when_requested(client):
     burn_superadmin(client)
     token, acc, _ = make_owner(client, "is2@corp.com", "Jco")
-    # No explicit mode → files default to structured extraction.
-    data = {"file": (io.BytesIO(_make_docx()), "cmc.docx")}
+    # Files default to document mode now; ask explicitly for step extraction.
+    data = {"file": (io.BytesIO(_make_docx()), "cmc.docx"), "mode": "structured"}
     res = client.post(f"/api/accounts/{acc}/protocols/import", data=data,
                       content_type="multipart/form-data", headers=auth(token))
     assert res.status_code == 201

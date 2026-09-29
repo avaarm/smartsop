@@ -34,7 +34,7 @@ export class ProtocolListComponent implements OnInit {
   importTab: 'paste' | 'file' = 'paste';
   importTitle = '';
   importText = '';
-  importMode = 'structured';
+  importMode = 'document';
   importFile: File | null = null;
   importing = false;
 
@@ -203,7 +203,7 @@ export class ProtocolListComponent implements OnInit {
     this.importTab = 'paste';
     this.importTitle = '';
     this.importText = '';
-    this.importMode = 'structured';
+    this.importMode = 'document';
     this.importFile = null;
     this.importAsTemplate = false;
     this.importCategory = '';
