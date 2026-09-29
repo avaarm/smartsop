@@ -22,6 +22,8 @@ from .protocol_import import (
     extract_document, _document_from_text,
 )
 from .templates import template_summaries, get_template
+from .doc_taxonomy import GMP_CATEGORIES, is_valid as _is_valid_category
+from .doc_templates import doc_template_summaries, get_doc_template
 from .generator_provider import get_generator
 
 RUN_STEP_STATUSES = ("pending", "done", "failed", "skipped")
@@ -283,6 +285,74 @@ def list_templates(account_id):
     return jsonify({"success": True, "templates": template_summaries()})
 
 
+@protocol_bp.route("/<int:account_id>/protocols/doc-templates", methods=["GET"])
+@require_account_access
+def list_doc_templates(account_id):
+    """Built-in facility document templates (batch records, test methods, etc.),
+    structured per the facility's own SOPs — the 'what do you want to write?'
+    starting points. Optionally filter to one category with ?category=BR."""
+    cat = (request.args.get("category") or "").strip().upper()
+    templates = doc_template_summaries()
+    if cat:
+        templates = [t for t in templates if t["doc_category"] == cat]
+    return jsonify({"success": True, "templates": templates})
+
+
+@protocol_bp.route("/<int:account_id>/protocols/from-doc-template", methods=["POST"])
+@require_account_access
+def create_from_doc_template(account_id):
+    """Start a new document from a built-in facility template, with any
+    {{fill-in}} fields substituted. Lands as a draft for the normal lifecycle."""
+    data = request.get_json(silent=True) or {}
+    template = get_doc_template((data.get("key") or "").strip())
+    if template is None:
+        return jsonify({"success": False, "error": "Unknown template"}), 404
+    variables = data.get("variables") if isinstance(data.get("variables"), dict) else None
+    # Default the title to the template's first heading (it often carries the
+    # {{product}} / {{method_name}} placeholder) so filling variables names the doc.
+    default_title = template["name"]
+    for b in template.get("body", []):
+        if b.get("type") == "heading":
+            default_title = b.get("text", default_title)
+            break
+    title = (data.get("title") or default_title)[:500]
+    if variables:
+        title = _apply_variables(title, variables)[:500]
+
+    author = (g.current_user.name or "").strip() or g.current_user.email
+    protocol = Protocol(
+        account_id=account_id,
+        title=title,
+        description=template.get("description", ""),
+        protocol_type=template["protocol_type"],
+        created_by=author,
+        doc_category=template.get("doc_category", ""),
+        doc_format=template.get("doc_format", "steps"),
+    )
+    if template.get("doc_format") == "document":
+        blocks = template.get("body", [])
+        if variables:
+            blocks = _apply_variables_to_blocks(blocks, variables)
+        protocol.body_json = json.dumps(blocks)
+    db.session.add(protocol)
+    db.session.flush()
+    if template.get("doc_format") != "document":
+        for i, step in enumerate(template.get("steps", [])):
+            db.session.add(ProtocolStep(
+                protocol_id=protocol.id, order_index=i,
+                section=_apply_variables(step.get("section", ""), variables),
+                title=_apply_variables(step.get("title", ""), variables)[:500],
+                description=_apply_variables(step.get("description", ""), variables),
+                warning=step.get("warning", ""),
+                duration_seconds=step.get("duration_seconds"),
+            ))
+    record_audit(account_id, "protocol.created", "protocol", protocol.id,
+                 f"Started “{protocol.title}” from the {template['name']} template")
+    db.session.commit()
+    logger.info("Protocol created from doc-template %s (account=%s)", template["key"], account_id)
+    return jsonify({"success": True, "protocol": protocol.to_dict(include_steps=True)}), 201
+
+
 @protocol_bp.route("/<int:account_id>/protocols/from-template", methods=["POST"])
 @require_account_access
 def create_from_template(account_id):
@@ -349,6 +419,8 @@ def import_protocol(account_id):
         mode = (request.form.get("mode") or "document").lower()
         as_template = request.form.get("as_template") in ("true", "1", "yes")
         category = (request.form.get("category") or "").strip()[:120]
+        doc_category = (request.form.get("doc_category") or "").strip().upper()[:10]
+        product_code = (request.form.get("product_code") or "").strip()[:60]
         if not title:
             base = file_name.rsplit(".", 1)[0].replace("_", " ").strip()
             title = base[:500] or "Imported document"
@@ -359,6 +431,10 @@ def import_protocol(account_id):
         mode = (data.get("mode") or "numbered").lower()
         as_template = bool(data.get("as_template"))
         category = (data.get("category") or "").strip()[:120]
+        doc_category = (data.get("doc_category") or "").strip().upper()[:10]
+        product_code = (data.get("product_code") or "").strip()[:60]
+    if doc_category and not _is_valid_category(doc_category):
+        doc_category = ""
 
     # ── Document-fidelity mode ──────────────────────────────────────────────
     # Keep the upload as a real document — headings, paragraphs, tables and
@@ -380,6 +456,7 @@ def import_protocol(account_id):
             original_filename=(file_name or "")[:300],
             is_template=as_template,
             template_category=(category or "General") if as_template else "",
+            doc_category=doc_category, product_code=product_code,
         )
         if file_bytes is not None and (file_name or "").lower().endswith(".docx"):
             protocol.original_file = file_bytes
@@ -426,6 +503,7 @@ def import_protocol(account_id):
     protocol = Protocol(
         account_id=account_id, title=title[:500], created_by=author,
         is_template=as_template, template_category=(category or "General") if as_template else "",
+        doc_category=doc_category, product_code=product_code,
     )
     db.session.add(protocol)
     db.session.flush()
@@ -465,6 +543,31 @@ def template_variables(account_id, protocol_id):
     if protocol is None:
         return jsonify({"success": False, "error": "Protocol not found"}), 404
     return jsonify({"success": True, "variables": _protocol_variables(protocol)})
+
+
+@protocol_bp.route("/<int:account_id>/protocols/doc-categories", methods=["GET"])
+@require_account_access
+def doc_categories(account_id):
+    """The facility's document taxonomy with, per category, how many of the org's
+    own templates and how many effective documents exist — so 'what do you want
+    to write?' shows exactly what's available to start from."""
+    tpl_counts = dict(
+        db.session.query(Protocol.doc_category, func.count(Protocol.id))
+        .filter(Protocol.account_id == account_id, Protocol.is_template.is_(True))
+        .group_by(Protocol.doc_category).all()
+    )
+    eff_counts = dict(
+        db.session.query(Protocol.doc_category, func.count(Protocol.id))
+        .filter(Protocol.account_id == account_id, Protocol.is_template.is_(False),
+                Protocol.status == "effective")
+        .group_by(Protocol.doc_category).all()
+    )
+    cats = []
+    for c in GMP_CATEGORIES:
+        cats.append({**c,
+                     "template_count": int(tpl_counts.get(c["code"], 0)),
+                     "effective_count": int(eff_counts.get(c["code"], 0))})
+    return jsonify({"success": True, "categories": cats})
 
 
 def _export_filename(protocol, ext):
@@ -568,6 +671,11 @@ def update_protocol(account_id, protocol_id):
     for field in ("sop_number", "department", "review_date"):
         if field in data:
             setattr(protocol, field, (data.get(field) or "")[:200])
+    if "doc_category" in data:
+        code = (data.get("doc_category") or "").strip().upper()[:10]
+        protocol.doc_category = code if (not code or _is_valid_category(code)) else protocol.doc_category
+    if "product_code" in data:
+        protocol.product_code = (data.get("product_code") or "").strip()[:60]
     db.session.commit()
     return jsonify({"success": True, "protocol": protocol.to_dict(include_steps=True)})
 
@@ -1710,6 +1818,9 @@ def save_as_template(account_id, protocol_id):
     data = request.get_json(silent=True) or {}
     category = (data.get("category") or source.template_category or "General")[:120]
     title = (data.get("title") or source.title)[:500]
+    doc_cat = (data.get("doc_category") or "").strip().upper()[:10]
+    if doc_cat and not _is_valid_category(doc_cat):
+        doc_cat = ""
 
     template = Protocol(
         account_id=account_id,
@@ -1727,6 +1838,8 @@ def save_as_template(account_id, protocol_id):
     db.session.flush()
     _copy_steps(source, template)
     _copy_document_fields(source, template)
+    if doc_cat:                       # explicit override wins over the source's
+        template.doc_category = doc_cat
     record_audit(account_id, "template.created", "protocol", template.id,
                  f"Saved “{title}” to the {category} template library")
     db.session.commit()
@@ -1742,6 +1855,8 @@ def _copy_document_fields(source, dest, variables=None):
     dest.doc_format = source.doc_format or "steps"
     dest.original_filename = source.original_filename
     dest.original_file = source.original_file
+    dest.doc_category = source.doc_category
+    dest.product_code = source.product_code
     if source.body_json:
         try:
             blocks = json.loads(source.body_json)

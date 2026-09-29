@@ -363,6 +363,12 @@ class Protocol(db.Model):
     original_filename = db.Column(db.String(300), default="")
     original_file = db.Column(db.LargeBinary, nullable=True)    # raw uploaded bytes
 
+    # Facility document taxonomy (see doc_taxonomy.py). doc_category is the GMP
+    # code an established facility files by (EQ, QA, TM, VP, BR, …). product_code
+    # groups batch records by their protocol / part number (e.g. "B090").
+    doc_category = db.Column(db.String(10), default="", index=True)
+    product_code = db.Column(db.String(60), default="")
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -395,6 +401,8 @@ class Protocol(db.Model):
             "doc_format": self.doc_format or "steps",
             "has_original": bool(self.original_file),
             "original_filename": self.original_filename or "",
+            "doc_category": self.doc_category or "",
+            "product_code": self.product_code or "",
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "step_count": self.steps.count(),
