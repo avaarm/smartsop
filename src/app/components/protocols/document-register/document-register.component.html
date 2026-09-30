@@ -1,0 +1,81 @@
+<div class="page" *ngIf="account">
+  <header class="page-head">
+    <div>
+      <h1>Controlled Documents</h1>
+      <p class="subtitle">Effective batch records and procedures — your facility's controlled-document register.</p>
+    </div>
+    <div class="status-toggle">
+      <button [class.active]="status === 'effective'" (click)="setStatus('effective')">Effective</button>
+      <button [class.active]="status === 'approved'" (click)="setStatus('approved')">Approved</button>
+      <button [class.active]="status === 'all'" (click)="setStatus('all')">All</button>
+    </div>
+  </header>
+
+  <div class="toast toast-error" *ngIf="errorMessage">{{ errorMessage }}</div>
+  <div class="loading" *ngIf="loading">Loading…</div>
+
+  <div class="empty" *ngIf="isEmpty">
+    No {{ status === 'all' ? '' : status + ' ' }}documents yet.
+    Create one with <strong>New document</strong> on the Protocols page — once it's released it appears here.
+  </div>
+
+  <div class="registers" *ngIf="!loading && !isEmpty">
+    <!-- Batch records, grouped by protocol / part number -->
+    <section class="register">
+      <h2>Batch Records <span class="reg-count">{{ brCount }}</span></h2>
+      <div class="empty-mini" *ngIf="!batchRecords.length">No batch records.</div>
+
+      <div class="reg-group" *ngFor="let g of batchRecords">
+        <button class="reg-group-head" (click)="toggle('br:' + g.group)">
+          <span class="chev">{{ collapsed['br:' + g.group] ? '▸' : '▾' }}</span>
+          <span class="reg-group-name">Protocol (Part Number): <strong>{{ g.group }}</strong></span>
+          <span class="reg-group-count">{{ g.items.length }}</span>
+        </button>
+        <table class="reg-table" *ngIf="!collapsed['br:' + g.group]">
+          <thead>
+            <tr><th class="c-mark">✓</th><th>Number</th><th>Rev</th><th>Title</th><th>Effective Date</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let it of g.items" (click)="open(it)">
+              <td class="c-mark"><span class="mark" [class.on]="it.status === 'effective'">✓</span></td>
+              <td class="c-num">{{ it.document_number || '—' }}</td>
+              <td class="c-rev">{{ revision(it) }}</td>
+              <td class="c-title">{{ it.title }}</td>
+              <td class="c-date">{{ it.effective_date || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Procedures, grouped by document category -->
+    <section class="register">
+      <h2>Procedures <span class="reg-count">{{ procCount }}</span></h2>
+      <div class="empty-mini" *ngIf="!procedures.length">No procedures.</div>
+
+      <div class="reg-group" *ngFor="let g of procedures">
+        <button class="reg-group-head" (click)="toggle('pr:' + g.code)">
+          <span class="chev">{{ collapsed['pr:' + g.code] ? '▸' : '▾' }}</span>
+          <span class="reg-group-name">
+            <span class="cat-code">{{ g.code }}</span> {{ g.name }}
+          </span>
+          <span class="reg-group-count">{{ g.items.length }}</span>
+        </button>
+        <table class="reg-table" *ngIf="!collapsed['pr:' + g.code]">
+          <thead>
+            <tr><th class="c-mark">✓</th><th>Number</th><th>Rev</th><th>Title</th><th>Effective Date</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let it of g.items" (click)="open(it)">
+              <td class="c-mark"><span class="mark" [class.on]="it.status === 'effective'">✓</span></td>
+              <td class="c-num">{{ it.document_number || '—' }}</td>
+              <td class="c-rev">{{ revision(it) }}</td>
+              <td class="c-title">{{ it.title }}</td>
+              <td class="c-date">{{ it.effective_date || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>

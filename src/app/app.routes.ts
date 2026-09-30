@@ -27,6 +27,12 @@ export const routes: Routes = [
             .then(m => m.ProtocolListComponent),
       },
       {
+        path: 'register',
+        loadComponent: () =>
+          import('./components/protocols/document-register/document-register.component')
+            .then(m => m.DocumentRegisterComponent),
+      },
+      {
         path: 'protocols/:id',
         loadComponent: () =>
           import('./components/protocols/protocol-detail/protocol-detail.component')

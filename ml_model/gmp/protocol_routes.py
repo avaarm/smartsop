@@ -22,7 +22,7 @@ from .protocol_import import (
     extract_document, _document_from_text,
 )
 from .templates import template_summaries, get_template
-from .doc_taxonomy import GMP_CATEGORIES, is_valid as _is_valid_category
+from .doc_taxonomy import GMP_CATEGORIES, is_valid as _is_valid_category, category_name
 from .doc_templates import doc_template_summaries, get_doc_template
 from .generator_provider import get_generator
 
@@ -107,6 +107,36 @@ def _apply_variables(text, variables):
     if not text or not variables:
         return text
     return VAR_RE.sub(lambda m: str(variables.get(m.group(1).strip(), m.group(0))), text)
+
+
+def _next_document_number(account_id, code):
+    """Next controlled-document number for a category, e.g. EQ-002 (DC-002 style).
+
+    Scans existing working documents in that category and returns the code plus
+    the next zero-padded sequence. Templates don't consume numbers.
+    """
+    code = (code or "").strip().upper()
+    if not code:
+        return ""
+    rows = (db.session.query(Protocol.document_number)
+            .filter(Protocol.account_id == account_id,
+                    Protocol.doc_category == code,
+                    Protocol.is_template.is_(False),
+                    Protocol.document_number != "").all())
+    mx = 0
+    pat = re.compile(rf"^{re.escape(code)}-(\d+)$")
+    for (dn,) in rows:
+        m = pat.match(dn or "")
+        if m:
+            mx = max(mx, int(m.group(1)))
+    return f"{code}-{mx + 1:03d}"
+
+
+def _assign_document_number(protocol):
+    """Give a working document its next number for its category, if it lacks one."""
+    if (not protocol.is_template and protocol.doc_category
+            and not (protocol.document_number or "").strip()):
+        protocol.document_number = _next_document_number(protocol.account_id, protocol.doc_category)
 
 
 def _apply_variables_to_blocks(blocks, variables):
@@ -336,6 +366,7 @@ def create_from_doc_template(account_id):
         protocol.body_json = json.dumps(blocks)
     db.session.add(protocol)
     db.session.flush()
+    _assign_document_number(protocol)
     if template.get("doc_format") != "document":
         for i, step in enumerate(template.get("steps", [])):
             db.session.add(ProtocolStep(
@@ -462,6 +493,7 @@ def import_protocol(account_id):
             protocol.original_file = file_bytes
         db.session.add(protocol)
         db.session.flush()
+        _assign_document_number(protocol)
         if as_template:
             record_audit(account_id, "template.created", "protocol", protocol.id,
                          f"Imported “{protocol.title}” into the {protocol.template_category} template library")
@@ -507,6 +539,7 @@ def import_protocol(account_id):
     )
     db.session.add(protocol)
     db.session.flush()
+    _assign_document_number(protocol)
     for i, s in enumerate(steps):
         db.session.add(ProtocolStep(
             protocol_id=protocol.id, order_index=i,
@@ -568,6 +601,48 @@ def doc_categories(account_id):
                      "template_count": int(tpl_counts.get(c["code"], 0)),
                      "effective_count": int(eff_counts.get(c["code"], 0))})
     return jsonify({"success": True, "categories": cats})
+
+
+@protocol_bp.route("/<int:account_id>/protocols/register", methods=["GET"])
+@require_account_access
+def document_register(account_id):
+    """The controlled-document register — effective batch records grouped by
+    protocol / part number, and effective procedures grouped by category —
+    mirroring a facility's 'Controlled Documents' home page.
+
+    ?status=effective (default) | approved | all — which documents to include.
+    """
+    status = (request.args.get("status") or "effective").lower()
+    q = Protocol.query.filter_by(account_id=account_id, is_template=False)
+    if status != "all":
+        q = q.filter(Protocol.status == status)
+    docs = q.order_by(Protocol.document_number, Protocol.title).all()
+
+    def row(p):
+        return {
+            "id": p.id,
+            "document_number": p.document_number or "",
+            "title": p.title,
+            "version": p.version,
+            "status": p.status,
+            "effective_date": p.effective_date or "",
+            "doc_category": p.doc_category or "",
+            "product_code": p.product_code or "",
+        }
+
+    br_groups, proc_groups = {}, {}
+    for p in docs:
+        r = row(p)
+        if (p.doc_category or "") == "BR":
+            br_groups.setdefault(p.product_code or "General (Formulation)", []).append(r)
+        else:
+            proc_groups.setdefault(p.doc_category or "—", []).append(r)
+
+    batch_records = [{"group": k, "items": v} for k, v in sorted(br_groups.items())]
+    procedures = [{"code": k, "name": (category_name(k) if k != "—" else "Uncategorized"), "items": v}
+                  for k, v in sorted(proc_groups.items())]
+    return jsonify({"success": True, "status": status,
+                    "batch_records": batch_records, "procedures": procedures})
 
 
 def _export_filename(protocol, ext):
@@ -674,8 +749,11 @@ def update_protocol(account_id, protocol_id):
     if "doc_category" in data:
         code = (data.get("doc_category") or "").strip().upper()[:10]
         protocol.doc_category = code if (not code or _is_valid_category(code)) else protocol.doc_category
+        _assign_document_number(protocol)   # auto-number once categorized
     if "product_code" in data:
         protocol.product_code = (data.get("product_code") or "").strip()[:60]
+    if "document_number" in data:           # explicit override wins
+        protocol.document_number = (data.get("document_number") or "").strip()[:40]
     db.session.commit()
     return jsonify({"success": True, "protocol": protocol.to_dict(include_steps=True)})
 
@@ -1753,6 +1831,7 @@ def new_version(account_id, protocol_id):
     db.session.flush()
     _copy_steps(source, clone)
     _copy_document_fields(source, clone)
+    clone.document_number = source.document_number   # same doc, new revision
     record_audit(account_id, "protocol.new_version", "protocol", clone.id,
                  f"Drafted v{clone.version} of “{clone.title}” (from v{source.version})")
     db.session.commit()

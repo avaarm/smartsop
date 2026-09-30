@@ -368,6 +368,10 @@ class Protocol(db.Model):
     # groups batch records by their protocol / part number (e.g. "B090").
     doc_category = db.Column(db.String(10), default="", index=True)
     product_code = db.Column(db.String(60), default="")
+    # Controlled-document number auto-assigned from the category (e.g. EQ-002,
+    # QA-005), per the facility's numbering system (DC-002). Templates don't get
+    # one; a new version keeps it, a fork gets a fresh one when re-categorized.
+    document_number = db.Column(db.String(40), default="", index=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -403,6 +407,7 @@ class Protocol(db.Model):
             "original_filename": self.original_filename or "",
             "doc_category": self.doc_category or "",
             "product_code": self.product_code or "",
+            "document_number": self.document_number or "",
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "step_count": self.steps.count(),
