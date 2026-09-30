@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';" />
+  <title>Connect to SmartSOP</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center;
+      font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background: radial-gradient(120% 90% at 50% 0%, #1a1830 0%, #0f0f14 55%);
+      color: #ecebf5;
+    }
+    .card {
+      width: 400px; max-width: calc(100vw - 48px);
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px; padding: 32px 30px; box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    }
+    .logo {
+      width: 44px; height: 44px; border-radius: 11px; margin-bottom: 18px;
+      background: linear-gradient(135deg, #8b5cf6 0%, #4f6bed 100%);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 8px 22px rgba(99,80,240,0.45);
+    }
+    h1 { font-size: 19px; margin: 0 0 6px; letter-spacing: -0.02em; }
+    p.sub { font-size: 13px; color: #9b99ad; margin: 0 0 22px; line-height: 1.5; }
+    label { display: block; font-size: 12px; color: #9b99ad; margin: 0 0 6px; }
+    input {
+      width: 100%; font-size: 14px; padding: 11px 13px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.25); color: #fff;
+      font-family: inherit;
+    }
+    input:focus { outline: none; border-color: #7c6bf0; box-shadow: 0 0 0 3px rgba(124,107,240,0.25); }
+    .quick { display: flex; gap: 8px; margin: 10px 0 22px; flex-wrap: wrap; }
+    .quick button {
+      font-size: 12px; padding: 5px 11px; border-radius: 20px; cursor: pointer;
+      background: rgba(255,255,255,0.05); color: #c9c7d8; border: 1px solid rgba(255,255,255,0.1);
+    }
+    .quick button:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .connect {
+      width: 100%; font-size: 14px; font-weight: 600; padding: 12px; border-radius: 10px; cursor: pointer;
+      background: linear-gradient(135deg, #8b5cf6 0%, #4f6bed 100%); color: #fff; border: none;
+    }
+    .connect:hover { filter: brightness(1.06); }
+    .connect:disabled { opacity: 0.5; cursor: default; }
+    .err { color: #ff8a8a; font-size: 12.5px; margin-top: 12px; min-height: 16px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>
+    </div>
+    <h1>Connect to SmartSOP</h1>
+    <p class="sub">Enter the address of your SmartSOP server. Your workspaces, documents and approvals live there.</p>
+
+    <label for="url">Server address</label>
+    <input id="url" type="text" placeholder="https://sop.your-facility.com" autofocus />
+    <div class="quick">
+      <button data-url="http://localhost:4000">localhost:4000 (Docker)</button>
+      <button data-url="http://localhost:4200">localhost:4200 (dev)</button>
+    </div>
+
+    <button class="connect" id="go">Connect</button>
+    <div class="err" id="err"></div>
+  </div>
+
+  <script>
+    const input = document.getElementById('url');
+    const err = document.getElementById('err');
+    const go = document.getElementById('go');
+
+    (async () => {
+      try {
+        const cfg = await window.smartsop.getConfig();
+        if (cfg && cfg.serverUrl) input.value = cfg.serverUrl;
+      } catch {}
+    })();
+
+    document.querySelectorAll('.quick button').forEach(b => {
+      b.addEventListener('click', () => { input.value = b.dataset.url; input.focus(); });
+    });
+
+    async function connect() {
+      const val = input.value.trim();
+      if (!val) { err.textContent = 'Please enter a server address.'; return; }
+      err.textContent = '';
+      go.disabled = true; go.textContent = 'Connecting…';
+      try {
+        const saved = await window.smartsop.setServerUrl(val);
+        if (!saved) { err.textContent = 'That address doesn’t look valid.'; go.disabled = false; go.textContent = 'Connect'; }
+      } catch (e) {
+        err.textContent = 'Could not connect. Check the address and try again.';
+        go.disabled = false; go.textContent = 'Connect';
+      }
+    }
+    go.addEventListener('click', connect);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') connect(); });
+  </script>
+</body>
+</html>
