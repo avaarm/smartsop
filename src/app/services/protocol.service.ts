@@ -94,6 +94,7 @@ export interface Protocol {
   original_filename?: string;
   doc_category?: string;
   product_code?: string;
+  document_number?: string;
   created_at: string;
   updated_at: string;
   step_count: number;
@@ -111,6 +112,26 @@ export interface DocCategory {
   examples: string[];
   template_count: number;
   effective_count: number;
+}
+
+/** One row in the controlled-document register. */
+export interface RegisterItem {
+  id: number;
+  document_number: string;
+  title: string;
+  version: number;
+  status: string;
+  effective_date: string;
+  doc_category: string;
+  product_code: string;
+}
+
+/** A grouping in the register — a protocol/part number, or a category. */
+export interface RegisterGroup {
+  group?: string;   // batch-record grouping (product/protocol)
+  code?: string;    // procedure category code
+  name?: string;    // procedure category name
+  items: RegisterItem[];
 }
 
 /** A built-in facility document template (the "what do you want to write?" starters). */
@@ -337,6 +358,14 @@ export class ProtocolService {
     Observable<{ success: boolean; protocol: Protocol }> {
     return this.http.post<any>(`${this.base(accountId)}/from-doc-template`, { key, ...(opts || {}) })
       .pipe(timeout(20000), catchError(this.handleError));
+  }
+
+  /** The controlled-document register — effective batch records by protocol and
+      procedures by category (status: effective | approved | all). */
+  documentRegister(accountId: number, status: 'effective' | 'approved' | 'all' = 'effective'):
+    Observable<{ success: boolean; status: string; batch_records: RegisterGroup[]; procedures: RegisterGroup[] }> {
+    return this.http.get<any>(`${this.base(accountId)}/register?status=${status}`)
+      .pipe(timeout(15000), catchError(this.handleError));
   }
 
   importFromText(accountId: number,
