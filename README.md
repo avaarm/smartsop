@@ -101,6 +101,31 @@ docker compose exec ollama ollama pull llama3
 
 The frontend proxies `/api` to the backend container automatically via `API_URL` env var.
 
+## Desktop app (macOS & Windows)
+
+SmartSOP ships a native desktop client that connects to a SmartSOP **server** —
+so workspaces, review/approval e-signatures and the shared audit trail stay
+correct across everyone. It's a thin, secure Electron shell (no bundled backend,
+no local database): on first launch it asks for your server address and opens the
+web app in a dedicated window.
+
+```bash
+cd desktop
+npm install
+npm start            # opens the app; point it at your server (e.g. http://localhost:4000)
+npm run dist:mac     # build a .dmg for macOS
+npm run dist:win     # build a Setup .exe (run on Windows)
+```
+
+Tag a release (`git tag v1.0.0 && git push origin v1.0.0`) and
+`.github/workflows/desktop-release.yml` builds the macOS **.dmg** and Windows
+**.exe** on their own runners and attaches them to the GitHub Release. See
+[`desktop/README.md`](desktop/README.md) for signing/notarization and config.
+
+**Deploying the server** the desktop clients connect to: run the Docker stack
+above on a host, set `JWT_SECRET` and `CORS_ORIGINS` (see `.env.example`), point
+DNS at it, and give users that URL in the desktop app's connect screen.
+
 ## Project structure
 
 ```
