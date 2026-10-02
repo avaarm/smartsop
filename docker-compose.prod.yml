@@ -1,0 +1,46 @@
+# Production overlay — adds a Caddy reverse proxy that terminates TLS
+# (automatic Let's Encrypt) and routes your domain to the frontend, and sets
+# restart policies so the stack survives reboots.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# (the deploy.sh script does this for you)
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:?set DOMAIN in .env, e.g. sop.your-facility.com}
+      - ACME_EMAIL=${ACME_EMAIL:-admin@example.com}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+
+  frontend:
+    restart: unless-stopped
+
+  backend:
+    restart: unless-stopped
+
+  worker:
+    restart: unless-stopped
+
+  db:
+    restart: unless-stopped
+
+  redis:
+    restart: unless-stopped
+
+  ollama:
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

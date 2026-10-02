@@ -4,8 +4,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+    # Bound to localhost only: in production the public entrypoint is Caddy
+    # (docker-compose.prod.yml), which reaches this over the internal network.
+    # For local dev the app is still at http://localhost:4000.
     ports:
-      - "4000:4000"
+      - "127.0.0.1:4000:4000"
     environment:
       - PORT=4000
       - API_URL=http://backend:5001
@@ -22,8 +25,10 @@ services:
     # Apply DB migrations before serving, so the schema is always current and
     # the app never relies on create_all in production.
     command: ["sh", "-c", "flask --app gmp_server db upgrade && gunicorn --config gunicorn.conf.py gmp_server:app"]
+    # Localhost-only: the backend is reached by the frontend/worker over the
+    # internal network; it is never exposed publicly.
     ports:
-      - "5001:5001"
+      - "127.0.0.1:5001:5001"
     environment:
       - APP_ENV=production
       - FLASK_ENV=production
@@ -96,8 +101,9 @@ services:
   # Ollama LLM service
   ollama:
     image: ollama/ollama:latest
+    # Internal only — consumed by backend/worker over the compose network.
     ports:
-      - "11434:11434"
+      - "127.0.0.1:11434:11434"
     volumes:
       - ollama_data:/root/.ollama
     deploy:
