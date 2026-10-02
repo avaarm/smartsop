@@ -1,0 +1,9 @@
+# Caddy automatically obtains and renews a Let's Encrypt certificate for
+# $DOMAIN, then reverse-proxies everything to the SmartSOP frontend, which in
+# turn proxies /api to the backend. One public origin, HTTPS by default.
+
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy frontend:4000
+	tls {$ACME_EMAIL}
+}

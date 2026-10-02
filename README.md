@@ -101,6 +101,22 @@ docker compose exec ollama ollama pull llama3
 
 The frontend proxies `/api` to the backend container automatically via `API_URL` env var.
 
+### Production (one command, with HTTPS)
+
+Deploy to a single Linux host (cloud VM or on-prem) behind Caddy, which handles
+TLS automatically. Point DNS at the box, open ports 80/443, then:
+
+```bash
+git clone https://github.com/avaarm/smartsop.git && cd smartsop
+sudo DOMAIN=sop.your-facility.com ACME_EMAIL=you@your-facility.com ./deploy.sh
+# lean (no Ollama / AI assist): add WITHOUT_OLLAMA=1
+```
+
+`deploy.sh` generates `.env` (random `JWT_SECRET`, HTTPS `CORS_ORIGINS`), builds
+the stack behind Caddy, runs DB migrations, and pulls the LLM model. Only Caddy's
+80/443 are public — the app's internal ports are bound to localhost. Full guide,
+sizing, backups and operations: **[DEPLOY.md](DEPLOY.md)**.
+
 ## Desktop app (macOS & Windows)
 
 SmartSOP ships a native desktop client that connects to a SmartSOP **server** —
