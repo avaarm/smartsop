@@ -1,6 +1,6 @@
 {
   "name": "smartsop-desktop",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "description": "SmartSOP desktop client for macOS and Windows — connects to your SmartSOP server.",
   "author": "SmartSOP",
   "license": "UNLICENSED",
@@ -37,8 +37,7 @@
     "mac": {
       "category": "public.app-category.productivity",
       "target": [
-        "dmg",
-        "zip"
+        "dmg"
       ]
     },
     "win": {
