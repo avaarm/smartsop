@@ -10,6 +10,7 @@
     <header class="proto-head">
       <div class="head-main">
         <div class="badges">
+          <span *ngIf="protocol.document_number" class="docnum-badge" title="Controlled document number">{{ protocol.document_number }}</span>
           <span class="type-badge" [class.gmp]="protocol.protocol_type === 'gmp_sop'">{{ typeLabel(protocol.protocol_type) }}</span>
           <span class="status-badge" [ngClass]="'st-' + protocol.status">{{ statusLabel(protocol.status) }}</span>
           <span class="ver">v{{ protocol.version }}</span>

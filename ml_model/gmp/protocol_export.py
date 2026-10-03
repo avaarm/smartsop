@@ -68,11 +68,22 @@ def document_to_pdf(protocol_dict) -> BytesIO:
     }
     body = ParagraphStyle("db", parent=styles["Normal"], fontSize=9.5, leading=13)
     cell = ParagraphStyle("dc", parent=styles["Normal"], fontSize=8.5, leading=11)
+    meta = ParagraphStyle("dm", parent=styles["Normal"], fontSize=9, textColor=colors.HexColor("#666"))
 
     def p(text, style):
         return Paragraph(escape(str(text)).replace("\n", "<br/>"), style)
 
+    meta_bits = []
+    if protocol_dict.get("document_number"):
+        meta_bits.append(protocol_dict["document_number"])
+    meta_bits.append(f"Rev {max(0, protocol_dict.get('version', 1) - 1):02d}")
+    meta_bits.append(STATUS_LABELS.get(protocol_dict.get("status"), protocol_dict.get("status", "")))
+    if protocol_dict.get("effective_date"):
+        meta_bits.append(f"Effective {protocol_dict['effective_date']}")
+
     flow = [p(protocol_dict.get("title") or "Untitled document", h_title),
+            p(" · ".join(str(b) for b in meta_bits if b), meta),
+            Spacer(1, 4),
             HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#ccc")),
             Spacer(1, 6)]
 
@@ -140,6 +151,8 @@ def protocol_to_pdf(protocol_dict) -> BytesIO:
 
     # Control metadata line.
     meta_bits = []
+    if protocol_dict.get("document_number"):
+        meta_bits.append(protocol_dict["document_number"])
     if protocol_dict.get("sop_number"):
         meta_bits.append(f"SOP {protocol_dict['sop_number']}")
     meta_bits.append(f"v{protocol_dict.get('version', 1)}")
