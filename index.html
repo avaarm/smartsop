@@ -207,7 +207,7 @@
   <section id="download" class="download">
     <div class="container">
       <h2>Download SmartSOP</h2>
-      <p class="section-sub">Free to download. Runs entirely on your machine. No account required.</p>
+      <p class="section-sub">Free desktop app for macOS and Windows. Install it, then connect to your SmartSOP server.</p>
 
       <div class="download-grid">
         <a href="https://github.com/avaarm/smartsop/releases/latest" class="download-card" data-platform="mac">
@@ -237,6 +237,10 @@
           <span class="download-type">.AppImage</span>
         </a>
       </div>
+
+      <p class="dl-version" id="dl-version">
+        <a href="https://github.com/avaarm/smartsop/releases/latest">View all releases &amp; release notes →</a>
+      </p>
 
       <div class="download-alt">
         <h4>Alternative Installation Methods</h4>
@@ -364,6 +368,27 @@ npm start                    # port 4200</code></pre>
         if (el) el.scrollIntoView({ behavior: 'smooth' });
       });
     });
+
+    // Point each download card straight at the latest release's installer, and
+    // hide platforms that don't have a build yet. Falls back to the releases
+    // page (the cards' default href) if the API is unavailable.
+    fetch('https://api.github.com/repos/avaarm/smartsop/releases/latest')
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(rel => {
+        const pick = re => (rel.assets.find(a => re.test(a.name)) || {}).browser_download_url;
+        const byPlatform = { mac: pick(/\.dmg$/i), win: pick(/\.exe$/i), linux: pick(/\.AppImage$/i) };
+        document.querySelectorAll('.download-card[data-platform]').forEach(card => {
+          const url = byPlatform[card.getAttribute('data-platform')];
+          if (url) card.href = url;            // one-click direct download
+          else card.style.display = 'none';    // no build for this platform yet
+        });
+        const v = document.getElementById('dl-version');
+        if (v && rel.tag_name) {
+          v.innerHTML = 'Latest version <strong>' + rel.tag_name + '</strong> &middot; ' +
+            '<a href="' + rel.html_url + '">release notes</a>';
+        }
+      })
+      .catch(() => { /* keep the /releases/latest fallback links */ });
   </script>
 </body>
 </html>
