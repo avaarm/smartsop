@@ -11,6 +11,10 @@ on:
       - 'v*'
   workflow_dispatch:
 
+# electron-builder needs to create the Release and upload the installers.
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
