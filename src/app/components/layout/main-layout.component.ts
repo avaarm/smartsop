@@ -42,6 +42,13 @@ import { AccountService, Account } from '../../services/account.service';
 
           <!-- Right cluster: workspace switcher + user -->
           <div class="topbar-right">
+            <form class="topsearch" (submit)="runSearch(); $event.preventDefault()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input type="search" [(ngModel)]="globalSearch" name="globalSearch"
+                     placeholder="Search SOPs…" aria-label="Search protocols" />
+            </form>
             <div class="switcher" *ngIf="activeAccount">
               <button class="switcher-btn" type="button" (click)="switcherOpen = !switcherOpen; userMenuOpen = false">
                 <span class="ws-avatar">{{ initial(activeAccount.name) }}</span>
@@ -157,6 +164,20 @@ import { AccountService, Account } from '../../services/account.service';
     /* Right cluster */
     .topbar-right { flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
 
+    .topsearch {
+      display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px;
+      background: hsl(240 8% 97.5%); border: 1px solid var(--bar-border); border-radius: 9px;
+      transition: border-color 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+    }
+    .topsearch:focus-within { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px var(--accent-soft); }
+    .topsearch svg { color: var(--faint); flex-shrink: 0; }
+    .topsearch input {
+      border: none; background: none; outline: none; font-family: inherit;
+      font-size: 13px; width: 150px; color: var(--text);
+    }
+    .topsearch input::placeholder { color: var(--faint); }
+    @media (max-width: 1040px) { .topsearch { display: none; } }
+
     .switcher { position: relative; }
     .switcher-btn {
       display: flex; align-items: center; gap: 8px; padding: 6px 10px 6px 6px; border-radius: 9px; cursor: pointer;
@@ -250,6 +271,7 @@ export class MainLayoutComponent implements OnInit {
   creatingWorkspace = false;
   newWorkspaceName = '';
   busy = false;
+  globalSearch = '';
 
   private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
@@ -272,6 +294,12 @@ export class MainLayoutComponent implements OnInit {
 
   initial(name: string): string {
     return (name || '?').trim().charAt(0).toUpperCase();
+  }
+
+  /** Global search → the Protocols SOP Finder (works from any page). */
+  runSearch(): void {
+    const q = this.globalSearch.trim();
+    this.router.navigate(['/protocols'], { queryParams: { q: q || null } });
   }
 
   switchTo(a: Account): void {

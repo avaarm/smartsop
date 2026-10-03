@@ -1,7 +1,7 @@
 import { Component, OnInit, PLATFORM_ID, inject } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 
 import { ProtocolService, Protocol, ProtocolTemplate, DocCategory, DocTemplate } from '../../../services/protocol.service';
 import { AccountService, Account } from '../../../services/account.service';
@@ -44,12 +44,21 @@ export class ProtocolListComponent implements OnInit {
     private protocolService: ProtocolService,
     private accountService: AccountService,
     private router: Router,
+    private route: ActivatedRoute,
   ) {}
 
   ngOnInit(): void {
     this.accountService.activeAccount$.subscribe(a => {
       this.activeAccount = a;
       if (a && this.isBrowser) { this.loadProtocols(); this.loadTemplates(); }
+    });
+    // Honor a ?q= search coming from the global top-bar search (or a shared link).
+    this.route.queryParamMap.subscribe(p => {
+      const q = p.get('q') || '';
+      if (q !== this.search) {
+        this.search = q;
+        if (this.activeAccount && this.isBrowser) this.loadProtocols();
+      }
     });
     if (this.isBrowser) this.accountService.loadSavedAccount();
   }
