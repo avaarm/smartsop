@@ -28,16 +28,16 @@ import { AccountService, Account } from '../../services/account.service';
 
           <!-- Primary navigation -->
           <nav class="topnav">
-            <a routerLink="/gmp" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Document Builder</a>
-            <a routerLink="/protocols" routerLinkActive="active">Protocols</a>
-            <a routerLink="/register" routerLinkActive="active">Controlled Docs</a>
-            <a routerLink="/schedule" routerLinkActive="active">Schedule</a>
-            <a routerLink="/assets" routerLinkActive="active">Assets</a>
-            <a routerLink="/deviations" routerLinkActive="active">Deviations</a>
-            <a routerLink="/competency" routerLinkActive="active">Competency</a>
-            <a routerLink="/analytics" routerLinkActive="active">Analytics</a>
-            <a routerLink="/audit" routerLinkActive="active">Audit</a>
-            <a routerLink="/account" routerLinkActive="active">Account</a>
+            <a routerLink="/gmp" routerLinkActive="active" ariaCurrentWhenActive="page" [routerLinkActiveOptions]="{exact: true}">Document Builder</a>
+            <a routerLink="/protocols" routerLinkActive="active" ariaCurrentWhenActive="page">Protocols</a>
+            <a routerLink="/register" routerLinkActive="active" ariaCurrentWhenActive="page">Controlled Docs</a>
+            <a routerLink="/schedule" routerLinkActive="active" ariaCurrentWhenActive="page">Schedule</a>
+            <a routerLink="/assets" routerLinkActive="active" ariaCurrentWhenActive="page">Assets</a>
+            <a routerLink="/deviations" routerLinkActive="active" ariaCurrentWhenActive="page">Deviations</a>
+            <a routerLink="/competency" routerLinkActive="active" ariaCurrentWhenActive="page">Competency</a>
+            <a routerLink="/analytics" routerLinkActive="active" ariaCurrentWhenActive="page">Analytics</a>
+            <a routerLink="/audit" routerLinkActive="active" ariaCurrentWhenActive="page">Audit</a>
+            <a routerLink="/account" routerLinkActive="active" ariaCurrentWhenActive="page">Account</a>
           </nav>
 
           <!-- Right cluster: workspace switcher + user -->

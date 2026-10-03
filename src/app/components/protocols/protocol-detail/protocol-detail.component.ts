@@ -305,10 +305,20 @@ export class ProtocolDetailComponent implements OnInit {
     this.protocolService.templateVariables(this.account.id, this.protocolId).subscribe({
       next: (res) => {
         this.fillVars = res.variables || [];
-        for (const v of this.fillVars) this.fillValues[v] = '';
+        for (const v of this.fillVars) this.fillValues[v] = this.prefillFor(v);
       },
       error: (err) => (this.errorMessage = err.message),
     });
+  }
+
+  /** Sensible defaults for well-known fill-in fields. */
+  private prefillFor(name: string): string {
+    const key = name.toLowerCase().replace(/[\s_-]/g, '');
+    if (key === 'documentnumber' || key === 'docnumber') return this.protocol?.document_number || '';
+    if (key === 'revision' || key === 'revno' || key === 'revisionnumber') {
+      return String(Math.max(0, (this.protocol?.version || 1) - 1)).padStart(2, '0');
+    }
+    return '';
   }
 
   exportFilled(): void {
