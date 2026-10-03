@@ -1,15 +1,17 @@
 /* ━━ SmartSOP Landing Page ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 :root {
-  --green-50:  #f0fdf4;
-  --green-100: #dcfce7;
-  --green-200: #bbf7d0;
-  --green-400: #4ade80;
-  --green-500: #22c55e;
-  --green-600: #16a34a;
-  --green-700: #15803d;
-  --green-800: #166534;
-  --green-900: #14532d;
+  /* Brand ramp — indigo/violet, matching the SmartSOP app (var names kept
+     as --green-* so every existing reference rebrands in one place). */
+  --green-50:  #f3f1ff;
+  --green-100: #e9e5ff;
+  --green-200: #d4ccff;
+  --green-400: #9f8dfb;
+  --green-500: #7c6bf0;
+  --green-600: #6150e6;
+  --green-700: #4f3fc9;
+  --green-800: #3f329f;
+  --green-900: #2f2678;
 
   --gray-50:   #fafafa;
   --gray-100:  #f5f5f5;
