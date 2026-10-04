@@ -52,8 +52,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-      ollama:
-        condition: service_started
+      # Ollama is optional (AI assist degrades gracefully): don't block backend
+      # startup on it, so the app still boots when Ollama is omitted.
 
   # Celery worker — runs the long LLM tasks off the request path
   worker:
@@ -74,8 +74,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-      ollama:
-        condition: service_started
+      # Ollama optional — see backend.
 
   # Redis — Celery broker + result backend
   redis:
