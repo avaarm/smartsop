@@ -70,3 +70,23 @@ h1 { font-size: 27px; font-weight: 720; letter-spacing: -0.03em; margin: 0 0 5px
 .c-rev { width: 40px; color: var(--muted-fg); font-family: ui-monospace, SFMono-Regular, monospace; }
 .c-title { color: var(--primary); }
 .c-date { white-space: nowrap; color: var(--muted-fg); }
+
+/* Approved → effective release affordances */
+.release-nudge {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 18px; padding: 12px 16px; border-radius: 12px;
+  background: hsl(217 91% 97%); border: 1px solid hsl(217 80% 88%); color: hsl(217 60% 32%);
+  font-size: 13px;
+}
+.nudge-btn {
+  font-size: 12.5px; font-weight: 600; padding: 7px 13px; border-radius: 8px; cursor: pointer;
+  background: hsl(217 85% 55%); color: #fff; border: none; white-space: nowrap;
+  &:hover { background: hsl(217 85% 48%); }
+}
+.release-btn {
+  font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 7px; cursor: pointer;
+  background: hsl(143 60% 94%); color: hsl(143 65% 26%); border: 1px solid hsl(143 50% 80%);
+  white-space: nowrap;
+  &:hover:not(:disabled) { background: hsl(143 60% 88%); }
+  &:disabled { opacity: 0.6; cursor: default; }
+}

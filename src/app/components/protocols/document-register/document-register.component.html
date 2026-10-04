@@ -14,6 +14,13 @@
   <div class="toast toast-error" *ngIf="errorMessage">{{ errorMessage }}</div>
   <div class="loading" *ngIf="loading">Loading…</div>
 
+  <!-- Nudge: approved documents waiting to be released into the register -->
+  <div class="release-nudge" *ngIf="!loading && status === 'effective' && isManager && approvedWaiting > 0">
+    <span><strong>{{ approvedWaiting }}</strong> document{{ approvedWaiting === 1 ? '' : 's' }}
+      approved and ready to release.</span>
+    <button class="nudge-btn" (click)="setStatus('approved')">Review &amp; release →</button>
+  </div>
+
   <div class="empty" *ngIf="isEmpty">
     No {{ status === 'all' ? '' : status + ' ' }}documents yet.
     Create one with <strong>New document</strong> on the Protocols page — once it's released it appears here.
@@ -41,7 +48,13 @@
               <td class="c-num">{{ it.document_number || '—' }}</td>
               <td class="c-rev">{{ revision(it) }}</td>
               <td class="c-title">{{ it.title }}</td>
-              <td class="c-date">{{ it.effective_date || '—' }}</td>
+              <td class="c-date">
+                <button *ngIf="it.status === 'approved' && isManager" class="release-btn"
+                        (click)="makeEffective(it, $event)" [disabled]="releasing === it.id">
+                  {{ releasing === it.id ? 'Releasing…' : 'Make effective' }}
+                </button>
+                <span *ngIf="!(it.status === 'approved' && isManager)">{{ it.effective_date || '—' }}</span>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -71,7 +84,13 @@
               <td class="c-num">{{ it.document_number || '—' }}</td>
               <td class="c-rev">{{ revision(it) }}</td>
               <td class="c-title">{{ it.title }}</td>
-              <td class="c-date">{{ it.effective_date || '—' }}</td>
+              <td class="c-date">
+                <button *ngIf="it.status === 'approved' && isManager" class="release-btn"
+                        (click)="makeEffective(it, $event)" [disabled]="releasing === it.id">
+                  {{ releasing === it.id ? 'Releasing…' : 'Make effective' }}
+                </button>
+                <span *ngIf="!(it.status === 'approved' && isManager)">{{ it.effective_date || '—' }}</span>
+              </td>
             </tr>
           </tbody>
         </table>
