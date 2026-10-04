@@ -42,7 +42,7 @@ testem.log
 .DS_Store
 Thumbs.db
 
-# Claude Code local config and worktrees
+# Local agent/editor config and worktrees
 .claude/
 
 # Environment variables
