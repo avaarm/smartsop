@@ -338,6 +338,16 @@ def create_from_doc_template(account_id):
     if template is None:
         return jsonify({"success": False, "error": "Unknown template"}), 404
     variables = data.get("variables") if isinstance(data.get("variables"), dict) else None
+
+    # Auto-assign the controlled document number up front so it also fills any
+    # {{document_number}} field in the template body — the rendered document shows
+    # its real number (e.g. BR-001), not a placeholder, and it's one less field.
+    doc_category = template.get("doc_category", "")
+    assigned_number = _next_document_number(account_id, doc_category) if doc_category else ""
+    fill = dict(variables or {})
+    if assigned_number:
+        fill.setdefault("document_number", assigned_number)
+
     # Default the title to the template's first heading (it often carries the
     # {{product}} / {{method_name}} placeholder) so filling variables names the doc.
     default_title = template["name"]
@@ -345,9 +355,7 @@ def create_from_doc_template(account_id):
         if b.get("type") == "heading":
             default_title = b.get("text", default_title)
             break
-    title = (data.get("title") or default_title)[:500]
-    if variables:
-        title = _apply_variables(title, variables)[:500]
+    title = _apply_variables((data.get("title") or default_title), fill)[:500]
 
     author = (g.current_user.name or "").strip() or g.current_user.email
     protocol = Protocol(
@@ -356,24 +364,21 @@ def create_from_doc_template(account_id):
         description=template.get("description", ""),
         protocol_type=template["protocol_type"],
         created_by=author,
-        doc_category=template.get("doc_category", ""),
+        doc_category=doc_category,
         doc_format=template.get("doc_format", "steps"),
+        document_number=assigned_number,
     )
     if template.get("doc_format") == "document":
-        blocks = template.get("body", [])
-        if variables:
-            blocks = _apply_variables_to_blocks(blocks, variables)
-        protocol.body_json = json.dumps(blocks)
+        protocol.body_json = json.dumps(_apply_variables_to_blocks(template.get("body", []), fill))
     db.session.add(protocol)
     db.session.flush()
-    _assign_document_number(protocol)
     if template.get("doc_format") != "document":
         for i, step in enumerate(template.get("steps", [])):
             db.session.add(ProtocolStep(
                 protocol_id=protocol.id, order_index=i,
-                section=_apply_variables(step.get("section", ""), variables),
-                title=_apply_variables(step.get("title", ""), variables)[:500],
-                description=_apply_variables(step.get("description", ""), variables),
+                section=_apply_variables(step.get("section", ""), fill),
+                title=_apply_variables(step.get("title", ""), fill)[:500],
+                description=_apply_variables(step.get("description", ""), fill),
                 warning=step.get("warning", ""),
                 duration_seconds=step.get("duration_seconds"),
             ))

@@ -168,3 +168,19 @@ def test_register_effective_default_excludes_drafts(client):
     data = res.get_json()
     # The doc is a draft, so the effective register is empty.
     assert data["batch_records"] == [] and data["procedures"] == []
+
+
+def test_doc_template_autofills_assigned_document_number(client):
+    """The auto-assigned controlled number fills {{document_number}} in the body,
+    so the rendered document shows BR-001 (not a placeholder) and it's no longer
+    a manual fill-in field."""
+    burn_superadmin(client)
+    token, acc, _ = make_owner(client, "tx8@corp.com", "Tco")
+    p = client.post(f"/api/accounts/{acc}/protocols/from-doc-template",
+                    json={"key": "br_production"}, headers=auth(token)).get_json()["protocol"]
+    assert p["document_number"] == "BR-001"
+    cells = [c for b in p["body"] if b["type"] == "table" for row in b["rows"] for c in row]
+    assert "BR-001" in cells
+    assert not any("{{document_number}}" in c for c in cells)
+    res = client.get(f"/api/accounts/{acc}/protocols/{p['id']}/template-variables", headers=auth(token))
+    assert "document_number" not in res.get_json()["variables"]
