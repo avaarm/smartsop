@@ -88,6 +88,19 @@ export class AuthService {
       .pipe(timeout(15000), tap(res => this.storeSession(res)), catchError(this.handleError));
   }
 
+  /** Begin a password reset. The server never reveals whether the email exists. */
+  forgotPassword(email: string):
+    Observable<{ success: boolean; message: string; reset_link?: string; dev_note?: string }> {
+    return this.http.post<any>(`${this.baseUrl}/forgot-password`, { email })
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
+  /** Complete a password reset with a token; signs the user in on success. */
+  resetPassword(token: string, password: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.baseUrl}/reset-password`, { token, password })
+      .pipe(timeout(15000), tap(res => this.storeSession(res)), catchError(this.handleError));
+  }
+
   /** Re-fetch the current user from the server (e.g. after membership changes). */
   refreshUser(): void {
     this.http.get<{ success: boolean; user: AuthUser }>(`${this.baseUrl}/me`)

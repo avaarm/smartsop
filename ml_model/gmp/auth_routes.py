@@ -6,8 +6,12 @@ import os
 from flask import Blueprint, request, jsonify, g, session, redirect
 
 from .database import db, User, Account, Membership
-from .auth import require_auth, generate_token
+from .auth import (
+    require_auth, generate_token,
+    generate_reset_token, user_from_reset_token, RESET_TTL_MINUTES,
+)
 from .extensions import limiter, AUTH_RATELIMIT
+from .mailer import send_email
 from . import sso
 
 logger = logging.getLogger(__name__)
@@ -88,6 +92,86 @@ def login():
     return jsonify({
         "success": True,
         "token": token,
+        "user": user.to_dict(include_memberships=True),
+    })
+
+
+def _frontend_base_url() -> str:
+    """Where the reset link should point — the user-facing app origin."""
+    base = os.environ.get("APP_BASE_URL")
+    if base:
+        return base.rstrip("/")
+    origin = request.headers.get("Origin")
+    if origin:
+        return origin.rstrip("/")
+    return request.host_url.rstrip("/")
+
+
+@auth_bp.route("/forgot-password", methods=["POST"])
+@limiter.limit(AUTH_RATELIMIT)
+def forgot_password():
+    """Begin a password reset. Always returns 200 and the same message whether or
+    not the email exists (no account enumeration). Emails a time-limited reset
+    link when SMTP is configured; on a non-production instance without mail, the
+    link is returned in the response so the flow is still usable."""
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    generic = {"success": True,
+               "message": "If an account exists for that email, a password reset link has been sent."}
+
+    if not email or "@" not in email:
+        return jsonify(generic)
+
+    user = User.query.filter_by(email=email).first()
+    if user is None or not user.is_active:
+        return jsonify(generic)
+
+    token = generate_reset_token(user)
+    link = f"{_frontend_base_url()}/reset-password?token={token}"
+    sent = send_email(
+        user.email,
+        "Reset your SmartSOP password",
+        f"Hello{(' ' + user.name) if user.name else ''},\n\n"
+        f"We received a request to reset your SmartSOP password. Use the link below "
+        f"within {RESET_TTL_MINUTES} minutes to choose a new one:\n\n{link}\n\n"
+        f"If you didn't request this, you can ignore this email — your password won't change.\n",
+    )
+    logger.info("Password reset requested for %s (emailed=%s)", email, sent)
+
+    resp = dict(generic)
+    is_prod = (os.environ.get("APP_ENV") or os.environ.get("FLASK_ENV") or "").lower() == "production"
+    if not sent and not is_prod:
+        resp["reset_link"] = link
+        resp["dev_note"] = "SMTP is not configured; link returned for development only."
+    return jsonify(resp)
+
+
+@auth_bp.route("/reset-password", methods=["POST"])
+@limiter.limit(AUTH_RATELIMIT)
+def reset_password():
+    """Complete a password reset with a valid token. Signs the user in on success."""
+    data = request.get_json(silent=True) or {}
+    token = (data.get("token") or "").strip()
+    password = data.get("password") or ""
+    if len(password) < MIN_PASSWORD_LENGTH:
+        return jsonify({
+            "success": False,
+            "error": f"Password must be at least {MIN_PASSWORD_LENGTH} characters",
+        }), 400
+
+    user = user_from_reset_token(token)
+    if user is None:
+        return jsonify({
+            "success": False,
+            "error": "This reset link is invalid or has expired. Request a new one.",
+        }), 400
+
+    user.set_password(password)
+    db.session.commit()
+    logger.info("Password reset completed for %s", user.email)
+    return jsonify({
+        "success": True,
+        "token": generate_token(user),   # log straight in
         "user": user.to_dict(include_memberships=True),
     })
 

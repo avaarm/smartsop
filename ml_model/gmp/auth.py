@@ -53,6 +53,52 @@ def decode_token(token: str) -> dict:
     return jwt.decode(token, get_jwt_secret(), algorithms=[JWT_ALGORITHM])
 
 
+# ── Password-reset tokens ──────────────────────────────────────────────────
+# A reset token is a short-lived JWT with purpose="pwreset". It carries a
+# fingerprint of the current password hash so it's single-use: once the password
+# changes (or the user signs in and the hash is rehashed), outstanding reset
+# tokens stop validating. It can never be used as an auth token (purpose check).
+
+RESET_TTL_MINUTES = int(os.environ.get("PASSWORD_RESET_TTL_MINUTES", 60))
+
+
+def _password_fingerprint(user: User) -> str:
+    import hashlib
+    basis = f"{user.id}:{user.password_hash}".encode()
+    return hashlib.sha256(basis).hexdigest()[:16]
+
+
+def generate_reset_token(user: User) -> str:
+    now = datetime.utcnow()
+    payload = {
+        "sub": str(user.id),
+        "purpose": "pwreset",
+        "fp": _password_fingerprint(user),
+        "iat": now,
+        "exp": now + timedelta(minutes=RESET_TTL_MINUTES),
+    }
+    return jwt.encode(payload, get_jwt_secret(), algorithm=JWT_ALGORITHM)
+
+
+def user_from_reset_token(token: str):
+    """Return the user a valid, unexpired, unused reset token belongs to, else None."""
+    try:
+        payload = jwt.decode(token, get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+    except jwt.PyJWTError:
+        return None
+    if payload.get("purpose") != "pwreset":
+        return None
+    try:
+        user = db.session.get(User, int(payload.get("sub", 0)))
+    except (TypeError, ValueError):
+        return None
+    if user is None or not user.is_active:
+        return None
+    if payload.get("fp") != _password_fingerprint(user):   # already used / changed
+        return None
+    return user
+
+
 def _user_from_request():
     """Resolve the authenticated, active user from the Bearer token, or None."""
     auth_header = request.headers.get("Authorization", "")
@@ -64,6 +110,10 @@ def _user_from_request():
     try:
         payload = decode_token(token)
     except jwt.PyJWTError:
+        return None
+    # Purpose-scoped tokens (e.g. password reset) are valid JWTs signed with the
+    # same secret, but must never authenticate a request.
+    if payload.get("purpose"):
         return None
     try:
         user_id = int(payload.get("sub", 0))

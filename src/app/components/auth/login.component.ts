@@ -22,14 +22,21 @@ import { AuthService } from '../../services/auth.service';
           <span>SmartSOP</span>
         </div>
 
-        <h1>{{ mode === 'login' ? 'Sign in' : 'Create your account' }}</h1>
-        <p class="subtitle">
-          {{ mode === 'login'
-            ? 'Access your organization\\'s GMP document workspace.'
-            : 'Set up a workspace for your organization.' }}
-        </p>
+        <h1>{{ titleText }}</h1>
+        <p class="subtitle">{{ subtitleText }}</p>
 
-        <form (ngSubmit)="submit()">
+        <!-- Confirmation shown after a reset link is requested -->
+        <div class="sent" *ngIf="forgotSent">
+          <div class="sent-icon">✓</div>
+          <p class="sent-msg">{{ forgotMessage }}</p>
+          <p class="dev-link" *ngIf="forgotDevLink">
+            <small>No email is configured on this server — use this link to reset:</small>
+            <a [href]="forgotDevLink">Continue to reset your password →</a>
+          </p>
+          <button type="button" class="link back" (click)="setMode('login')">← Back to sign in</button>
+        </div>
+
+        <form (ngSubmit)="submit()" *ngIf="!forgotSent">
           <ng-container *ngIf="mode === 'register'">
             <label>
               <span>Your name</span>
@@ -48,7 +55,7 @@ import { AuthService } from '../../services/auth.service';
                    placeholder="you@company.com" autocomplete="email" />
           </label>
 
-          <label>
+          <label *ngIf="mode !== 'forgot'">
             <span>Password</span>
             <input type="password" name="password" [(ngModel)]="password" required
                    placeholder="••••••••"
@@ -56,27 +63,35 @@ import { AuthService } from '../../services/auth.service';
             <small *ngIf="mode === 'register'" class="hint">At least 8 characters.</small>
           </label>
 
+          <div class="forgot-link" *ngIf="mode === 'login'">
+            <button type="button" class="link" (click)="setMode('forgot')">Forgot password?</button>
+          </div>
+
           <div class="error" *ngIf="error">{{ error }}</div>
 
           <button type="submit" class="btn-primary" [disabled]="loading">
-            {{ loading ? 'Please wait…' : (mode === 'login' ? 'Sign in' : 'Create account') }}
+            {{ loading ? 'Please wait…' : submitText }}
           </button>
         </form>
 
-        <div class="sso" *ngIf="ssoEnabled">
+        <div class="sso" *ngIf="ssoEnabled && mode === 'login' && !forgotSent">
           <div class="divider"><span>or</span></div>
           <button type="button" class="btn-sso" (click)="ssoLogin()">Sign in with {{ ssoProvider }}</button>
         </div>
 
-        <div class="switch">
-          <ng-container *ngIf="mode === 'login'; else toLogin">
+        <div class="switch" *ngIf="!forgotSent">
+          <ng-container *ngIf="mode === 'login'">
             New here?
             <button type="button" class="link" (click)="setMode('register')">Create an account</button>
           </ng-container>
-          <ng-template #toLogin>
+          <ng-container *ngIf="mode === 'register'">
             Already have an account?
             <button type="button" class="link" (click)="setMode('login')">Sign in</button>
-          </ng-template>
+          </ng-container>
+          <ng-container *ngIf="mode === 'forgot'">
+            Remembered it?
+            <button type="button" class="link" (click)="setMode('login')">Back to sign in</button>
+          </ng-container>
         </div>
       </div>
     </div>
@@ -226,10 +241,30 @@ import { AuthService } from '../../services/auth.service';
       border-radius: 7px; cursor: pointer;
       &:hover { background: hsl(0 0% 97%); border-color: hsl(0 0% 75%); }
     }
+
+    .forgot-link { text-align: right; margin-top: -6px; }
+    .forgot-link .link { font-size: 12px; color: hsl(0 0% 45%); }
+    .forgot-link .link:hover { color: hsl(243 75% 55%); }
+
+    .sent { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; padding: 6px 0 2px; }
+    .sent-icon {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: hsl(143 60% 94%); color: hsl(143 65% 32%);
+      display: flex; align-items: center; justify-content: center; font-size: 22px;
+    }
+    .sent-msg { font-size: 13.5px; color: hsl(0 0% 32%); line-height: 1.55; margin: 0; }
+    .dev-link {
+      font-size: 12.5px; background: hsl(45 92% 96%); border: 1px solid hsl(45 80% 85%);
+      border-radius: 8px; padding: 10px 12px; margin: 0; display: flex; flex-direction: column; gap: 6px; text-align: left;
+      small { color: hsl(38 60% 35%); }
+      a { color: hsl(243 75% 52%); font-weight: 600; text-decoration: none; word-break: break-all; }
+      a:hover { text-decoration: underline; }
+    }
+    .back { margin-top: 2px; }
   `]
 })
 export class LoginComponent implements OnInit {
-  mode: 'login' | 'register' = 'login';
+  mode: 'login' | 'register' | 'forgot' = 'login';
   email = '';
   password = '';
   name = '';
@@ -237,8 +272,31 @@ export class LoginComponent implements OnInit {
   loading = false;
   error = '';
 
+  // Forgot-password state
+  forgotSent = false;
+  forgotMessage = '';
+  forgotDevLink = '';
+
   ssoEnabled = false;
   ssoProvider = 'SSO';
+
+  get titleText(): string {
+    return this.mode === 'login' ? 'Sign in'
+      : this.mode === 'register' ? 'Create your account'
+      : 'Reset your password';
+  }
+
+  get subtitleText(): string {
+    return this.mode === 'login' ? "Access your organization's GMP document workspace."
+      : this.mode === 'register' ? 'Set up a workspace for your organization.'
+      : "Enter your email and we'll send you a link to reset your password.";
+  }
+
+  get submitText(): string {
+    return this.mode === 'login' ? 'Sign in'
+      : this.mode === 'register' ? 'Create account'
+      : 'Send reset link';
+  }
 
   private returnUrl = '/gmp';
   private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
@@ -278,13 +336,16 @@ export class LoginComponent implements OnInit {
     if (this.isBrowser) window.location.href = '/api/auth/sso/login';
   }
 
-  setMode(mode: 'login' | 'register'): void {
+  setMode(mode: 'login' | 'register' | 'forgot'): void {
     this.mode = mode;
     this.error = '';
+    this.forgotSent = false;
+    this.forgotDevLink = '';
   }
 
   submit(): void {
     this.error = '';
+    if (this.mode === 'forgot') { this.forgotSubmit(); return; }
     if (!this.email || !this.password) {
       this.error = 'Email and password are required.';
       return;
@@ -303,6 +364,23 @@ export class LoginComponent implements OnInit {
       next: () => {
         this.loading = false;
         this.router.navigateByUrl(this.returnUrl);
+      },
+      error: (err) => {
+        this.loading = false;
+        this.error = err.message || 'Something went wrong.';
+      },
+    });
+  }
+
+  private forgotSubmit(): void {
+    if (!this.email) { this.error = 'Enter your email address.'; return; }
+    this.loading = true;
+    this.auth.forgotPassword(this.email).subscribe({
+      next: (res) => {
+        this.loading = false;
+        this.forgotSent = true;
+        this.forgotMessage = res.message;
+        this.forgotDevLink = res.reset_link || '';   // dev-only fallback when no SMTP
       },
       error: (err) => {
         this.loading = false;
