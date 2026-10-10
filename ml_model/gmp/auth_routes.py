@@ -176,6 +176,32 @@ def reset_password():
     })
 
 
+@auth_bp.route("/change-password", methods=["POST"])
+@limiter.limit(AUTH_RATELIMIT)
+@require_auth
+def change_password():
+    """Change the signed-in user's password (requires the current password)."""
+    data = request.get_json(silent=True) or {}
+    current = data.get("current_password") or ""
+    new = data.get("new_password") or ""
+    user = g.current_user
+
+    if not user.check_password(current):
+        return jsonify({"success": False, "error": "Your current password is incorrect"}), 400
+    if len(new) < MIN_PASSWORD_LENGTH:
+        return jsonify({
+            "success": False,
+            "error": f"Password must be at least {MIN_PASSWORD_LENGTH} characters",
+        }), 400
+    if new == current:
+        return jsonify({"success": False, "error": "New password must be different from the current one"}), 400
+
+    user.set_password(new)
+    db.session.commit()
+    logger.info("Password changed for %s", user.email)
+    return jsonify({"success": True})
+
+
 @auth_bp.route("/me", methods=["GET"])
 @require_auth
 def me():

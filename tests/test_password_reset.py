@@ -71,3 +71,42 @@ def test_reset_token_cannot_authenticate_as_bearer(client):
     register(client, "sep@corp.com", password="origpass123")
     token = _request_reset(client, "sep@corp.com").get_json()["reset_link"].split("token=", 1)[1]
     assert client.get("/api/auth/me", headers=auth(token)).status_code == 401
+
+
+# ── Change password (signed-in user) ──
+
+def _token(client, email, password="origpass123"):
+    return register(client, email, password=password).get_json()["token"]
+
+
+def test_change_password_requires_correct_current(client):
+    tok = _token(client, "chg1@corp.com")
+    bad = client.post("/api/auth/change-password",
+                      json={"current_password": "wrong", "new_password": "newpass9876"},
+                      headers=auth(tok))
+    assert bad.status_code == 400
+    ok = client.post("/api/auth/change-password",
+                     json={"current_password": "origpass123", "new_password": "newpass9876"},
+                     headers=auth(tok))
+    assert ok.status_code == 200
+    assert login(client, "chg1@corp.com", "newpass9876").status_code == 200
+    assert login(client, "chg1@corp.com", "origpass123").status_code == 401
+
+
+def test_change_password_guards(client):
+    tok = _token(client, "chg2@corp.com")
+    short = client.post("/api/auth/change-password",
+                        json={"current_password": "origpass123", "new_password": "short"},
+                        headers=auth(tok))
+    assert short.status_code == 400
+    same = client.post("/api/auth/change-password",
+                       json={"current_password": "origpass123", "new_password": "origpass123"},
+                       headers=auth(tok))
+    assert same.status_code == 400
+
+
+def test_change_password_requires_auth(client):
+    _token(client, "chg3@corp.com")
+    res = client.post("/api/auth/change-password",
+                      json={"current_password": "origpass123", "new_password": "newpass9876"})
+    assert res.status_code == 401

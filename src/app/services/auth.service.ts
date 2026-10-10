@@ -101,6 +101,13 @@ export class AuthService {
       .pipe(timeout(15000), tap(res => this.storeSession(res)), catchError(this.handleError));
   }
 
+  /** Change the signed-in user's password (requires their current password). */
+  changePassword(currentPassword: string, newPassword: string): Observable<{ success: boolean }> {
+    return this.http.post<{ success: boolean }>(`${this.baseUrl}/change-password`,
+      { current_password: currentPassword, new_password: newPassword })
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
   /** Re-fetch the current user from the server (e.g. after membership changes). */
   refreshUser(): void {
     this.http.get<{ success: boolean; user: AuthUser }>(`${this.baseUrl}/me`)

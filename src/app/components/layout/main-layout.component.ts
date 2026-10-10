@@ -96,6 +96,7 @@ import { AccountService, Account } from '../../services/account.service';
                 </div>
                 <div class="menu-sep"></div>
                 <a class="menu-item" routerLink="/account" (click)="userMenuOpen = false">Account &amp; Training</a>
+                <button class="menu-item" type="button" (click)="openChangePassword()">Change password</button>
                 <button class="menu-item danger" type="button" (click)="logout()">Sign out</button>
               </div>
             </div>
@@ -106,6 +107,28 @@ import { AccountService, Account } from '../../services/account.service';
       <!-- click-away for any open menu -->
       <div class="menu-backdrop" *ngIf="switcherOpen || userMenuOpen"
            (click)="switcherOpen = false; userMenuOpen = false"></div>
+
+      <!-- Change-password modal -->
+      <div class="pw-overlay" *ngIf="showChangePw" (click)="closeChangePassword()">
+        <div class="pw-modal" (click)="$event.stopPropagation()">
+          <h3>Change password</h3>
+          <form (ngSubmit)="submitChangePassword()">
+            <label><span>Current password</span>
+              <input type="password" name="pwCurrent" [(ngModel)]="pwCurrent" autocomplete="current-password" /></label>
+            <label><span>New password</span>
+              <input type="password" name="pwNew" [(ngModel)]="pwNew" autocomplete="new-password" />
+              <small class="pw-hint">At least 8 characters.</small></label>
+            <label><span>Confirm new password</span>
+              <input type="password" name="pwConfirm" [(ngModel)]="pwConfirm" autocomplete="new-password" /></label>
+            <div class="pw-error" *ngIf="pwError">{{ pwError }}</div>
+            <div class="pw-success" *ngIf="pwSuccess">✓ Your password has been updated.</div>
+            <div class="pw-actions">
+              <button type="button" class="pw-cancel" (click)="closeChangePassword()">{{ pwSuccess ? 'Close' : 'Cancel' }}</button>
+              <button type="submit" class="pw-save" *ngIf="!pwSuccess" [disabled]="pwBusy">{{ pwBusy ? 'Saving…' : 'Update password' }}</button>
+            </div>
+          </form>
+        </div>
+      </div>
 
       <main class="main-content">
         <router-outlet></router-outlet>
@@ -246,6 +269,28 @@ import { AccountService, Account } from '../../services/account.service';
 
     .menu-backdrop { position: fixed; inset: 0; z-index: 60; }
 
+    /* Change-password modal */
+    .pw-overlay { position: fixed; inset: 0; z-index: 80; background: hsl(240 30% 10% / 0.35);
+      display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .pw-modal { width: 100%; max-width: 380px; background: #fff; border-radius: 14px; padding: 22px 22px 18px;
+      box-shadow: 0 16px 48px hsl(240 30% 12% / 0.22); }
+    .pw-modal h3 { margin: 0 0 16px; font-size: 16px; font-weight: 650; letter-spacing: -0.01em; color: var(--text); }
+    .pw-modal form { display: flex; flex-direction: column; gap: 12px; }
+    .pw-modal label { display: flex; flex-direction: column; gap: 5px; }
+    .pw-modal label > span { font-size: 12px; font-weight: 500; color: var(--muted); }
+    .pw-modal input { width: 100%; box-sizing: border-box; padding: 8px 11px; font-size: 13px; font-family: inherit;
+      border: 1px solid var(--bar-border); border-radius: 7px; outline: none; }
+    .pw-modal input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .pw-hint { font-size: 11px; color: var(--faint); }
+    .pw-error { font-size: 12.5px; color: hsl(0 72% 45%); background: hsl(0 80% 97%); border: 1px solid hsl(0 70% 90%); border-radius: 7px; padding: 7px 10px; }
+    .pw-success { font-size: 12.5px; color: hsl(143 65% 30%); background: hsl(143 60% 96%); border: 1px solid hsl(143 50% 85%); border-radius: 7px; padding: 7px 10px; }
+    .pw-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+    .pw-cancel { padding: 8px 13px; font-size: 13px; background: #fff; border: 1px solid var(--bar-border); border-radius: 8px; cursor: pointer; color: var(--text); }
+    .pw-cancel:hover { background: hsl(240 6% 97%); }
+    .pw-save { padding: 8px 15px; font-size: 13px; font-weight: 600; color: #fff; border: none; border-radius: 8px; cursor: pointer;
+      background: linear-gradient(135deg, hsl(243 75% 60%) 0%, hsl(230 82% 56%) 100%); }
+    .pw-save:disabled { opacity: 0.6; cursor: default; }
+
     /* Content */
     .main-content {
       flex: 1; overflow-y: auto;
@@ -272,6 +317,15 @@ export class MainLayoutComponent implements OnInit {
   newWorkspaceName = '';
   busy = false;
   globalSearch = '';
+
+  // Change-password modal
+  showChangePw = false;
+  pwCurrent = '';
+  pwNew = '';
+  pwConfirm = '';
+  pwError = '';
+  pwSuccess = false;
+  pwBusy = false;
 
   private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
@@ -330,5 +384,29 @@ export class MainLayoutComponent implements OnInit {
     this.userMenuOpen = false;
     this.auth.logout();
     this.router.navigate(['/login']);
+  }
+
+  openChangePassword(): void {
+    this.userMenuOpen = false;
+    this.showChangePw = true;
+    this.pwCurrent = this.pwNew = this.pwConfirm = this.pwError = '';
+    this.pwSuccess = false;
+    this.pwBusy = false;
+  }
+
+  closeChangePassword(): void {
+    this.showChangePw = false;
+  }
+
+  submitChangePassword(): void {
+    this.pwError = '';
+    if (!this.pwCurrent) { this.pwError = 'Enter your current password.'; return; }
+    if (this.pwNew.length < 8) { this.pwError = 'New password must be at least 8 characters.'; return; }
+    if (this.pwNew !== this.pwConfirm) { this.pwError = 'New passwords do not match.'; return; }
+    this.pwBusy = true;
+    this.auth.changePassword(this.pwCurrent, this.pwNew).subscribe({
+      next: () => { this.pwBusy = false; this.pwSuccess = true; },
+      error: (err) => { this.pwBusy = false; this.pwError = err.message || 'Could not change your password.'; },
+    });
   }
 }
