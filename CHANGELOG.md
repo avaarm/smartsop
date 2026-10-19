@@ -17,6 +17,9 @@ All notable changes to SmartSOP. Dates are ISO (UTC).
   added / edited / removed, reordering, and deletions are recorded with actor,
   timestamp, and the exact fields that changed. The timeline gains matching
   filter options and colour-coded entries for edits vs. deletions.
+- **Per-document History** — a "History" button on the document opens a timeline
+  of every recorded action on that document (edits, approvals, lifecycle), the
+  per-document slice of the audit trail an auditor reviews in context.
 - One-click **Approved → Effective** release straight from the Controlled Docs
   register, with a nudge when approved documents are waiting.
 
