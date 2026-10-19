@@ -20,6 +20,9 @@ All notable changes to SmartSOP. Dates are ISO (UTC).
 - **Per-document History** — a "History" button on the document opens a timeline
   of every recorded action on that document (edits, approvals, lifecycle), the
   per-document slice of the audit trail an auditor reviews in context.
+- **Access-control changes are audited** — granting access, changing a member's
+  role, and revoking access now appear in the audit trail (with before/after
+  detail), answering "who could view and approve these SOPs, and when."
 - One-click **Approved → Effective** release straight from the Controlled Docs
   register, with a nudge when approved documents are waiting.
 
@@ -46,8 +49,9 @@ All notable changes to SmartSOP. Dates are ISO (UTC).
 ### Tests
 - Edge cases (render/original error paths, numbering, register filters) and
   multi-tenant isolation for the document endpoints. Plus password-reset /
-  change-password, audit capture of edits/deletions, and the server-side
-  change-control lock. 253 backend tests.
+  change-password, audit capture of edits/deletions, the server-side
+  change-control lock, per-document history, and access-control auditing.
+  255 backend tests.
 
 ## [1.1.2] — 2026-10-02
 
