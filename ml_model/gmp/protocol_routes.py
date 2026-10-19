@@ -212,6 +212,26 @@ def _changed_labels(before, after, label_map):
     return [label for field, label in label_map.items() if before.get(field) != after.get(field)]
 
 
+# A controlled document's content is frozen once it leaves authoring. Edits are
+# allowed only while it is a draft (or was rejected back to the author); any
+# later change must go through a new controlled version. This mirrors the
+# client's `canEdit`, but the server is the real enforcer — a desktop client, a
+# stale browser tab, a direct API call, or an approval that lands in another tab
+# must never be able to mutate a signed/effective record in place.
+EDITABLE_STATUSES = {"draft", "rejected"}
+
+
+def _locked_response(protocol):
+    """A 409 response if the document's content is locked for its status, else None."""
+    if protocol.status in EDITABLE_STATUSES:
+        return None
+    return jsonify({
+        "success": False,
+        "error": (f"This document is {protocol.status} and is locked for editing. "
+                  f"Create a new version to make changes."),
+    }), 409
+
+
 def _apply_step_fields(step, data):
     """Copy editable fields from a request body onto a step."""
     if "section" in data:
@@ -769,6 +789,9 @@ def update_protocol(account_id, protocol_id):
     protocol = _get_protocol(account_id, protocol_id)
     if protocol is None:
         return jsonify({"success": False, "error": "Protocol not found"}), 404
+    locked = _locked_response(protocol)
+    if locked:
+        return locked
     data = request.get_json(silent=True) or {}
     before = _snapshot(protocol, _PROTOCOL_AUDIT_FIELDS)
     if "title" in data:
@@ -813,6 +836,9 @@ def delete_protocol(account_id, protocol_id):
     protocol = _get_protocol(account_id, protocol_id)
     if protocol is None:
         return jsonify({"success": False, "error": "Protocol not found"}), 404
+    locked = _locked_response(protocol)
+    if locked:   # a controlled record that's been through review is retired, never deleted
+        return locked
     label = protocol.title + (f" ({protocol.document_number})" if protocol.document_number else "")
     record_audit(account_id, "protocol.deleted", "protocol", protocol_id,
                  f"Deleted “{label}” (v{protocol.version})",
@@ -830,6 +856,9 @@ def add_step(account_id, protocol_id):
     protocol = _get_protocol(account_id, protocol_id)
     if protocol is None:
         return jsonify({"success": False, "error": "Protocol not found"}), 404
+    locked = _locked_response(protocol)
+    if locked:
+        return locked
 
     data = request.get_json(silent=True) or {}
     next_index = (db.session.query(func.max(ProtocolStep.order_index))
@@ -851,8 +880,12 @@ def add_step(account_id, protocol_id):
 @protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/steps/<int:step_id>", methods=["PUT"])
 @require_account_access
 def update_step(account_id, protocol_id, step_id):
-    if _get_protocol(account_id, protocol_id) is None:
+    protocol = _get_protocol(account_id, protocol_id)
+    if protocol is None:
         return jsonify({"success": False, "error": "Protocol not found"}), 404
+    locked = _locked_response(protocol)
+    if locked:
+        return locked
     step = ProtocolStep.query.filter_by(id=step_id, protocol_id=protocol_id).first()
     if step is None:
         return jsonify({"success": False, "error": "Step not found"}), 404
@@ -870,8 +903,12 @@ def update_step(account_id, protocol_id, step_id):
 @protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/steps/<int:step_id>", methods=["DELETE"])
 @require_account_access
 def delete_step(account_id, protocol_id, step_id):
-    if _get_protocol(account_id, protocol_id) is None:
+    protocol = _get_protocol(account_id, protocol_id)
+    if protocol is None:
         return jsonify({"success": False, "error": "Protocol not found"}), 404
+    locked = _locked_response(protocol)
+    if locked:
+        return locked
     step = ProtocolStep.query.filter_by(id=step_id, protocol_id=protocol_id).first()
     if step is None:
         return jsonify({"success": False, "error": "Step not found"}), 404
@@ -886,8 +923,12 @@ def delete_step(account_id, protocol_id, step_id):
 @protocol_bp.route("/<int:account_id>/protocols/<int:protocol_id>/steps/reorder", methods=["POST"])
 @require_account_access
 def reorder_steps(account_id, protocol_id):
-    if _get_protocol(account_id, protocol_id) is None:
+    protocol = _get_protocol(account_id, protocol_id)
+    if protocol is None:
         return jsonify({"success": False, "error": "Protocol not found"}), 404
+    locked = _locked_response(protocol)
+    if locked:
+        return locked
 
     data = request.get_json(silent=True) or {}
     order = data.get("order")

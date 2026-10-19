@@ -143,3 +143,52 @@ def test_lifecycle_is_account_scoped(sop):
     client, owner_tok, _, acc_id, pid = sop
     b_tok, b_id, _ = make_owner(client, "b@x.com", "Beta")
     assert client.post(f"/api/accounts/{acc_id}/protocols/{pid}/submit", headers=auth(b_tok)).status_code == 403
+
+
+def _drive_to_effective(client, owner_tok, acc_id, pid):
+    client.post(f"/api/accounts/{acc_id}/protocols/{pid}/submit", headers=auth(owner_tok))
+    client.post(f"/api/accounts/{acc_id}/protocols/{pid}/sign", headers=auth(owner_tok),
+                json={"role": "approver", "decision": "approved", "password": PW})
+    client.post(f"/api/accounts/{acc_id}/protocols/{pid}/make-effective", headers=auth(owner_tok))
+
+
+def test_effective_document_is_locked_for_edits(sop):
+    """A controlled record is frozen once effective — the server, not just the
+    UI, must reject in-place edits (change control → new version only)."""
+    client, owner_tok, _, acc_id, pid = sop
+    step_id = _get(client, owner_tok, acc_id, pid)["steps"][0]["id"]
+    _drive_to_effective(client, owner_tok, acc_id, pid)
+    assert _get(client, owner_tok, acc_id, pid)["status"] == "effective"
+
+    h = auth(owner_tok)
+    base = f"/api/accounts/{acc_id}/protocols/{pid}"
+    assert client.put(base, headers=h, json={"title": "Tampered"}).status_code == 409
+    assert client.post(f"{base}/steps", headers=h, json={"title": "Sneaky"}).status_code == 409
+    assert client.put(f"{base}/steps/{step_id}", headers=h, json={"title": "Altered"}).status_code == 409
+    assert client.delete(f"{base}/steps/{step_id}", headers=h).status_code == 409
+    assert client.post(f"{base}/steps/reorder", headers=h, json={"order": [step_id]}).status_code == 409
+    assert client.delete(base, headers=h).status_code == 409
+
+    # the record is untouched
+    p = _get(client, owner_tok, acc_id, pid)
+    assert p["title"] == "Gowning SOP" and len(p["steps"]) == 1
+
+
+def test_in_review_document_is_locked(sop):
+    client, owner_tok, _, acc_id, pid = sop
+    client.post(f"/api/accounts/{acc_id}/protocols/{pid}/submit", headers=auth(owner_tok))
+    assert _get(client, owner_tok, acc_id, pid)["status"] == "in_review"
+    assert client.put(f"/api/accounts/{acc_id}/protocols/{pid}", headers=auth(owner_tok),
+                      json={"title": "Edit under review"}).status_code == 409
+
+
+def test_rejected_document_is_editable_again(sop):
+    """Rejection hands the document back to the author, so it must be editable."""
+    client, owner_tok, _, acc_id, pid = sop
+    client.post(f"/api/accounts/{acc_id}/protocols/{pid}/submit", headers=auth(owner_tok))
+    client.post(f"/api/accounts/{acc_id}/protocols/{pid}/sign", headers=auth(owner_tok),
+                json={"role": "approver", "decision": "rejected", "password": PW, "comment": "Fix it"})
+    assert _get(client, owner_tok, acc_id, pid)["status"] == "rejected"
+    r = client.put(f"/api/accounts/{acc_id}/protocols/{pid}", headers=auth(owner_tok),
+                   json={"title": "Revised after rejection"})
+    assert r.status_code == 200 and r.get_json()["protocol"]["title"] == "Revised after rejection"
