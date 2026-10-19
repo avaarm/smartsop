@@ -30,6 +30,16 @@ export class AuditService {
       .pipe(timeout(15000), catchError(this.handleError));
   }
 
+  /** The audit history of a single entity (e.g. one document) — newest first. */
+  forEntity(accountId: number, entityType: string, entityId: number):
+    Observable<{ success: boolean; events: AuditEvent[]; total: number; pages: number }> {
+    const params = new URLSearchParams({
+      entity_type: entityType, entity_id: String(entityId), per_page: '200',
+    });
+    return this.http.get<any>(`${this.base(accountId)}?${params.toString()}`)
+      .pipe(timeout(15000), catchError(this.handleError));
+  }
+
   exportCsv(accountId: number): Observable<Blob> {
     return this.http.get(`${this.base(accountId)}/export.csv`, { responseType: 'blob' })
       .pipe(timeout(30000), catchError(this.handleError));

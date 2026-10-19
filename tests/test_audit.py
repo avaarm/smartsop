@@ -173,6 +173,21 @@ def test_step_reorder_audited(client):
     assert ev["detail"]["order"] == [s2["id"], s1["id"]]
 
 
+def test_filter_by_entity_id(client):
+    """A single document's history — the per-document audit view the detail page uses."""
+    burn_superadmin(client)
+    token, acc, _ = make_owner(client, "au15@corp.com", "Ouco")
+    h = auth(token)
+    p1 = client.post(f"/api/accounts/{acc}/protocols", json={"title": "Doc one"}, headers=h).get_json()["protocol"]
+    p2 = client.post(f"/api/accounts/{acc}/protocols", json={"title": "Doc two"}, headers=h).get_json()["protocol"]
+    client.put(f"/api/accounts/{acc}/protocols/{p1['id']}", json={"title": "Doc one v2"}, headers=h)
+
+    hist = _events(client, acc, token, entity_type="protocol", entity_id=p1["id"])
+    assert hist and all(e["entity_id"] == p1["id"] for e in hist)
+    assert {e["action"] for e in hist} == {"protocol.created", "protocol.updated"}
+    assert not any(e["entity_id"] == p2["id"] for e in hist)
+
+
 def test_protocol_delete_audited(client):
     burn_superadmin(client)
     token, acc, _ = make_owner(client, "au14@corp.com", "Nuco")

@@ -25,6 +25,7 @@
         <button *ngIf="!isDocument" class="btn-primary" (click)="runProtocol()" [disabled]="steps.length === 0" title="Run this protocol">▶ Run</button>
         <button *ngIf="isDocument" class="btn-primary" (click)="openFill()" title="Fill in the fields and download a matching Word file">✎ Fill in &amp; export</button>
         <button class="btn-ghost sm" (click)="openComments()" title="Comments">💬 Comments<span class="cbadge" *ngIf="openCommentCount">{{ openCommentCount }}</span></button>
+        <button class="btn-ghost sm" (click)="openHistory()" title="Audit history of this document">🕑 History</button>
         <button class="btn-ghost sm" (click)="copyProtocol()" title="Duplicate as a new draft">⎘ Copy</button>
         <button class="btn-ghost sm" (click)="openSaveTemplate()" title="Save as a reusable template">★ Save as template</button>
         <div class="export-wrap">
@@ -379,6 +380,35 @@
 
       <div class="modal-actions">
         <button class="btn-ghost" (click)="showVersions = false">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Document history (audit trail for this document) -->
+  <div class="modal-overlay" *ngIf="showHistory" (click)="showHistory = false">
+    <div class="modal wide" (click)="$event.stopPropagation()">
+      <h3>Document history</h3>
+      <p class="modal-sub">Every recorded action on this document — edits, approvals, and lifecycle changes — with who and when. The per-document slice of the audit trail.</p>
+
+      <div class="empty-mini" *ngIf="historyBusy">Loading…</div>
+      <div class="empty-mini" *ngIf="!historyBusy && !history.length">No recorded history yet.</div>
+
+      <ol class="hist-list" *ngIf="!historyBusy && history.length">
+        <li class="hist-row" *ngFor="let e of history">
+          <span class="hist-dot" [ngClass]="historyKind(e.action)"></span>
+          <div class="hist-body">
+            <div class="hist-top">
+              <span class="hist-action" [ngClass]="historyKind(e.action)">{{ historyLabel(e.action) }}</span>
+              <span class="hist-time">{{ historyStamp(e.created_at) }}</span>
+            </div>
+            <div class="hist-summary">{{ e.summary }}</div>
+            <div class="hist-actor" *ngIf="e.actor">by {{ e.actor }}</div>
+          </div>
+        </li>
+      </ol>
+
+      <div class="modal-actions">
+        <button class="btn-ghost" (click)="showHistory = false">Close</button>
       </div>
     </div>
   </div>

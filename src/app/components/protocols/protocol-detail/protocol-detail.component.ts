@@ -10,6 +10,7 @@ import {
 import { AccountService, Account } from '../../../services/account.service';
 import { AuthService } from '../../../services/auth.service';
 import { CommentService, Comment } from '../../../services/comment.service';
+import { AuditService, AuditEvent } from '../../../services/audit.service';
 
 @Component({
   selector: 'app-protocol-detail',
@@ -45,6 +46,7 @@ export class ProtocolDetailComponent implements OnInit {
     private accountService: AccountService,
     private auth: AuthService,
     private commentService: CommentService,
+    private auditService: AuditService,
     private route: ActivatedRoute,
     public router: Router,
   ) {}
@@ -387,6 +389,55 @@ export class ProtocolDetailComponent implements OnInit {
   }
 
   changeClass(c: string): string { return 'chg-' + c; }
+
+  // ── Document history (audit trail for this document) ──
+
+  showHistory = false;
+  history: AuditEvent[] = [];
+  historyBusy = false;
+
+  private static readonly HISTORY_LABELS: Record<string, string> = {
+    'protocol.created': 'Created',
+    'protocol.updated': 'Edited',
+    'protocol.submitted': 'Submitted for review',
+    'protocol.signed': 'E-signature',
+    'protocol.made_effective': 'Made effective',
+    'protocol.new_version': 'New version',
+    'protocol.retired': 'Retired',
+    'protocol.deleted': 'Deleted',
+    'step.added': 'Step added',
+    'step.updated': 'Step edited',
+    'step.deleted': 'Step removed',
+    'steps.reordered': 'Steps reordered',
+  };
+
+  openHistory(): void {
+    if (!this.account) return;
+    this.showHistory = true;
+    this.historyBusy = true;
+    this.history = [];
+    this.auditService.forEntity(this.account.id, 'protocol', this.protocolId).subscribe({
+      next: (res) => { this.history = res.events; this.historyBusy = false; },
+      error: (err) => { this.errorMessage = err.message; this.historyBusy = false; },
+    });
+  }
+
+  historyLabel(action: string): string {
+    return ProtocolDetailComponent.HISTORY_LABELS[action] || action;
+  }
+
+  historyKind(action: string): string {
+    if (action === 'protocol.signed' || action === 'protocol.made_effective') return 'sign';
+    if (action.endsWith('.deleted') || action === 'protocol.retired') return 'delete';
+    if (action === 'protocol.updated' || action.startsWith('step')) return 'edit';
+    return 'default';
+  }
+
+  historyStamp(iso: string): string {
+    return new Date(iso).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
+    });
+  }
 
   // ── Comments & collaboration ──
 

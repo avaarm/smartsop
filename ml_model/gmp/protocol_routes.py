@@ -1154,6 +1154,9 @@ def list_audit(account_id):
     entity_type = request.args.get("entity_type")
     if entity_type:
         query = query.filter_by(entity_type=entity_type)
+    entity_id = request.args.get("entity_id", type=int)
+    if entity_id:
+        query = query.filter_by(entity_id=entity_id)
 
     paginated = query.order_by(AuditEvent.created_at.desc(), AuditEvent.id.desc()).paginate(
         page=page, per_page=per_page, error_out=False)
