@@ -10,6 +10,15 @@ All notable changes to SmartSOP. Dates are ISO (UTC).
 - **Document number** surfaced in the detail header (badge) and in PDF exports;
   the Fill-in & export dialog pre-fills `{{document_number}}` and `{{revision}}`.
 - Accessibility: `aria-current="page"` on the active top-nav tab.
+- **Self-service password reset** ("Forgot password") and **change password**
+  for signed-in users — single-use, time-limited reset links, delivered by email
+  when SMTP is configured (shown in-app on non-production otherwise).
+- **Audit trail now covers document edits.** Content and metadata changes, steps
+  added / edited / removed, reordering, and deletions are recorded with actor,
+  timestamp, and the exact fields that changed. The timeline gains matching
+  filter options and colour-coded entries for edits vs. deletions.
+- One-click **Approved → Effective** release straight from the Controlled Docs
+  register, with a nudge when approved documents are waiting.
 
 ### Changed
 - Landing page (avaarm.github.io/smartsop) rebranded to the app's indigo and
@@ -21,6 +30,11 @@ All notable changes to SmartSOP. Dates are ISO (UTC).
   turning the pipeline green (frontend + backend + Docker build).
 - Desktop release workflow: unsigned macOS builds no longer fail on empty signing
   env; `contents: write` lets the release publish; dmg-only avoids the hdiutil race.
+- **Change control is now enforced server-side.** Once a controlled document
+  leaves draft (in review / approved / effective / retired) the API rejects
+  in-place edits, step changes, and deletion with `409` — changes must go through
+  a new version. Previously only the client gated this.
+- Compose: backend and worker no longer block startup on Ollama (optional LLM).
 
 ### Removed
 - Dead legacy ELN module (11 unreferenced components + service with a hardcoded
@@ -28,7 +42,9 @@ All notable changes to SmartSOP. Dates are ISO (UTC).
 
 ### Tests
 - Edge cases (render/original error paths, numbering, register filters) and
-  multi-tenant isolation for the document endpoints. 235 backend tests.
+  multi-tenant isolation for the document endpoints. Plus password-reset /
+  change-password, audit capture of edits/deletions, and the server-side
+  change-control lock. 253 backend tests.
 
 ## [1.1.2] — 2026-10-02
 
