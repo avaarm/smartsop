@@ -22,11 +22,17 @@ export class AuditComponent implements OnInit {
   readonly actions = [
     { value: '', label: 'All events' },
     { value: 'protocol.created', label: 'Protocol created' },
+    { value: 'protocol.updated', label: 'Protocol edited' },
     { value: 'protocol.submitted', label: 'Submitted for review' },
     { value: 'protocol.signed', label: 'E-signature' },
     { value: 'protocol.made_effective', label: 'Made effective' },
-    { value: 'protocol.retired', label: 'Retired' },
     { value: 'protocol.new_version', label: 'New version' },
+    { value: 'protocol.retired', label: 'Retired' },
+    { value: 'protocol.deleted', label: 'Protocol deleted' },
+    { value: 'step.added', label: 'Step added' },
+    { value: 'step.updated', label: 'Step edited' },
+    { value: 'step.deleted', label: 'Step removed' },
+    { value: 'steps.reordered', label: 'Steps reordered' },
     { value: 'run.finished', label: 'Run finished' },
     { value: 'deviation.created', label: 'Deviation flagged' },
     { value: 'deviation.resolved', label: 'Deviation resolved' },
@@ -75,6 +81,8 @@ export class AuditComponent implements OnInit {
     if (action === 'protocol.signed' || action === 'protocol.made_effective') return 'sign';
     if (action === 'competency.acknowledged') return 'training';
     if (action === 'run.finished') return 'run';
+    if (action.endsWith('.deleted') || action === 'protocol.retired') return 'delete';
+    if (action === 'protocol.updated' || action.startsWith('step')) return 'edit';
     return 'default';
   }
 

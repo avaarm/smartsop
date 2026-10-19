@@ -115,3 +115,70 @@ def test_run_finish_audited(client):
     run = client.post(f"/api/accounts/{acc}/protocols/{pid}/runs", json={}, headers=h).get_json()["run"]
     client.post(f"/api/accounts/{acc}/runs/{run['id']}/finish", headers=h)
     assert any(e["action"] == "run.finished" for e in _events(client, acc, token))
+
+
+# ── Content & structure edits must be captured (GxP: changes to the record) ──
+
+def test_protocol_edit_is_audited(client):
+    burn_superadmin(client)
+    token, acc, _ = make_owner(client, "au10@corp.com", "Juco")
+    h = auth(token)
+    p = client.post(f"/api/accounts/{acc}/protocols", json={"title": "SOP"}, headers=h).get_json()["protocol"]
+    client.put(f"/api/accounts/{acc}/protocols/{p['id']}",
+               json={"title": "Gowning SOP", "description": "new"}, headers=h)
+    ev = next(e for e in _events(client, acc, token) if e["action"] == "protocol.updated")
+    assert "Gowning SOP" in ev["summary"]
+    assert set(ev["detail"]["changed"]) == {"title", "description"}
+
+
+def test_noop_edit_is_not_audited(client):
+    burn_superadmin(client)
+    token, acc, _ = make_owner(client, "au11@corp.com", "Kuco")
+    h = auth(token)
+    p = client.post(f"/api/accounts/{acc}/protocols", json={"title": "SOP"}, headers=h).get_json()["protocol"]
+    client.put(f"/api/accounts/{acc}/protocols/{p['id']}", json={"title": "SOP"}, headers=h)  # unchanged
+    assert not any(e["action"] == "protocol.updated" for e in _events(client, acc, token))
+
+
+def test_step_add_update_delete_audited(client):
+    burn_superadmin(client)
+    token, acc, _ = make_owner(client, "au12@corp.com", "Luco")
+    h = auth(token)
+    p = client.post(f"/api/accounts/{acc}/protocols", json={"title": "SOP"}, headers=h).get_json()["protocol"]
+    pid = p["id"]
+    step = client.post(f"/api/accounts/{acc}/protocols/{pid}/steps",
+                       json={"title": "Step A"}, headers=h).get_json()["step"]
+    client.put(f"/api/accounts/{acc}/protocols/{pid}/steps/{step['id']}",
+               json={"title": "Step A revised", "warning": "hot"}, headers=h)
+    client.delete(f"/api/accounts/{acc}/protocols/{pid}/steps/{step['id']}", headers=h)
+
+    events = _events(client, acc, token)
+    assert any(e["action"] == "step.added" for e in events)
+    upd = next(e for e in events if e["action"] == "step.updated")
+    assert set(upd["detail"]["changed"]) == {"title", "warning"}
+    assert any(e["action"] == "step.deleted" for e in events)
+
+
+def test_step_reorder_audited(client):
+    burn_superadmin(client)
+    token, acc, _ = make_owner(client, "au13@corp.com", "Muco")
+    h = auth(token)
+    p = client.post(f"/api/accounts/{acc}/protocols", json={"title": "SOP"}, headers=h).get_json()["protocol"]
+    pid = p["id"]
+    s1 = client.post(f"/api/accounts/{acc}/protocols/{pid}/steps", json={"title": "A"}, headers=h).get_json()["step"]
+    s2 = client.post(f"/api/accounts/{acc}/protocols/{pid}/steps", json={"title": "B"}, headers=h).get_json()["step"]
+    client.post(f"/api/accounts/{acc}/protocols/{pid}/steps/reorder",
+                json={"order": [s2["id"], s1["id"]]}, headers=h)
+    ev = next(e for e in _events(client, acc, token) if e["action"] == "steps.reordered")
+    assert ev["detail"]["order"] == [s2["id"], s1["id"]]
+
+
+def test_protocol_delete_audited(client):
+    burn_superadmin(client)
+    token, acc, _ = make_owner(client, "au14@corp.com", "Nuco")
+    h = auth(token)
+    p = client.post(f"/api/accounts/{acc}/protocols",
+                    json={"title": "Retire me", "doc_category": "SOP"}, headers=h).get_json()["protocol"]
+    client.delete(f"/api/accounts/{acc}/protocols/{p['id']}", headers=h)
+    ev = next(e for e in _events(client, acc, token) if e["action"] == "protocol.deleted")
+    assert "Retire me" in ev["summary"]

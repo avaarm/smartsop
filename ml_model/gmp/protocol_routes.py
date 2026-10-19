@@ -174,6 +174,44 @@ def record_audit(account_id, action, entity_type="", entity_id=None, summary="",
     return ev
 
 
+# Fields whose edits are captured in the audit trail, mapped to the label an
+# auditor sees. Large content (document body, step components) is recorded as
+# "changed" without dumping the full before/after so the log stays readable.
+_PROTOCOL_AUDIT_FIELDS = {
+    "title": "title",
+    "description": "description",
+    "body_json": "document body",
+    "protocol_type": "type",
+    "sop_number": "SOP number",
+    "department": "department",
+    "review_date": "review date",
+    "doc_category": "category",
+    "product_code": "product code",
+    "document_number": "document number",
+}
+
+_STEP_AUDIT_FIELDS = {
+    "section": "section",
+    "title": "title",
+    "description": "description",
+    "warning": "warning",
+    "duration_seconds": "duration",
+    "reagents_json": "reagents",
+    "components_json": "components",
+    "branch_json": "branch",
+}
+
+
+def _snapshot(obj, label_map):
+    """Capture the current value of each audited field on an object."""
+    return {field: getattr(obj, field, None) for field in label_map}
+
+
+def _changed_labels(before, after, label_map):
+    """Friendly labels of the audited fields whose value actually changed."""
+    return [label for field, label in label_map.items() if before.get(field) != after.get(field)]
+
+
 def _apply_step_fields(step, data):
     """Copy editable fields from a request body onto a step."""
     if "section" in data:
@@ -732,6 +770,7 @@ def update_protocol(account_id, protocol_id):
     if protocol is None:
         return jsonify({"success": False, "error": "Protocol not found"}), 404
     data = request.get_json(silent=True) or {}
+    before = _snapshot(protocol, _PROTOCOL_AUDIT_FIELDS)
     if "title" in data:
         title = (data.get("title") or "").strip()
         if not title:
@@ -759,6 +798,11 @@ def update_protocol(account_id, protocol_id):
         protocol.product_code = (data.get("product_code") or "").strip()[:60]
     if "document_number" in data:           # explicit override wins
         protocol.document_number = (data.get("document_number") or "").strip()[:40]
+    changed = _changed_labels(before, _snapshot(protocol, _PROTOCOL_AUDIT_FIELDS), _PROTOCOL_AUDIT_FIELDS)
+    if changed:
+        record_audit(account_id, "protocol.updated", "protocol", protocol.id,
+                     f"Edited “{protocol.title}” (v{protocol.version}): {', '.join(changed)}",
+                     detail={"changed": changed, "version": protocol.version})
     db.session.commit()
     return jsonify({"success": True, "protocol": protocol.to_dict(include_steps=True)})
 
@@ -769,6 +813,10 @@ def delete_protocol(account_id, protocol_id):
     protocol = _get_protocol(account_id, protocol_id)
     if protocol is None:
         return jsonify({"success": False, "error": "Protocol not found"}), 404
+    label = protocol.title + (f" ({protocol.document_number})" if protocol.document_number else "")
+    record_audit(account_id, "protocol.deleted", "protocol", protocol_id,
+                 f"Deleted “{label}” (v{protocol.version})",
+                 detail={"document_number": protocol.document_number, "version": protocol.version})
     db.session.delete(protocol)
     db.session.commit()
     return jsonify({"success": True})
@@ -792,6 +840,10 @@ def add_step(account_id, protocol_id):
     )
     _apply_step_fields(step, data)
     db.session.add(step)
+    db.session.flush()   # assign step.id for the audit entry
+    record_audit(account_id, "step.added", "protocol", protocol_id,
+                 f"Added step to “{protocol.title}”",
+                 detail={"step_id": step.id, "title": step.title})
     db.session.commit()
     return jsonify({"success": True, "step": step.to_dict()}), 201
 
@@ -804,7 +856,13 @@ def update_step(account_id, protocol_id, step_id):
     step = ProtocolStep.query.filter_by(id=step_id, protocol_id=protocol_id).first()
     if step is None:
         return jsonify({"success": False, "error": "Step not found"}), 404
+    before = _snapshot(step, _STEP_AUDIT_FIELDS)
     _apply_step_fields(step, request.get_json(silent=True) or {})
+    changed = _changed_labels(before, _snapshot(step, _STEP_AUDIT_FIELDS), _STEP_AUDIT_FIELDS)
+    if changed:
+        record_audit(account_id, "step.updated", "protocol", protocol_id,
+                     f"Edited step “{step.title or step.id}”: {', '.join(changed)}",
+                     detail={"step_id": step.id, "changed": changed})
     db.session.commit()
     return jsonify({"success": True, "step": step.to_dict()})
 
@@ -817,6 +875,9 @@ def delete_step(account_id, protocol_id, step_id):
     step = ProtocolStep.query.filter_by(id=step_id, protocol_id=protocol_id).first()
     if step is None:
         return jsonify({"success": False, "error": "Step not found"}), 404
+    record_audit(account_id, "step.deleted", "protocol", protocol_id,
+                 f"Deleted step “{step.title or step_id}” from protocol #{protocol_id}",
+                 detail={"step_id": step_id, "title": step.title})
     db.session.delete(step)
     db.session.commit()
     return jsonify({"success": True})
@@ -839,6 +900,9 @@ def reorder_steps(account_id, protocol_id):
 
     for index, step_id in enumerate(order):
         steps[step_id].order_index = index
+    record_audit(account_id, "steps.reordered", "protocol", protocol_id,
+                 f"Reordered {len(order)} steps in protocol #{protocol_id}",
+                 detail={"order": order})
     db.session.commit()
     return jsonify({"success": True})
 
