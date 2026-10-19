@@ -10,6 +10,7 @@ from .database import db, Account, Document, TrainingExample, Membership, User
 from .data_collector import DataCollector
 from .training_export import TrainingExporter
 from .auth import require_auth, require_account_access, has_account_role
+from .audit_log import record_audit
 
 ROLES = ("owner", "admin", "member")
 MANAGER_ROLES = ("owner", "admin")
@@ -193,6 +194,9 @@ def add_member(account_id):
 
     membership = Membership(user_id=user.id, account_id=account_id, role=role)
     db.session.add(membership)
+    record_audit(account_id, "member.added", "member", user.id,
+                 f"Granted {user.name or user.email} access as {role}",
+                 detail={"email": user.email, "role": role})
     db.session.commit()
     return jsonify({"success": True, "member": _member_dict(membership, user)}), 201
 
@@ -217,9 +221,14 @@ def update_member(account_id, user_id):
     if membership.role == "owner" and role != "owner" and _owner_count(account_id) <= 1:
         return jsonify({"success": False, "error": "Cannot demote the last owner"}), 400
 
+    old_role = membership.role
     membership.role = role
-    db.session.commit()
     user = db.session.get(User, user_id)
+    if old_role != role:
+        record_audit(account_id, "member.role_changed", "member", user_id,
+                     f"Changed {user.name or user.email}'s role from {old_role} to {role}",
+                     detail={"from": old_role, "to": role})
+    db.session.commit()
     return jsonify({"success": True, "member": _member_dict(membership, user)})
 
 
@@ -235,6 +244,10 @@ def remove_member(account_id, user_id):
     if membership.role == "owner" and _owner_count(account_id) <= 1:
         return jsonify({"success": False, "error": "Cannot remove the last owner"}), 400
 
+    user = db.session.get(User, user_id)
+    record_audit(account_id, "member.removed", "member", user_id,
+                 f"Revoked {user.name or user.email}'s access ({membership.role})",
+                 detail={"email": user.email, "role": membership.role})
     db.session.delete(membership)
     db.session.commit()
     return jsonify({"success": True})

@@ -37,6 +37,9 @@ export class AuditComponent implements OnInit {
     { value: 'deviation.created', label: 'Deviation flagged' },
     { value: 'deviation.resolved', label: 'Deviation resolved' },
     { value: 'competency.acknowledged', label: 'Training acknowledged' },
+    { value: 'member.added', label: 'Access granted' },
+    { value: 'member.role_changed', label: 'Role changed' },
+    { value: 'member.removed', label: 'Access revoked' },
   ];
 
   private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
@@ -81,8 +84,10 @@ export class AuditComponent implements OnInit {
     if (action === 'protocol.signed' || action === 'protocol.made_effective') return 'sign';
     if (action === 'competency.acknowledged') return 'training';
     if (action === 'run.finished') return 'run';
+    if (action === 'member.removed') return 'delete';
+    if (action === 'member.added') return 'access';
     if (action.endsWith('.deleted') || action === 'protocol.retired') return 'delete';
-    if (action === 'protocol.updated' || action.startsWith('step')) return 'edit';
+    if (action === 'protocol.updated' || action.startsWith('step') || action === 'member.role_changed') return 'edit';
     return 'default';
   }
 

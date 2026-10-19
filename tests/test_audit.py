@@ -197,3 +197,28 @@ def test_protocol_delete_audited(client):
     client.delete(f"/api/accounts/{acc}/protocols/{p['id']}", headers=h)
     ev = next(e for e in _events(client, acc, token) if e["action"] == "protocol.deleted")
     assert "Retire me" in ev["summary"]
+
+
+# ── Access control is a regulated action: who was granted/revoked, and when ──
+
+def test_member_access_changes_are_audited(client):
+    burn_superadmin(client)
+    owner_tok, acc, _ = make_owner(client, "ao@corp.com", "Puco")
+    register(client, "newhire@corp.com", name="New Hire")
+    h = auth(owner_tok)
+
+    client.post(f"/api/accounts/{acc}/members",
+                json={"email": "newhire@corp.com", "role": "member"}, headers=h)
+    members = client.get(f"/api/accounts/{acc}/members", headers=h).get_json()["members"]
+    uid = next(m["user_id"] for m in members if m["email"] == "newhire@corp.com")
+    client.patch(f"/api/accounts/{acc}/members/{uid}", json={"role": "admin"}, headers=h)
+    client.delete(f"/api/accounts/{acc}/members/{uid}", headers=h)
+
+    events = _events(client, acc, owner_tok)
+    actions = [e["action"] for e in events]
+    assert "member.added" in actions
+    assert "member.role_changed" in actions
+    assert "member.removed" in actions
+    rc = next(e for e in events if e["action"] == "member.role_changed")
+    assert rc["detail"] == {"from": "member", "to": "admin"}
+    assert rc["entity_type"] == "member" and rc["entity_id"] == uid

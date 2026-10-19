@@ -25,6 +25,7 @@ from .templates import template_summaries, get_template
 from .doc_taxonomy import GMP_CATEGORIES, is_valid as _is_valid_category, category_name
 from .doc_templates import doc_template_summaries, get_doc_template
 from .generator_provider import get_generator
+from .audit_log import record_audit, actor_name as _actor_name
 
 RUN_STEP_STATUSES = ("pending", "done", "failed", "skipped")
 PROTOCOL_TYPES = ("protocol", "sop", "gmp_sop")
@@ -152,26 +153,6 @@ def _apply_variables_to_blocks(blocks, variables):
             b["text"] = _apply_variables(b["text"], variables)
         out.append(b)
     return out
-
-
-def record_audit(account_id, action, entity_type="", entity_id=None, summary="", detail=None):
-    """Append an immutable audit-trail entry to the current session.
-
-    Adds (does not commit) so the entry is persisted atomically with the action
-    that produced it by the caller's existing commit.
-    """
-    ev = AuditEvent(
-        account_id=account_id,
-        action=action,
-        entity_type=entity_type,
-        entity_id=entity_id,
-        summary=(summary or "")[:500],
-        detail_json=json.dumps(detail) if detail else "",
-        actor=_actor_name(),
-        actor_user_id=g.current_user.id,
-    )
-    db.session.add(ev)
-    return ev
 
 
 # Fields whose edits are captured in the audit trail, mapped to the label an
@@ -1431,10 +1412,6 @@ def update_deviation(account_id, deviation_id):
 
 
 # ── Scheduling / assignments ──
-
-def _actor_name():
-    return (g.current_user.name or "").strip() or g.current_user.email
-
 
 def _advance_due_date(iso_date, recurrence):
     """Next due date for a recurring assignment, or '' if not recurring/invalid."""
